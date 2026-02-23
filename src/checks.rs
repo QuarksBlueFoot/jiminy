@@ -102,6 +102,19 @@ pub fn check_keys_eq(a: &Address, b: &Address) -> ProgramResult {
     Ok(())
 }
 
+/// Verify the account is an executable program.
+///
+/// Use this when an instruction receives a program account as a parameter
+/// (e.g. for a CPI target) and you want to confirm it actually is one.
+/// Anchor has an `executable` constraint; this is the zero-copy equivalent.
+#[inline(always)]
+pub fn check_executable(account: &AccountView) -> ProgramResult {
+    if !account.executable() {
+        return Err(ProgramError::IncorrectProgramId);
+    }
+    Ok(())
+}
+
 /// Verify `account` holds at least `min_lamports`.
 ///
 /// Use this for collateral checks, fee escrow validation, or confirming

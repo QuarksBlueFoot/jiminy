@@ -5,8 +5,8 @@ edition = "2021"
 license = "Apache-2.0"
 authors = ["MoonManQuark"]
 description = "Anchor-style safety checks for pinocchio programs — zero-copy, no_std, BPF-safe"
-repository = "https://github.com/QuarksBlueFoot/jiminy"
-homepage = "https://github.com/QuarksBlueFoot/jiminy"
+repository = "https://github.com/BluefootLabs/jiminy"
+homepage = "https://github.com/BluefootLabs/jiminy"
 readme = "README.md"
 keywords = ["solana", "pinocchio", "bpf", "zero-copy", "anchor"]
 categories = ["no-std", "embedded"]
@@ -17,3 +17,4 @@ name = "jiminy"
 
 [dependencies]
 pinocchio = { version = "0.10", features = ["cpi"] }
+pinocchio-pubkey = "0.3"

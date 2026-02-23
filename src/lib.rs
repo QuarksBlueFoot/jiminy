@@ -3,19 +3,20 @@
 //!
 //! Pinocchio is the engine. Jiminy keeps it honest.
 //!
-//! Zero-copy, no alloc, BPF-safe. Provides composable check functions,
-//! zero-copy data cursors, and macros for the most common instruction
-//! guard-rails — so you can focus on program logic, not boilerplate.
+//! Zero-copy, no alloc, BPF-safe. Check functions, zero-copy data cursors,
+//! bit flag helpers, well-known program IDs, and iterator-style account
+//! validation — so you can focus on program logic, not boilerplate.
 //!
 //! # Quick-start
 //!
 //! ```rust,ignore
 //! use jiminy::{
-//!     check_account, check_signer, check_writable, check_system_program,
-//!     check_uninitialized, check_lamports_gte, safe_close,
-//!     checked_add, checked_sub,
-//!     require, require_accounts_ne,
-//!     SliceCursor, DataWriter, write_discriminator,
+//!     check_account, check_signer, check_writable, check_executable,
+//!     check_lamports_gte, safe_close, checked_add,
+//!     require, require_accounts_ne, require_keys_neq,
+//!     SliceCursor, DataWriter, zero_init, write_discriminator,
+//!     AccountList, programs,
+//!     read_bit, set_bit, clear_bit,
 //! };
 //! ```
 //!
@@ -28,6 +29,7 @@
 //! | `check_owner` | account is owned by your program |
 //! | `check_pda` | account address equals a derived PDA |
 //! | `check_system_program` | account is the system program |
+//! | `check_executable` | account is an executable program |
 //! | `check_uninitialized` | account has no data yet (anti-reinit) |
 //! | `check_lamports_gte` | account holds at least N lamports |
 //! | `check_closed` | account has zero lamports and empty data |
@@ -39,17 +41,32 @@
 //!
 //! [`SliceCursor`] reads typed fields sequentially from account data.
 //! [`DataWriter`] writes them when initializing a new account.
-//! Both are bounds-checked and compile to the same byte reads you'd
-//! write by hand.
+//! [`zero_init`] zero-fills account data before the first write.
+//!
+//! # Account iteration
+//!
+//! [`AccountList`] provides iterator-style account consumption with
+//! inline constraint checks, replacing manual index arithmetic.
+//!
+//! # Well-known program IDs
+//!
+//! [`programs`] module — `TOKEN`, `TOKEN_2022`, `ASSOCIATED_TOKEN`,
+//! `METADATA`, `BPF_LOADER`, `SYSVAR_CLOCK`, `SYSVAR_RENT`, and more.
 
+pub mod programs;
+
+mod accounts;
+mod bits;
 mod checks;
 mod close;
 mod cursor;
 mod math;
 
+pub use accounts::AccountList;
+pub use bits::*;
 pub use checks::*;
 pub use close::*;
-pub use cursor::{write_discriminator, DataWriter, SliceCursor};
+pub use cursor::{write_discriminator, zero_init, DataWriter, SliceCursor};
 pub use math::*;
 
 // Re-export pinocchio core types so users only need one import.
@@ -87,11 +104,28 @@ macro_rules! require_keys_eq {
     };
 }
 
+/// Require two [`Address`] values to be **different**.
+///
+/// The counterpart to `require_keys_eq!`. Useful for authority rotation
+/// checks, multi-hop validations, or any time two program-owned addresses
+/// must not collide.
+///
+/// ```rust,ignore
+/// require_keys_neq!(old_authority, new_authority, MyError::SameKey);
+/// ```
+#[macro_export]
+macro_rules! require_keys_neq {
+    ($a:expr, $b:expr, $err:expr) => {
+        if *$a == *$b {
+            return Err($err.into());
+        }
+    };
+}
+
 /// Require two accounts to have **different** addresses.
 ///
-/// Prevents source == destination attacks that are common in token and
-/// escrow programs. Anchor has no built-in constraint for this case —
-/// you need a custom constraint or inline logic. Here it's one line.
+/// Prevents source == destination attacks common in token and escrow
+/// programs. Anchor has no built-in constraint for this case.
 ///
 /// ```rust,ignore
 /// require_accounts_ne!(source_vault, dest_vault, MyError::SameAccount);
@@ -129,11 +163,41 @@ macro_rules! require_gt {
     };
 }
 
-/// Require `a == b` for non-Address scalar types.
+/// Require `a == b` for scalar types.
 #[macro_export]
 macro_rules! require_eq {
     ($a:expr, $b:expr, $err:expr) => {
         if $a != $b {
+            return Err($err.into());
+        }
+    };
+}
+
+/// Require `a != b` for scalar types.
+///
+/// The counterpart to `require_eq!`. Use `require_keys_neq!` for addresses.
+///
+/// ```rust,ignore
+/// require_neq!(new_value, current_value, MyError::NoChange);
+/// ```
+#[macro_export]
+macro_rules! require_neq {
+    ($a:expr, $b:expr, $err:expr) => {
+        if $a == $b {
+            return Err($err.into());
+        }
+    };
+}
+
+/// Require bit `n` to be set in `$byte`, else return `$err`.
+///
+/// ```rust,ignore
+/// require_flag!(state.flags, 0, MyError::AccountLocked);
+/// ```
+#[macro_export]
+macro_rules! require_flag {
+    ($byte:expr, $n:expr, $err:expr) => {
+        if ($byte >> $n) & 1 == 0 {
             return Err($err.into());
         }
     };
