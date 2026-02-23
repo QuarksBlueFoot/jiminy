@@ -163,26 +163,6 @@ macro_rules! require_gt {
     };
 }
 
-/// Require `a < b`.
-#[macro_export]
-macro_rules! require_lt {
-    ($a:expr, $b:expr, $err:expr) => {
-        if $a >= $b {
-            return Err($err.into());
-        }
-    };
-}
-
-/// Require `a <= b`.
-#[macro_export]
-macro_rules! require_lte {
-    ($a:expr, $b:expr, $err:expr) => {
-        if $a > $b {
-            return Err($err.into());
-        }
-    };
-}
-
 /// Require `a == b` for scalar types.
 #[macro_export]
 macro_rules! require_eq {

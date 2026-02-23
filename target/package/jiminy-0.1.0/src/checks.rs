@@ -130,55 +130,6 @@ pub fn check_lamports_gte(account: &AccountView, min_lamports: u64) -> ProgramRe
     Ok(())
 }
 
-/// Verify that a stored address field matches an account's actual address.
-///
-/// This is the runtime equivalent of Anchor's `has_one` constraint.
-/// Use it to confirm that a relationship stored in account data (e.g.
-/// `vault.authority`) actually matches the authority account being passed
-/// to the instruction.
-///
-/// ```rust,ignore
-/// // Read the stored authority from account data
-/// let mut cur = SliceCursor::new(&data[1..]);
-/// let stored_authority = cur.read_address()?;
-/// // Confirm the authority account passed in matches
-/// check_has_one(&stored_authority, authority_account)?;
-/// ```
-#[inline(always)]
-pub fn check_has_one(stored: &Address, account: &AccountView) -> ProgramResult {
-    if stored != account.address() {
-        return Err(ProgramError::InvalidArgument);
-    }
-    Ok(())
-}
-
-/// Approximate minimum lamports for rent exemption at the current mainnet rate.
-///
-/// Formula: `(128 + data_len) * 6960`
-///
-/// Uses the fixed mainnet rate (3480 lamports/byte/year × 2-year threshold).
-/// Solana requires all accounts to be rent-exempt; this gives you the floor.
-#[inline(always)]
-pub fn rent_exempt_min(data_len: usize) -> u64 {
-    (128u64 + data_len as u64).saturating_mul(6960)
-}
-
-/// Verify an account holds enough lamports to be rent-exempt for its data size.
-///
-/// Equivalent to Anchor's `rent_exempt` constraint. Uses the fixed mainnet
-/// formula: `(128 + data_len) * 6960 lamports`. Call this after account
-/// creation to confirm the payer funded it adequately.
-#[inline(always)]
-pub fn check_rent_exempt(account: &AccountView) -> ProgramResult {
-    let data = account.try_borrow()?;
-    let min = rent_exempt_min(data.len());
-    drop(data);
-    if account.lamports() < min {
-        return Err(ProgramError::InsufficientFunds);
-    }
-    Ok(())
-}
-
 /// Verify an account is fully closed: zero lamports and empty data.
 ///
 /// Useful in CPI-heavy programs where you need to confirm a previous
