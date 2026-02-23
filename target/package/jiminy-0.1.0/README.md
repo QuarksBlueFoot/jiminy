@@ -90,38 +90,30 @@ fn process_transfer(
 
 ### Account checks
 
-| Function | Anchor equivalent | What it does |
-| --- | --- | --- |
-| `check_signer(account)` | `signer` | Must be a transaction signer |
-| `check_writable(account)` | `mut` | Must be marked writable |
-| `check_owner(account, program_id)` | `owner` | Must be owned by your program |
-| `check_pda(account, expected)` | `seeds + bump` | Address must match the derived PDA |
-| `check_system_program(account)` | `Program<System>` | Must be the system program |
-| `check_executable(account)` | `executable` | Must be an executable program |
-| `check_uninitialized(account)` | `init` | Data must be empty — prevents reinit attacks |
-| `check_has_one(stored, account)` | `has_one` | Stored address field must match account key |
-| `check_rent_exempt(account)` | `rent_exempt` | Must hold enough lamports to be rent-exempt |
-| `check_lamports_gte(account, min)` | `constraint` | Must hold at least `min` lamports |
-| `check_closed(account)` | `close` | Must have zero lamports and empty data |
-| `check_size(data, min_len)` | — | Raw slice is at least N bytes |
-| `check_discriminator(data, expected)` | `discriminator` | First byte must match type tag |
-| `check_account(account, id, disc, len)` | composite | Owner + size + discriminator in one call |
+| Function | What it does |
+|---|---|
+| `check_signer(account)` | Must be a transaction signer |
+| `check_writable(account)` | Must be marked writable |
+| `check_owner(account, program_id)` | Must be owned by your program |
+| `check_pda(account, expected)` | Address must match the derived PDA |
+| `check_system_program(account)` | Must be the system program |
+| `check_uninitialized(account)` | Data must be empty — prevents reinit attacks |
+| `check_lamports_gte(account, min)` | Must hold at least `min` lamports |
+| `check_closed(account)` | Must have zero lamports and empty data |
+| `check_size(data, min_len)` | Raw slice is at least N bytes |
+| `check_discriminator(data, expected)` | First byte must match type tag |
+| `check_account(account, id, disc, len)` | Owner + size + discriminator in one call |
 
 ### Macros
 
-| Macro | Anchor equivalent | What it does |
-| --- | --- | --- |
-| `require!(cond, err)` | `require!` | Return error if condition is false |
-| `require_eq!(a, b, err)` | `require_eq!` | `a == b` (scalars) |
-| `require_neq!(a, b, err)` | `require_neq!` | `a != b` (scalars) |
-| `require_gt!(a, b, err)` | `require_gt!` | `a > b` |
-| `require_gte!(a, b, err)` | `require_gte!` | `a >= b` |
-| `require_lt!(a, b, err)` | `require_lt!` | `a < b` |
-| `require_lte!(a, b, err)` | `require_lte!` | `a <= b` |
-| `require_keys_eq!(a, b, err)` | `require_keys_eq!` | Two `Address` values must be equal |
-| `require_keys_neq!(a, b, err)` | `require_keys_neq!` | Two `Address` values must differ |
-| `require_accounts_ne!(a, b, err)` | — | Two accounts must have different addresses |
-| `require_flag!(byte, n, err)` | — | Bit `n` must be set in `byte` |
+| Macro | What it does |
+|---|---|
+| `require!(cond, err)` | Return error if condition is false |
+| `require_keys_eq!(a, b, err)` | Two `Address` values must be equal |
+| `require_accounts_ne!(a, b, err)` | Two accounts must have **different** addresses |
+| `require_gte!(a, b, err)` | `a >= b` |
+| `require_gt!(a, b, err)` | `a > b` |
+| `require_eq!(a, b, err)` | `a == b` (scalars) |
 
 ### Math
 
@@ -229,7 +221,7 @@ Zero lamports and empty data. If either condition isn't met, you get
 ## Compared to the alternatives
 
 |  | Raw pinocchio | Anchor | **Jiminy** |
-| --- | --- | --- | --- |
+|---|---|---|---|
 | Allocator required | No | Yes | No |
 | Borsh required | No | Yes | No |
 | Proc macros | No | Yes | No |

@@ -1,8 +1,6 @@
 use pinocchio::{error::ProgramError, AccountView, Address};
 
-use crate::checks::{
-    check_account, check_executable, check_signer, check_system_program, check_writable,
-};
+use crate::checks::{check_account, check_signer, check_system_program, check_writable};
 
 /// Iterator-style account accessor with inline constraint checks.
 ///
@@ -148,17 +146,6 @@ impl<'a> AccountList<'a> {
         let acc = self.next()?;
         check_writable(acc)?;
         check_account(acc, program_id, discriminator, min_len)?;
-        Ok(acc)
-    }
-
-    /// Consume the next account and verify it is an executable program.
-    ///
-    /// Use for CPI target programs passed as instruction accounts, where you
-    /// want to confirm the caller didn't pass a regular data account.
-    #[inline(always)]
-    pub fn next_executable(&mut self) -> Result<&'a AccountView, ProgramError> {
-        let acc = self.next()?;
-        check_executable(acc)?;
         Ok(acc)
     }
 }
