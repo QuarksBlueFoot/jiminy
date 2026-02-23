@@ -234,6 +234,34 @@ impl<'a> DataWriter<'a> {
     }
 }
 
+// ── Init helpers ─────────────────────────────────────────────────────────────
+
+/// Zero-fill `data` before writing any fields.
+///
+/// Call this immediately after allocating account space (via system program
+/// CPI) and before writing the discriminator or any other fields.
+///
+/// This matters because Solana reuses account storage — if someone closed an
+/// account and you reallocate it, stale bytes from the previous owner are
+/// still there. Zeroing first prevents programs from accidentally reading
+/// old data through padding or uninitialized fields.
+///
+/// Anchor does this automatically in its `init` constraint. In pinocchio
+/// you do it explicitly, which is the right call — just don't forget it.
+///
+/// ```rust,ignore
+/// // After create_account CPI:
+/// let mut raw = new_account.try_borrow_mut()?;
+/// zero_init(&mut raw);
+/// write_discriminator(&mut raw, VAULT_DISC)?;
+/// let mut w = DataWriter::new(&mut raw[1..]);
+/// w.write_u64(0)?;
+/// ```
+#[inline(always)]
+pub fn zero_init(data: &mut [u8]) {
+    data.fill(0);
+}
+
 // ── Discriminator init helper ─────────────────────────────────────────────────
 
 /// Write a discriminator byte to `data[0]`.

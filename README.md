@@ -241,7 +241,7 @@ to do it.
 
 ## Used in SHIPyard
 
-Jiminy powers the on-chain program registry in [SHIPyard](https://github.com/QuarksBlueFoot/SHIPyard) —
+Jiminy powers the on-chain program registry in [SHIPyard](https://github.com/BluefootLabs/SHIPyard) —
 a platform for building, deploying, and sharing Solana programs. Every
 instruction handler in the project registry uses Jiminy's check functions,
 and SHIPyard's code generator can target Jiminy as a framework option
@@ -254,7 +254,7 @@ hold up, we'll find it.
 
 ## About
 
-Built by [MoonManQuark](https://x.com/moonmanquark) / [Bluefoot Labs](https://github.com/QuarksBlueFoot).
+Built by [MoonManQuark](https://x.com/moonmanquark) / [Bluefoot Labs](https://github.com/BluefootLabs).
 
 If jiminy has saved you some debugging time, donations are welcome
 at `SolanaDevDao.sol` — it goes toward keeping development going.
