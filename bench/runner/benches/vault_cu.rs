@@ -1,161 +1,141 @@
-//! Vault CU benchmark — compares raw Pinocchio vs Jiminy vs Anchor.
+//! Vault CU benchmark — compares raw Pinocchio vs Jiminy.
 //!
-//! Requires compiled .so files for each program. Build them first:
-//!
-//! ```sh
-//! cargo build-sbf -p bench-pinocchio-vault
-//! cargo build-sbf -p bench-jiminy-vault
-//! cargo build-sbf -p bench-anchor-vault
-//! ```
-//!
-//! Then run:
+//! Requires compiled .so files. Build them first:
 //!
 //! ```sh
-//! cargo bench -p bench-runner
+//! rustup run solana -- cargo build --release --target sbf-solana-solana -p bench-pinocchio-vault
+//! rustup run solana -- cargo build --release --target sbf-solana-solana -p bench-jiminy-vault
+//! # Copy to target/deploy/
+//! cp target/sbf-solana-solana/release/bench_pinocchio_vault.so target/deploy/
+//! cp target/sbf-solana-solana/release/bench_jiminy_vault.so target/deploy/
 //! ```
 //!
-//! Output: a markdown table of CU consumed per instruction per variant.
+//! Then from bench/runner/:
+//!
+//! ```sh
+//! cargo bench
+//! ```
 
 use mollusk_svm::Mollusk;
-use mollusk_svm_bencher::MolluskComputeUnitBencher;
-use solana_sdk::{
-    account::Account,
-    instruction::{AccountMeta, Instruction},
-    pubkey::Pubkey,
-    system_program,
-};
+use solana_account::Account;
+use solana_pubkey::Pubkey;
+use solana_instruction::{AccountMeta, Instruction};
+
+const SYSTEM_PROGRAM: Pubkey = Pubkey::new_from_array([0u8; 32]);
+
+static mut COUNTER: u8 = 0;
+fn next_pubkey() -> Pubkey {
+    let mut bytes = [0u8; 32];
+    for i in 0..4 {
+        unsafe {
+            COUNTER = COUNTER.wrapping_add(37);
+            bytes[i] = COUNTER;
+        }
+    }
+    Pubkey::from(bytes)
+}
 
 fn main() {
-    // Program IDs — arbitrary, just need to be unique.
-    let pinocchio_id = Pubkey::new_unique();
-    let jiminy_id = Pubkey::new_unique();
-    // Anchor program has a declared ID but we can override for testing.
-    let anchor_id = Pubkey::new_unique();
+    let pinocchio_id = next_pubkey();
+    let jiminy_id = next_pubkey();
 
-    // ── Setup Mollusk instances ──────────────────────────────────────────────
-    //
-    // Each loads the compiled ELF from target/deploy/.
-    // If .so files are not found, the bench will fail with a clear error.
+    let pinocchio_mollusk =
+        Mollusk::new(&pinocchio_id, "../../target/deploy/bench_pinocchio_vault");
+    let jiminy_mollusk =
+        Mollusk::new(&jiminy_id, "../../target/deploy/bench_jiminy_vault");
 
-    let pinocchio_mollusk = Mollusk::new(&pinocchio_id, "../../target/deploy/bench_pinocchio_vault");
-    let jiminy_mollusk = Mollusk::new(&jiminy_id, "../../target/deploy/bench_jiminy_vault");
-    // Note: Anchor program needs `anchor build` or `cargo build-sbf` to produce .so
-    // let anchor_mollusk = Mollusk::new(&anchor_id, "../../target/deploy/bench_anchor_vault");
+    let authority = next_pubkey();
+    let vault_key = next_pubkey();
+    let recipient_key = next_pubkey();
 
-    // ── Shared test data ─────────────────────────────────────────────────────
-
-    let authority = Pubkey::new_unique();
-    let vault_key = Pubkey::new_unique();
-    let recipient_key = Pubkey::new_unique();
-
-    // Vault account data (41 bytes for pinocchio/jiminy variant).
+    // Vault account data (41 bytes: 1 disc + 8 balance + 32 authority).
     let mut vault_data_41 = vec![0u8; 41];
     vault_data_41[0] = 1; // discriminator
-    vault_data_41[1..9].copy_from_slice(&1_000_000_000u64.to_le_bytes()); // balance = 1 SOL
-    vault_data_41[9..41].copy_from_slice(authority.as_ref()); // authority
+    vault_data_41[1..9].copy_from_slice(&1_000_000_000u64.to_le_bytes());
+    vault_data_41[9..41].copy_from_slice(authority.as_ref());
 
-    let vault_account = Account {
-        lamports: 2_000_000_000, // 2 SOL
-        data: vault_data_41.clone(),
-        owner: pinocchio_id, // will be overridden per variant
+    // For deposit: the depositor account must be owned by the program so the
+    // runtime allows lamport deduction. We create per-program versions below.
+    let authority_account_system = Account {
+        lamports: 10_000_000_000,
+        data: vec![],
+        owner: SYSTEM_PROGRAM,
         executable: false,
         rent_epoch: 0,
     };
 
-    // ── Deposit instruction (tag=1, amount=500_000_000) ──────────────────────
+    let recipient_account = Account {
+        lamports: 1_000_000_000,
+        data: vec![],
+        owner: SYSTEM_PROGRAM,
+        executable: false,
+        rent_epoch: 0,
+    };
 
+    // ── Instruction data ─────────────────────────────────────────────────────
     let deposit_amount = 500_000_000u64;
-    let mut deposit_data = vec![1u8]; // tag
+    let mut deposit_data = vec![1u8];
     deposit_data.extend_from_slice(&deposit_amount.to_le_bytes());
 
-    // ── Withdraw instruction (tag=2, amount=100_000_000) ─────────────────────
-
     let withdraw_amount = 100_000_000u64;
-    let mut withdraw_data = vec![2u8]; // tag
+    let mut withdraw_data = vec![2u8];
     withdraw_data.extend_from_slice(&withdraw_amount.to_le_bytes());
 
-    // ── Pinocchio benches ────────────────────────────────────────────────────
+    let close_data = vec![3u8];
 
-    println!("## Pinocchio (raw) — Deposit");
-    {
-        let ix = Instruction {
-            program_id: pinocchio_id,
-            accounts: vec![
-                AccountMeta::new(authority, true),  // depositor
-                AccountMeta::new(vault_key, false),  // vault
-            ],
-            data: deposit_data.clone(),
+    println!();
+    println!("╔══════════════════════════════════════════════════════════════╗");
+    println!("║         Jiminy Vault CU Benchmark — Pinocchio vs Jiminy    ║");
+    println!("╚══════════════════════════════════════════════════════════════╝");
+    println!();
+
+    let mut results: Vec<(&str, &str, u64, bool)> = Vec::new();
+
+    // ── Deposit ──────────────────────────────────────────────────────────────
+    for (label, prog_id, mollusk) in [
+        ("Pinocchio", &pinocchio_id, &pinocchio_mollusk),
+        ("Jiminy",    &jiminy_id,    &jiminy_mollusk),
+    ] {
+        // Depositor owned by the program so the runtime allows lamport deduction.
+        let depositor_account = Account {
+            lamports: 10_000_000_000,
+            data: vec![],
+            owner: *prog_id,
+            executable: false,
+            rent_epoch: 0,
         };
-
-        let mut vault_acc = vault_account.clone();
-        vault_acc.owner = pinocchio_id;
-
-        let accounts = vec![
-            (authority, Account { lamports: 10_000_000_000, data: vec![], owner: system_program::id(), executable: false, rent_epoch: 0 }),
-            (vault_key, vault_acc),
-        ];
-
-        let result = pinocchio_mollusk.process_instruction(&ix, &accounts);
-        println!("  Result: {:?}", result.program_result);
-        println!("  CU consumed: {}", result.compute_units_consumed);
-    }
-
-    println!("\n## Pinocchio (raw) — Withdraw");
-    {
         let ix = Instruction {
-            program_id: pinocchio_id,
-            accounts: vec![
-                AccountMeta::new_readonly(authority, true),
-                AccountMeta::new(vault_key, false),
-                AccountMeta::new(recipient_key, false),
-            ],
-            data: withdraw_data.clone(),
-        };
-
-        let mut vault_acc = vault_account.clone();
-        vault_acc.owner = pinocchio_id;
-
-        let accounts = vec![
-            (authority, Account { lamports: 10_000_000_000, data: vec![], owner: system_program::id(), executable: false, rent_epoch: 0 }),
-            (vault_key, vault_acc),
-            (recipient_key, Account { lamports: 1_000_000_000, data: vec![], owner: system_program::id(), executable: false, rent_epoch: 0 }),
-        ];
-
-        let result = pinocchio_mollusk.process_instruction(&ix, &accounts);
-        println!("  Result: {:?}", result.program_result);
-        println!("  CU consumed: {}", result.compute_units_consumed);
-    }
-
-    // ── Jiminy benches ───────────────────────────────────────────────────────
-
-    println!("\n## Jiminy — Deposit");
-    {
-        let ix = Instruction {
-            program_id: jiminy_id,
+            program_id: *prog_id,
             accounts: vec![
                 AccountMeta::new(authority, true),
                 AccountMeta::new(vault_key, false),
             ],
             data: deposit_data.clone(),
         };
-
-        let mut vault_acc = vault_account.clone();
-        vault_acc.owner = jiminy_id;
-
         let accounts = vec![
-            (authority, Account { lamports: 10_000_000_000, data: vec![], owner: system_program::id(), executable: false, rent_epoch: 0 }),
-            (vault_key, vault_acc),
+            (authority, depositor_account),
+            (vault_key, Account {
+                lamports: 2_000_000_000,
+                data: vault_data_41.clone(),
+                owner: *prog_id,
+                executable: false,
+                rent_epoch: 0,
+            }),
         ];
-
-        let result = jiminy_mollusk.process_instruction(&ix, &accounts);
-        println!("  Result: {:?}", result.program_result);
-        println!("  CU consumed: {}", result.compute_units_consumed);
+        let result = mollusk.process_instruction(&ix, &accounts);
+        let ok = result.program_result.is_ok();
+        let cu = result.compute_units_consumed;
+        println!("  {:<10} │ Deposit  │ {:>6} CU │ {}", label, cu, if ok { "OK" } else { "FAIL" });
+        results.push((label, "Deposit", cu, ok));
     }
 
-    println!("\n## Jiminy — Withdraw");
-    {
+    // ── Withdraw ─────────────────────────────────────────────────────────────
+    for (label, prog_id, mollusk) in [
+        ("Pinocchio", &pinocchio_id, &pinocchio_mollusk),
+        ("Jiminy",    &jiminy_id,    &jiminy_mollusk),
+    ] {
         let ix = Instruction {
-            program_id: jiminy_id,
+            program_id: *prog_id,
             accounts: vec![
                 AccountMeta::new_readonly(authority, true),
                 AccountMeta::new(vault_key, false),
@@ -163,21 +143,87 @@ fn main() {
             ],
             data: withdraw_data.clone(),
         };
-
-        let mut vault_acc = vault_account.clone();
-        vault_acc.owner = jiminy_id;
-
         let accounts = vec![
-            (authority, Account { lamports: 10_000_000_000, data: vec![], owner: system_program::id(), executable: false, rent_epoch: 0 }),
-            (vault_key, vault_acc),
-            (recipient_key, Account { lamports: 1_000_000_000, data: vec![], owner: system_program::id(), executable: false, rent_epoch: 0 }),
+            (authority, authority_account_system.clone()),
+            (vault_key, Account {
+                lamports: 2_000_000_000,
+                data: vault_data_41.clone(),
+                owner: *prog_id,
+                executable: false,
+                rent_epoch: 0,
+            }),
+            (recipient_key, recipient_account.clone()),
         ];
-
-        let result = jiminy_mollusk.process_instruction(&ix, &accounts);
-        println!("  Result: {:?}", result.program_result);
-        println!("  CU consumed: {}", result.compute_units_consumed);
+        let result = mollusk.process_instruction(&ix, &accounts);
+        let ok = result.program_result.is_ok();
+        let cu = result.compute_units_consumed;
+        println!("  {:<10} │ Withdraw │ {:>6} CU │ {}", label, cu, if ok { "OK" } else { "FAIL" });
+        results.push((label, "Withdraw", cu, ok));
     }
 
-    println!("\n─── Done ───");
-    println!("Build the Anchor variant with `anchor build` and uncomment the Anchor section to add it to the comparison.");
+    // ── Close ────────────────────────────────────────────────────────────────
+    for (label, prog_id, mollusk) in [
+        ("Pinocchio", &pinocchio_id, &pinocchio_mollusk),
+        ("Jiminy",    &jiminy_id,    &jiminy_mollusk),
+    ] {
+        let ix = Instruction {
+            program_id: *prog_id,
+            accounts: vec![
+                AccountMeta::new_readonly(authority, true),
+                AccountMeta::new(vault_key, false),
+                AccountMeta::new(recipient_key, false),
+            ],
+            data: close_data.clone(),
+        };
+        let accounts = vec![
+            (authority, authority_account_system.clone()),
+            (vault_key, Account {
+                lamports: 2_000_000_000,
+                data: vault_data_41.clone(),
+                owner: *prog_id,
+                executable: false,
+                rent_epoch: 0,
+            }),
+            (recipient_key, recipient_account.clone()),
+        ];
+        let result = mollusk.process_instruction(&ix, &accounts);
+        let ok = result.program_result.is_ok();
+        let cu = result.compute_units_consumed;
+        println!("  {:<10} │ Close    │ {:>6} CU │ {}", label, cu, if ok { "OK" } else { "FAIL" });
+        results.push((label, "Close", cu, ok));
+    }
+
+    // ── Summary ──────────────────────────────────────────────────────────────
+    println!();
+    println!("┌────────────┬──────────────┬──────────────┬────────┐");
+    println!("│ Instruction│  Pinocchio   │    Jiminy    │  Delta │");
+    println!("├────────────┼──────────────┼──────────────┼────────┤");
+
+    for instr in ["Deposit", "Withdraw", "Close"] {
+        let p = results.iter().find(|r| r.0 == "Pinocchio" && r.1 == instr).unwrap();
+        let j = results.iter().find(|r| r.0 == "Jiminy" && r.1 == instr).unwrap();
+        let delta = j.2 as i64 - p.2 as i64;
+        let _sign = if delta > 0 { "+" } else if delta < 0 { "" } else { " " };
+        println!("│ {:<10} │ {:>8} CU  │ {:>8} CU  │ {:>+5}  │", instr, p.2, j.2, delta);
+    }
+    println!("└────────────┴──────────────┴──────────────┴────────┘");
+
+    // Binary sizes
+    println!();
+    println!("Binary sizes (release SBF):");
+    for name in ["bench_pinocchio_vault.so", "bench_jiminy_vault.so"] {
+        let path = format!("../../target/deploy/{}", name);
+        if let Ok(meta) = std::fs::metadata(&path) {
+            println!("  {} — {:.1} KB", name, meta.len() as f64 / 1024.0);
+        }
+    }
+
+    // Also check sbf-solana-solana path
+    for name in ["bench_pinocchio_vault.so", "bench_jiminy_vault.so"] {
+        let path = format!("../../target/sbf-solana-solana/release/{}", name);
+        if let Ok(meta) = std::fs::metadata(&path) {
+            println!("  {} — {:.1} KB (sbf-solana-solana)", name, meta.len() as f64 / 1024.0);
+        }
+    }
+    println!();
 }

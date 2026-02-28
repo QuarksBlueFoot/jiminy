@@ -5,13 +5,19 @@ edition = "2021"
 license = "Apache-2.0"
 publish = false
 
+# Standalone workspace — kept out of the main jiminy workspace because
+# mollusk / solana-sdk pull in a different solana-address version.
+[workspace]
+
 # This is a native (host) crate, not a BPF program.
 # It loads compiled .so files via Mollusk for CU benchmarking.
 
 [dependencies]
 mollusk-svm = "0.10"
-mollusk-svm-bencher = "0.10"
-solana-sdk = "2"
+solana-account = "3"
+solana-pubkey = "4"
+solana-instruction = "3"
+openssl = { version = "0.10", features = ["vendored"] }
 
 [[bench]]
 name = "vault_cu"
