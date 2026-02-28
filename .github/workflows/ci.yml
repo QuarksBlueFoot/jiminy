@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  check:
+    name: Check & Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry + build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      # Check the core jiminy library (no BPF, host target).
+      - name: cargo check (jiminy)
+        run: cargo check -p jiminy
+
+      # Check the example programs (host target, no-entrypoint to skip BPF macros).
+      - name: cargo check (examples, no entrypoint)
+        run: |
+          cargo check -p jiminy-vault --no-default-features
+          cargo check -p jiminy-escrow --no-default-features
+
+      # Check the bench variants (host target, no entrypoint).
+      - name: cargo check (bench programs, no entrypoint)
+        run: |
+          cargo check -p bench-pinocchio-vault --no-default-features
+          cargo check -p bench-jiminy-vault --no-default-features
+
+      # Run tests for the jiminy library.
+      - name: cargo test (jiminy)
+        run: cargo test -p jiminy
+
+  # BPF build job — requires Solana CLI.
+  # Uncomment when you have a Solana toolchain in CI.
+  #
+  # build-sbf:
+  #   name: Build SBF Programs
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - name: Install Solana CLI
+  #       run: |
+  #         sh -c "$(curl -sSfL https://release.anza.xyz/stable/install)"
+  #         echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
+  #     - name: Build SBF programs
+  #       run: |
+  #         cargo build-sbf -p bench-pinocchio-vault
+  #         cargo build-sbf -p bench-jiminy-vault
+  #         cargo build-sbf -p jiminy-vault
+  #         cargo build-sbf -p jiminy-escrow
+  #     - name: Run CU benchmarks
+  #       run: cargo bench -p bench-runner

@@ -1,0 +1,18 @@
+[package]
+name = "bench-runner"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+publish = false
+
+# This is a native (host) crate, not a BPF program.
+# It loads compiled .so files via Mollusk for CU benchmarking.
+
+[dependencies]
+mollusk-svm = "0.10"
+mollusk-svm-bencher = "0.10"
+solana-sdk = "2"
+
+[[bench]]
+name = "vault_cu"
+harness = false

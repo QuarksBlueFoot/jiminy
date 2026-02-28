@@ -125,6 +125,19 @@ impl<'a> SliceCursor<'a> {
         self.pos = end;
         Ok(())
     }
+
+    /// Return the remaining unread portion of the slice from the current position.
+    ///
+    /// This is useful for handing off the rest of instruction data to a
+    /// sub-parser after reading a tag/discriminator byte.
+    #[inline(always)]
+    pub fn data_from_position(&self) -> &'a [u8] {
+        if self.pos >= self.data.len() {
+            &[]
+        } else {
+            &self.data[self.pos..]
+        }
+    }
 }
 
 // ── DataWriter ────────────────────────────────────────────────────────────────

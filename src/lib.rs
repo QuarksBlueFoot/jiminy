@@ -31,11 +31,15 @@
 //! | `check_system_program` | account is the system program |
 //! | `check_executable` | account is an executable program |
 //! | `check_uninitialized` | account has no data yet (anti-reinit) |
+//! | `check_has_one` | stored address field matches account key |
+//! | `check_keys_eq` | two addresses are equal |
 //! | `check_lamports_gte` | account holds at least N lamports |
+//! | `check_rent_exempt` | account holds enough lamports for rent exemption |
 //! | `check_closed` | account has zero lamports and empty data |
 //! | `check_size` | raw data slice is at least N bytes |
 //! | `check_discriminator` | first byte matches expected type tag |
 //! | `check_account` | owner + size + discriminator in one call |
+//! | `rent_exempt_min` | compute minimum lamports for rent exemption |
 //!
 //! # Zero-copy cursors
 //!
@@ -50,9 +54,11 @@
 //!
 //! # Well-known program IDs
 //!
-//! [`programs`] module — `TOKEN`, `TOKEN_2022`, `ASSOCIATED_TOKEN`,
-//! `METADATA`, `BPF_LOADER`, `SYSVAR_CLOCK`, `SYSVAR_RENT`, and more.
+//! [`programs`] module — `SYSTEM`, `TOKEN`, `TOKEN_2022`, `ASSOCIATED_TOKEN`,
+//! `METADATA`, `BPF_LOADER`, `COMPUTE_BUDGET`, `SYSVAR_CLOCK`, `SYSVAR_RENT`,
+//! `SYSVAR_INSTRUCTIONS`.
 
+#[cfg(feature = "programs")]
 pub mod programs;
 
 mod accounts;
@@ -60,13 +66,16 @@ mod bits;
 mod checks;
 mod close;
 mod cursor;
+mod header;
 mod math;
+pub mod prelude;
 
 pub use accounts::AccountList;
 pub use bits::*;
 pub use checks::*;
 pub use close::*;
 pub use cursor::{write_discriminator, zero_init, DataWriter, SliceCursor};
+pub use header::*;
 pub use math::*;
 
 // Re-export pinocchio core types so users only need one import.

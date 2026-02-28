@@ -1,3 +1,25 @@
+[workspace]
+members = [
+    ".",
+    "examples/jiminy-vault",
+    "examples/jiminy-escrow",
+    "bench/pinocchio-vault",
+    "bench/jiminy-vault",
+    "bench/anchor-vault",
+]
+exclude = [
+    "bench/runner",
+]
+resolver = "2"
+
+[workspace.lints.rust]
+unexpected_cfgs = { level = "allow", check-cfg = ['cfg(target_os, values("solana"))','cfg(target_arch, values("bpf"))'] }
+
+[workspace.dependencies]
+pinocchio = { version = "0.10", features = ["cpi"] }
+pinocchio-pubkey = "0.3"
+jiminy = { path = "." }
+
 [package]
 name = "jiminy"
 version = "0.1.0"
@@ -10,11 +32,18 @@ homepage = "https://github.com/BluefootLabs/jiminy"
 readme = "README.md"
 keywords = ["solana", "pinocchio", "bpf", "zero-copy", "anchor"]
 categories = ["no-std", "embedded"]
-exclude = [".github", "*.sh"]
+exclude = [".github", "*.sh", "examples", "bench", "docs", "BENCHMARKS.md"]
 
 [lib]
 name = "jiminy"
 
 [dependencies]
-pinocchio = { version = "0.10", features = ["cpi"] }
-pinocchio-pubkey = "0.3"
+pinocchio = { workspace = true }
+pinocchio-pubkey = { workspace = true }
+
+[features]
+default = ["programs"]
+programs = []
+
+[lints]
+workspace = true

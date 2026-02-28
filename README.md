@@ -19,8 +19,9 @@ that neither pinocchio nor Anchor ever got around to building.
 
 **No allocator. No borsh. No proc macros. BPF-safe.**
 
-Every function is `#[inline(always)]`. At compile time it produces the same
-instructions you'd write by hand, just without the copy-paste.
+Every function is `#[inline(always)]`. Designed to inline away in BPF builds;
+the [benchmark suite](BENCHMARKS.md) is included so you can verify zero overhead
+yourself.
 
 ---
 
@@ -30,6 +31,21 @@ instructions you'd write by hand, just without the copy-paste.
 [dependencies]
 jiminy = "0.1"
 ```
+
+## Quick Start
+
+```rust
+use jiminy::prelude::*;
+```
+
+The prelude re-exports all check functions, macros, cursors, header helpers,
+math utilities, `AccountList`, and the pinocchio core types (`AccountView`,
+`Address`, `ProgramResult`, `ProgramError`). One import, everything you need.
+
+> **No proc macros** is both an advantage and a conscious tradeoff. Less surface
+> area = fewer build surprises = fully auditable. The tradeoff: no auto-generated
+> IDL or client code. For the teams that care about CU budgets and binary size,
+> that's the right call.
 
 ---
 
@@ -249,14 +265,40 @@ to do it.
 
 ## Used in SHIPyard
 
-Jiminy powers the on-chain program registry in [SHIPyard](https://github.com/BluefootLabs/SHIPyard) —
-a platform for building, deploying, and sharing Solana programs. Every
-instruction handler in the project registry uses Jiminy's check functions,
-and SHIPyard's code generator can target Jiminy as a framework option
-when generating programs from IR.
+Jiminy is being used in [SHIPyard](https://github.com/BluefootLabs/SHIPyard) —
+a platform for building, deploying, and sharing Solana programs. The on-chain
+program registry is built with Jiminy's check functions and layout convention,
+and the code generator targets Jiminy as a framework option.
 
-Real usage in a production program is the best test. If something doesn't
-hold up, we'll find it.
+---
+
+## Account Layout Convention
+
+Jiminy ships an opinionated [Account Layout v1](docs/LAYOUT_CONVENTION.md)
+convention — an 8-byte header with discriminator, version, flags, and
+optional `data_len`. Use `write_header` / `check_header` / `header_payload`
+for versioned, evolvable account schemas without proc macros.
+
+See [docs/LAYOUT_CONVENTION.md](docs/LAYOUT_CONVENTION.md) for the full spec
+and a copy-pasteable layout lint test.
+
+---
+
+## Benchmarks
+
+See [BENCHMARKS.md](BENCHMARKS.md) for CU and binary size comparisons
+between raw Pinocchio, Jiminy, and Anchor.
+
+---
+
+## Reference Programs
+
+| Program | What it demonstrates |
+|---------|---------------------|
+| [`examples/jiminy-vault`](examples/jiminy-vault) | Init/deposit/withdraw/close with `AccountList`, cursors, `safe_close` |
+| [`examples/jiminy-escrow`](examples/jiminy-escrow) | Two-party escrow, flag-based state, `check_closed`, ordering guarantees |
+
+Both use the Jiminy Header v1 layout. Fork them as starting templates.
 
 ---
 

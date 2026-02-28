@@ -1,0 +1,19 @@
+[package]
+name = "bench-pinocchio-vault"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "lib"]
+
+[dependencies]
+pinocchio = { workspace = true }
+
+[features]
+default = ["bpf-entrypoint"]
+bpf-entrypoint = []
+
+[lints]
+workspace = true
