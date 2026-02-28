@@ -29,7 +29,7 @@ yourself.
 
 ```toml
 [dependencies]
-jiminy = "0.1"
+jiminy = "0.2"
 ```
 
 ## Quick Start
