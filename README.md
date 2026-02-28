@@ -20,8 +20,8 @@ that neither pinocchio nor Anchor ever got around to building.
 **No allocator. No borsh. No proc macros. BPF-safe.**
 
 Every function is `#[inline(always)]`. Designed to inline away in BPF builds;
-the [benchmark suite](BENCHMARKS.md) is included so you can verify zero overhead
-yourself.
+the [benchmark suite](#benchmarks) shows 3–16 CU of overhead per instruction
+with a smaller binary than hand-written Pinocchio.
 
 ---
 
@@ -286,8 +286,31 @@ and a copy-pasteable layout lint test.
 
 ## Benchmarks
 
-See [BENCHMARKS.md](BENCHMARKS.md) for CU and binary size comparisons
-between raw Pinocchio, Jiminy, and Anchor.
+Comparing a vault program (deposit / withdraw / close) written in raw
+Pinocchio vs the same logic using Jiminy. Measured via
+[Mollusk SVM](https://github.com/anza-xyz/mollusk) on Agave 2.3.
+
+### Compute Units
+
+| Instruction | Pinocchio | Jiminy | Delta |
+|-------------|-----------|--------|-------|
+| Deposit     | 146 CU    | 149 CU | +3    |
+| Withdraw    | 253 CU    | 266 CU | +13   |
+| Close       | 214 CU    | 230 CU | +16   |
+
+### Binary Size (release SBF)
+
+| Program | Size |
+|---------|------|
+| Pinocchio vault | 18.7 KB |
+| Jiminy vault    | 17.4 KB |
+
+Jiminy adds **3–16 CU** of overhead per instruction (a single `sol_log` costs
+~100 CU). The binary is actually **1.3 KB smaller** thanks to pattern
+deduplication from `AccountList` and the check functions.
+
+See [BENCHMARKS.md](BENCHMARKS.md) for full details and instructions to run
+them yourself.
 
 ---
 
