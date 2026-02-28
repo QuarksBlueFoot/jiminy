@@ -1,0 +1,18 @@
+[package]
+name = "bench-anchor-vault"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "lib"]
+
+[dependencies]
+anchor-lang = "0.30"
+
+[features]
+default = []
+
+[lints]
+workspace = true
