@@ -1,5 +1,5 @@
 #![cfg_attr(target_os = "solana", no_std)]
-//! Jiminy vault — same logic as bench-pinocchio-vault, using Jiminy helpers.
+//! Jiminy vault - same logic as bench-pinocchio-vault, using Jiminy helpers.
 //!
 //! Uses the same 1-byte discriminator layout (41 bytes) for a fair CU comparison.
 

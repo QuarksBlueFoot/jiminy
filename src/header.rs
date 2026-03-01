@@ -4,7 +4,7 @@ use pinocchio::error::ProgramError;
 ///
 /// Layout:
 /// - Byte 0: `u8` discriminator (account type tag)
-/// - Byte 1: `u8` version (schema version — bump when layout changes)
+/// - Byte 1: `u8` version (schema version - bump when layout changes)
 /// - Byte 2: `u8` flags (application-defined bitfield)
 /// - Byte 3: `u8` reserved (must be zero)
 /// - Bytes 4–7: `u32` data_len (optional; payload length for variable-size accounts)

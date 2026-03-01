@@ -3,7 +3,7 @@ use pinocchio::{error::ProgramError, Address};
 /// Zero-copy read cursor over a byte slice.
 ///
 /// Tracks the current position and reads typed fields sequentially.
-/// Every read is bounds-checked — you get `AccountDataTooSmall` instead
+/// Every read is bounds-checked: you get `AccountDataTooSmall` instead
 /// of a panic if you read past the end.
 ///
 /// The typical pattern is to skip the discriminator byte and then read
@@ -18,7 +18,7 @@ use pinocchio::{error::ProgramError, Address};
 /// ```
 ///
 /// No alloc. No borsh schema. If the field order in your cursor doesn't
-/// match your on-chain layout, you'll get wrong values — that's the only
+/// match your on-chain layout, you'll get wrong values - that's the only
 /// footgun. Keep a layout comment next to your account struct to avoid it.
 pub struct SliceCursor<'a> {
     data: &'a [u8],
@@ -145,7 +145,7 @@ impl<'a> SliceCursor<'a> {
 /// Zero-copy write cursor over a mutable byte slice.
 ///
 /// Position-tracked and bounds-checked. Use this when initializing a new
-/// account's data layout inside a create instruction — it replaces the
+/// account's data layout inside a create instruction - it replaces the
 /// error-prone pattern of tracking byte offsets by hand.
 ///
 /// ```rust,ignore
@@ -254,13 +254,13 @@ impl<'a> DataWriter<'a> {
 /// Call this immediately after allocating account space (via system program
 /// CPI) and before writing the discriminator or any other fields.
 ///
-/// This matters because Solana reuses account storage — if someone closed an
+/// This matters because Solana reuses account storage: if someone closed an
 /// account and you reallocate it, stale bytes from the previous owner are
 /// still there. Zeroing first prevents programs from accidentally reading
 /// old data through padding or uninitialized fields.
 ///
 /// Anchor does this automatically in its `init` constraint. In pinocchio
-/// you do it explicitly, which is the right call — just don't forget it.
+/// you do it explicitly, which is the right call - just don't forget it.
 ///
 /// ```rust,ignore
 /// // After create_account CPI:

@@ -22,7 +22,7 @@ Measured via [Mollusk SVM](https://github.com/anza-xyz/mollusk) on Agave 2.3.
 | Close       | 214 CU    | 230 CU | +16   |
 
 Jiminy adds **3–16 CU** of overhead per instruction. At these levels the cost
-is negligible — a single `sol_log` call costs ~100 CU.
+is negligible - a single `sol_log` call costs ~100 CU.
 
 ### Binary Size (release SBF)
 

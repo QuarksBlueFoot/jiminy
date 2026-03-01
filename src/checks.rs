@@ -120,7 +120,7 @@ pub fn check_executable(account: &AccountView) -> ProgramResult {
 /// Use this for collateral checks, fee escrow validation, or confirming
 /// an account is above rent-exemption before transferring into it.
 ///
-/// Anchor has no built-in constraint for this — you end up with inline
+/// Anchor has no built-in constraint for this - you end up with inline
 /// comparisons scattered through handler code. Here it's one line.
 #[inline(always)]
 pub fn check_lamports_gte(account: &AccountView, min_lamports: u64) -> ProgramResult {

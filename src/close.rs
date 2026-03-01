@@ -7,9 +7,9 @@ use crate::math::checked_add;
 /// Steps:
 /// 1. Overflow-checked addition of lamports into `destination`.
 /// 2. Zero `account` lamports.
-/// 3. `close_unchecked()` — zeros data and clears the owner field.
+/// 3. `close_unchecked()`: zeros data and clears the owner field.
 ///
-/// Both accounts **must be writable** — caller is responsible for that check.
+/// Both accounts **must be writable** - caller is responsible for that check.
 ///
 /// # Safety
 /// Caller must guarantee no active borrows exist on `account` at call time.

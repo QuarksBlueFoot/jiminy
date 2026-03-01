@@ -32,7 +32,7 @@ use crate::checks::{
 /// let state  = accs.next_account(program_id, STATE_DISC, STATE_LEN)?;
 /// ```
 ///
-/// Same instructions generated at the end — just far less noise.
+/// Same instructions generated at the end - just far less noise.
 pub struct AccountList<'a> {
     accounts: &'a [AccountView],
     pos: usize,
@@ -136,7 +136,7 @@ impl<'a> AccountList<'a> {
 
     /// Consume the next account as a writable state account.
     ///
-    /// Combines `next_account` with a writable check — the most common
+    /// Combines `next_account` with a writable check - the most common
     /// pattern for accounts being modified in an instruction.
     #[inline(always)]
     pub fn next_writable_account(

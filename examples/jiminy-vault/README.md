@@ -9,7 +9,7 @@ A minimal vault program demonstrating Jiminy's safety primitives on top of Pinoc
 | `0` | InitVault | `[signer+writable] payer`, `[writable] vault`, `[] system_program` | `authority: [u8; 32]` |
 | `1` | Deposit | `[signer+writable] depositor`, `[writable] vault` | `amount: u64` |
 | `2` | Withdraw | `[signer] authority`, `[writable] vault`, `[writable] recipient` | `amount: u64` |
-| `3` | CloseVault | `[signer] authority`, `[writable] vault`, `[writable] destination` | — |
+| `3` | CloseVault | `[signer] authority`, `[writable] vault`, `[writable] destination` | - |
 
 ## Account Layout (Jiminy Header v1)
 

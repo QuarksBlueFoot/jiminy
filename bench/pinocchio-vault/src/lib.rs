@@ -1,5 +1,5 @@
 #![cfg_attr(target_os = "solana", no_std)]
-//! Raw pinocchio vault — no Jiminy. Baseline for CU benchmarks.
+//! Raw pinocchio vault - no Jiminy. Baseline for CU benchmarks.
 //!
 //! Same logic as jiminy-vault, but all checks are hand-inlined.
 

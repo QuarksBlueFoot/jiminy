@@ -1,7 +1,7 @@
 use pinocchio::Address;
 use pinocchio_pubkey::pubkey;
 
-/// The system program — where lamports come from and where rent goes.
+/// The system program - where lamports come from and where rent goes.
 pub const SYSTEM: Address = Address::new_from_array([0u8; 32]);
 
 /// SPL Token (original) program.

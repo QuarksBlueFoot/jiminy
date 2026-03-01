@@ -48,7 +48,7 @@ fn process_init_vault(
 
     check_uninitialized(vault)?;
 
-    // Read authority from instruction data — cursor is past the tag byte.
+    // Read authority from instruction data - cursor is past the tag byte.
     let mut args = SliceCursor::new(&ix.data_from_position());
     let authority = args.read_address()?;
 

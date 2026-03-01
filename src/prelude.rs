@@ -12,6 +12,18 @@ pub use crate::checks::{
     rent_exempt_min,
 };
 
+// ── Assert functions (PDA, address, program) ─────────────────────────────────
+pub use crate::asserts::{
+    assert_address, assert_not_initialized, assert_pda, assert_pda_external,
+    assert_pda_with_bump, assert_program, assert_token_program,
+};
+
+// ── Token account readers ────────────────────────────────────────────────────
+pub use crate::token::{
+    token_account_amount, token_account_delegate, token_account_mint, token_account_owner,
+    TOKEN_ACCOUNT_LEN,
+};
+
 // ── Cursors ──────────────────────────────────────────────────────────────────
 pub use crate::cursor::{write_discriminator, zero_init, DataWriter, SliceCursor};
 
