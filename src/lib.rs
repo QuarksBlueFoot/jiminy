@@ -62,6 +62,18 @@
 //! | `token_account_mint` | mint field (bytes 0..32) |
 //! | `token_account_delegate` | delegate field (Option, bytes 72..108) |
 //!
+//! # PDA utilities
+//!
+//! | Macro / Function | What it does |
+//! |---|---|
+//! | `find_pda!` | find canonical PDA + bump via syscall |
+//! | `derive_pda!` | derive PDA with known bump (cheap, ~100 CU) |
+//! | `derive_pda_const!` | derive PDA at compile time |
+//! | `derive_ata` | derive ATA address for wallet + mint |
+//! | `derive_ata_with_program` | derive ATA with explicit token program |
+//! | `derive_ata_with_bump` | derive ATA with known bump (cheap) |
+//! | `derive_ata_const!` | derive ATA at compile time |
+//!
 //! # Zero-copy cursors
 //!
 //! [`SliceCursor`] reads typed fields sequentially from account data.
@@ -90,6 +102,7 @@ mod close;
 mod cursor;
 mod header;
 mod math;
+mod pda;
 pub mod prelude;
 mod token;
 
@@ -101,6 +114,7 @@ pub use close::*;
 pub use cursor::{write_discriminator, zero_init, DataWriter, SliceCursor};
 pub use header::*;
 pub use math::*;
+pub use pda::*;
 pub use token::*;
 
 // Re-export pinocchio core types so users only need one import.

@@ -14,7 +14,7 @@ Byte   Field          Type    Description
 1      version        u8      Schema version - bump when layout changes
 2      flags          u8      Application-defined bitfield (LSB-first)
 3      reserved       u8      Must be zero (future use)
-4–7    data_len       u32     Payload size (LE); 0 for fixed-size accounts
+4-7    data_len       u32     Payload size (LE); 0 for fixed-size accounts
 ──────────────────────────────────────────────────────
 ```
 

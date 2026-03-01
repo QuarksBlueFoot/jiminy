@@ -7,7 +7,7 @@ use pinocchio::error::ProgramError;
 /// - Byte 1: `u8` version (schema version - bump when layout changes)
 /// - Byte 2: `u8` flags (application-defined bitfield)
 /// - Byte 3: `u8` reserved (must be zero)
-/// - Bytes 4–7: `u32` data_len (optional; payload length for variable-size accounts)
+/// - Bytes 4-7: `u32` data_len (optional; payload length for variable-size accounts)
 ///
 /// Total: 8 bytes, naturally aligned.
 pub const HEADER_LEN: usize = 8;
@@ -39,7 +39,7 @@ pub fn write_header(
     data[1] = version;
     data[2] = flags;
     data[3] = 0; // reserved
-    // data_len = 0 (bytes 4–7)
+    // data_len = 0 (bytes 4-7)
     data[4..8].copy_from_slice(&0u32.to_le_bytes());
     Ok(())
 }
@@ -107,7 +107,7 @@ pub fn read_header_flags(data: &[u8]) -> Result<u8, ProgramError> {
     Ok(data[2])
 }
 
-/// Read the `data_len` field (bytes 4–7) from an account header.
+/// Read the `data_len` field (bytes 4-7) from an account header.
 #[inline(always)]
 pub fn read_data_len(data: &[u8]) -> Result<u32, ProgramError> {
     if data.len() < HEADER_LEN {
