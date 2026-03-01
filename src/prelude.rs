@@ -44,7 +44,9 @@ pub use crate::bits::{
 
 // ── Account lifecycle ────────────────────────────────────────────────────────
 pub use crate::close::safe_close;
-
+// -- PDA utilities ────────────────────────────────────────────────────────────
+pub use crate::pda::{derive_ata, derive_ata_with_bump, derive_ata_with_program};
+// Also: find_pda!, derive_pda!, derive_pda_const!, derive_ata_const! (macros, auto-exported)
 // ── Account iteration ────────────────────────────────────────────────────────
 pub use crate::accounts::AccountList;
 

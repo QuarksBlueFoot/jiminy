@@ -131,6 +131,21 @@ These do more than just check a condition. They derive, compare, and return usef
 | `assert_program(account, expected)` | Address match + must be executable |
 | `assert_not_initialized(account)` | Lamports == 0 (account doesn't exist yet) |
 
+### PDA utilities
+
+Macros and helpers for deriving program addresses and ATAs without manual
+seed-array construction.
+
+| Macro / Function | What it does |
+| --- | --- |
+| `find_pda!(program_id, seed1, seed2, ...)` | Find canonical PDA + bump via syscall |
+| `derive_pda!(program_id, bump, seed1, ...)` | Derive PDA with known bump (~100 CU) |
+| `derive_pda_const!(id_bytes, bump, seed1, ...)` | Compile-time PDA derivation |
+| `derive_ata(wallet, mint)` | Derive ATA address + bump |
+| `derive_ata_with_program(wallet, mint, token_prog)` | ATA with explicit token program |
+| `derive_ata_with_bump(wallet, mint, bump)` | ATA with known bump (cheap) |
+| `derive_ata_const!(wallet_bytes, mint_bytes, bump)` | Compile-time ATA derivation |
+
 ### Token account readers
 
 Zero-copy field reads from SPL Token accounts. No deserialization, no borsh,
@@ -203,6 +218,43 @@ let bump = assert_pda(vault, &[b"vault", authority.as_ref()], program_id)?;
 If you already have the bump (read it from account data), use `assert_pda_with_bump`
 to skip the search and save ~1500 CU per bump iteration avoided.
 
+### PDA macros - derive without the boilerplate
+
+Building seed arrays by hand is tedious and error-prone. These macros handle it:
+
+```rust
+// Find canonical bump via syscall (~1500 CU per bump tried)
+let (pda, bump) = find_pda!(program_id, b"vault", authority.as_ref());
+
+// Derive with known bump (~100 CU, no curve check)
+let pda = derive_pda!(program_id, bump, b"vault", authority.as_ref());
+check_pda(vault_account, &pda)?;
+
+// Compile-time derivation (zero runtime cost)
+const VAULT_PDA: Address = derive_pda_const!(PROGRAM_ID_BYTES, BUMP, b"vault", AUTHORITY_BYTES);
+```
+
+### ATA derivation
+
+Deriving Associated Token Account addresses is a three-seed derivation that
+everyone gets wrong at least once. Jiminy handles it:
+
+```rust
+// Find ATA with canonical bump
+let (ata, bump) = derive_ata(wallet.address(), mint.address())?;
+
+// With known bump (cheap)
+let ata = derive_ata_with_bump(wallet.address(), mint.address(), bump);
+
+// Token-2022 variant
+let (ata, bump) = derive_ata_with_program(
+    wallet.address(), mint.address(), &programs::TOKEN_2022
+)?;
+
+// Compile-time
+const MY_ATA: Address = derive_ata_const!(WALLET_BYTES, MINT_BYTES, BUMP);
+```
+
 ### Token account reads without borsh
 
 Need to check a token account's owner or balance? In Anchor you deserialize
@@ -270,7 +322,8 @@ assert_not_initialized(new_vault)?;
 | Borsh required | No | Yes | No |
 | Proc macros | No | Yes | No |
 | Account validation | Manual | `#[account(...)]` constraints | Functions + macros |
-| PDA derivation + bump | Manual syscall | `seeds + bump` constraint | `assert_pda` returns bump |
+| PDA derivation + bump | Manual syscall | `seeds + bump` constraint | `assert_pda` / `find_pda!` / `derive_pda!` |
+| ATA derivation | Manual 3-seed derive | `init_if_needed` | `derive_ata` / `derive_ata_const!` |
 | Token account reads | Manual offset math | `Account<'info, TokenAccount>` | `token_account_owner/amount/mint` |
 | Data reads | Manual index arithmetic | `Account<'info, T>` + borsh | `SliceCursor` |
 | Data writes | Manual index arithmetic | Automatic via borsh | `DataWriter` |
@@ -326,7 +379,7 @@ Pinocchio vs the same logic using Jiminy. Measured via
 | Pinocchio vault | 18.7 KB |
 | Jiminy vault    | 17.4 KB |
 
-Jiminy adds **3–16 CU** of overhead per instruction (a single `sol_log` costs
+Jiminy adds **3-16 CU** of overhead per instruction (a single `sol_log` costs
 ~100 CU). The binary is actually **1.3 KB smaller** thanks to pattern
 deduplication from `AccountList` and the check functions.
 
