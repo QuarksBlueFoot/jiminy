@@ -1,10 +1,10 @@
 #![cfg_attr(target_os = "solana", no_std)]
-//! **jiminy-escrow** — A two-party escrow demonstrating close checks and ordering guarantees.
+//! **jiminy-escrow** - A two-party escrow demonstrating close checks and ordering guarantees.
 //!
 //! Instructions:
-//! - `0`: CreateEscrow — lock lamports until the counterparty accepts or timeout expires
-//! - `1`: AcceptEscrow — counterparty claims the escrowed lamports
-//! - `2`: CancelEscrow — creator reclaims after timeout (or if linked account is closed)
+//! - `0`: CreateEscrow: lock lamports until the counterparty accepts or timeout expires
+//! - `1`: AcceptEscrow: counterparty claims the escrowed lamports
+//! - `2`: CancelEscrow: creator reclaims after timeout (or if linked account is closed)
 
 pub mod processor;
 pub mod state;

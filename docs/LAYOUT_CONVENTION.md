@@ -11,7 +11,7 @@ Every Jiminy-managed account starts with an **8-byte fixed header**:
 Byte   Field          Type    Description
 ──────────────────────────────────────────────────────
 0      discriminator  u8      Account type tag (unique per program)
-1      version        u8      Schema version — bump when layout changes
+1      version        u8      Schema version - bump when layout changes
 2      flags          u8      Application-defined bitfield (LSB-first)
 3      reserved       u8      Must be zero (future use)
 4–7    data_len       u32     Payload size (LE); 0 for fixed-size accounts
@@ -97,7 +97,7 @@ mod layout_tests {
 
     #[test]
     fn vault_layout_stable() {
-        assert_eq!(VAULT_LEN, EXPECTED_LEN, "VAULT_LEN changed — bump VAULT_VERSION");
+        assert_eq!(VAULT_LEN, EXPECTED_LEN, "VAULT_LEN changed - bump VAULT_VERSION");
         assert_eq!(VAULT_VERSION, EXPECTED_VERSION);
     }
 
@@ -116,7 +116,7 @@ mod layout_tests {
 ```
 
 This test will fail CI if someone changes the account size without
-updating the version constant — catching layout drift before it reaches
+updating the version constant - catching layout drift before it reaches
 mainnet.
 
 ## FAQ

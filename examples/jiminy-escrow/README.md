@@ -7,8 +7,8 @@ A two-party escrow program demonstrating close checks and ordering guarantees wi
 | Index | Name | Accounts | Data |
 |-------|------|----------|------|
 | `0` | CreateEscrow | `[signer+writable] creator`, `[writable] escrow`, `[] system_program` | `amount: u64`, `recipient: Address`, `timeout_ts: i64` |
-| `1` | AcceptEscrow | `[signer] recipient`, `[writable] escrow`, `[writable] destination` | — |
-| `2` | CancelEscrow | `[signer] creator`, `[writable] escrow`, `[writable] destination`, `[optional] linked_account` | — |
+| `1` | AcceptEscrow | `[signer] recipient`, `[writable] escrow`, `[writable] destination` | - |
+| `2` | CancelEscrow | `[signer] creator`, `[writable] escrow`, `[writable] destination`, `[optional] linked_account` | - |
 
 ## Account Layout (Jiminy Header v1)
 

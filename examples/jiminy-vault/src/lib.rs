@@ -1,11 +1,11 @@
 #![cfg_attr(target_os = "solana", no_std)]
-//! **jiminy-vault** — A minimal vault program demonstrating Jiminy's safety primitives.
+//! **jiminy-vault** - A minimal vault program demonstrating Jiminy's safety primitives.
 //!
 //! Instructions:
-//! - `0`: InitVault — create a new vault account
-//! - `1`: Deposit — add lamports to a vault
-//! - `2`: Withdraw — remove lamports from a vault
-//! - `3`: CloseVault — close a vault and reclaim rent
+//! - `0`: InitVault: create a new vault account
+//! - `1`: Deposit: add lamports to a vault
+//! - `2`: Withdraw: remove lamports from a vault
+//! - `3`: CloseVault: close a vault and reclaim rent
 
 pub mod processor;
 pub mod state;

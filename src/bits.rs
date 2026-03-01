@@ -57,7 +57,7 @@ pub fn check_any_flag(byte: u8, mask: u8) -> bool {
 }
 
 /// Read the `flags` byte from a data slice at `offset`, returning the
-/// value. Bounds-checked — `AccountDataTooSmall` if offset is out of range.
+/// value. Bounds-checked: `AccountDataTooSmall` if offset is out of range.
 ///
 /// Pairs with `SliceCursor::skip` when you want to jump to a flags byte
 /// at a known position without reading all preceding fields.
@@ -69,7 +69,7 @@ pub fn read_flags_at(data: &[u8], offset: usize) -> Result<u8, ProgramError> {
 }
 
 /// Write `value` to the flags byte at `offset` in a mutable data slice.
-/// Bounds-checked — `AccountDataTooSmall` if offset is out of range.
+/// Bounds-checked: `AccountDataTooSmall` if offset is out of range.
 #[inline(always)]
 pub fn write_flags_at(data: &mut [u8], offset: usize, value: u8) -> Result<(), ProgramError> {
     let byte = data

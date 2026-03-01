@@ -1,4 +1,4 @@
-//! Vault CU benchmark — compares raw Pinocchio vs Jiminy.
+//! Vault CU benchmark - compares raw Pinocchio vs Jiminy.
 //!
 //! Requires compiled .so files. Build them first:
 //!
@@ -85,7 +85,7 @@ fn main() {
 
     println!();
     println!("╔══════════════════════════════════════════════════════════════╗");
-    println!("║         Jiminy Vault CU Benchmark — Pinocchio vs Jiminy    ║");
+    println!("║         Jiminy Vault CU Benchmark - Pinocchio vs Jiminy    ║");
     println!("╚══════════════════════════════════════════════════════════════╝");
     println!();
 
@@ -214,7 +214,7 @@ fn main() {
     for name in ["bench_pinocchio_vault.so", "bench_jiminy_vault.so"] {
         let path = format!("../../target/deploy/{}", name);
         if let Ok(meta) = std::fs::metadata(&path) {
-            println!("  {} — {:.1} KB", name, meta.len() as f64 / 1024.0);
+            println!("  {} - {:.1} KB", name, meta.len() as f64 / 1024.0);
         }
     }
 
@@ -222,7 +222,7 @@ fn main() {
     for name in ["bench_pinocchio_vault.so", "bench_jiminy_vault.so"] {
         let path = format!("../../target/sbf-solana-solana/release/{}", name);
         if let Ok(meta) = std::fs::metadata(&path) {
-            println!("  {} — {:.1} KB (sbf-solana-solana)", name, meta.len() as f64 / 1024.0);
+            println!("  {} - {:.1} KB (sbf-solana-solana)", name, meta.len() as f64 / 1024.0);
         }
     }
     println!();

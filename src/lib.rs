@@ -1,11 +1,11 @@
 #![no_std]
-//! **Jiminy** — Anchor-style safety abstractions for [pinocchio](https://docs.rs/pinocchio) programs.
+//! **Jiminy** - Anchor-style safety abstractions for [pinocchio](https://docs.rs/pinocchio) programs.
 //!
 //! Pinocchio is the engine. Jiminy keeps it honest.
 //!
 //! Zero-copy, no alloc, BPF-safe. Check functions, zero-copy data cursors,
 //! bit flag helpers, well-known program IDs, and iterator-style account
-//! validation — so you can focus on program logic, not boilerplate.
+//! validation - so you can focus on program logic, not boilerplate.
 //!
 //! # Quick-start
 //!
@@ -41,6 +41,27 @@
 //! | `check_account` | owner + size + discriminator in one call |
 //! | `rent_exempt_min` | compute minimum lamports for rent exemption |
 //!
+//! # Assert functions
+//!
+//! | Function | What it does |
+//! |---|---|
+//! | `assert_pda` | derive PDA, verify match, return bump |
+//! | `assert_pda_with_bump` | verify PDA with known bump (cheaper) |
+//! | `assert_pda_external` | same as `assert_pda` for external programs |
+//! | `assert_token_program` | account is SPL Token or Token-2022 |
+//! | `assert_address` | account address matches expected key |
+//! | `assert_program` | address matches + account is executable |
+//! | `assert_not_initialized` | lamports == 0 (account doesn't exist yet) |
+//!
+//! # Token account readers
+//!
+//! | Function | What it reads |
+//! |---|---|
+//! | `token_account_owner` | owner field (bytes 32..64) |
+//! | `token_account_amount` | amount field (bytes 64..72) |
+//! | `token_account_mint` | mint field (bytes 0..32) |
+//! | `token_account_delegate` | delegate field (Option, bytes 72..108) |
+//!
 //! # Zero-copy cursors
 //!
 //! [`SliceCursor`] reads typed fields sequentially from account data.
@@ -54,7 +75,7 @@
 //!
 //! # Well-known program IDs
 //!
-//! [`programs`] module — `SYSTEM`, `TOKEN`, `TOKEN_2022`, `ASSOCIATED_TOKEN`,
+//! [`programs`] module: `SYSTEM`, `TOKEN`, `TOKEN_2022`, `ASSOCIATED_TOKEN`,
 //! `METADATA`, `BPF_LOADER`, `COMPUTE_BUDGET`, `SYSVAR_CLOCK`, `SYSVAR_RENT`,
 //! `SYSVAR_INSTRUCTIONS`.
 
@@ -62,6 +83,7 @@
 pub mod programs;
 
 mod accounts;
+mod asserts;
 mod bits;
 mod checks;
 mod close;
@@ -69,21 +91,24 @@ mod cursor;
 mod header;
 mod math;
 pub mod prelude;
+mod token;
 
 pub use accounts::AccountList;
+pub use asserts::*;
 pub use bits::*;
 pub use checks::*;
 pub use close::*;
 pub use cursor::{write_discriminator, zero_init, DataWriter, SliceCursor};
 pub use header::*;
 pub use math::*;
+pub use token::*;
 
 // Re-export pinocchio core types so users only need one import.
 pub use pinocchio::{error::ProgramError, AccountView, Address, ProgramResult};
 
 // ── Macros ───────────────────────────────────────────────────────────────────
 
-/// Require a boolean condition — return `$err` (converted via `Into`) if false.
+/// Require a boolean condition: return `$err` (converted via `Into`) if false.
 ///
 /// Equivalent to Anchor's `require!`.
 ///

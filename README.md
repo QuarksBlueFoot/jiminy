@@ -6,22 +6,21 @@
 
 **Pinocchio is the engine. Jiminy keeps it honest.**
 
-Writing Solana programs with [pinocchio](https://github.com/anza-xyz/pinocchio)
-is fast — no allocator, no borsh, full control over every byte in every account.
-The tradeoff is that safety checks end up scattered through your handlers. Signer
-check here, owner check there, discriminator byte manually compared somewhere else,
-and an overflow somewhere you forgot to look at.
+If you're writing Solana programs with [pinocchio](https://github.com/anza-xyz/pinocchio),
+you already know the deal. No allocator, no borsh, raw bytes, full control. Insanely
+fast. But every handler ends up with the same boilerplate: signer check, owner check,
+discriminator comparison, overflow math, PDA derivation. Copy paste it enough times
+and something slips through.
 
-Jiminy bundles those checks into composable functions and macros. It doesn't abstract
-away pinocchio — you still work directly with `AccountView`, `Address`, and raw byte
-slices. Jiminy just makes the guard-rail part less repetitive, and adds a few things
-that neither pinocchio nor Anchor ever got around to building.
+Jiminy gives you composable check functions, PDA assertions that return bumps,
+zero-copy token account readers, safe math, and data cursors. All `#[inline(always)]`,
+all `no_std`, all BPF-safe. You're still writing pinocchio. You're just not writing
+the boring parts by hand anymore.
 
-**No allocator. No borsh. No proc macros. BPF-safe.**
+**No allocator. No borsh. No proc macros.**
 
-Every function is `#[inline(always)]`. Designed to inline away in BPF builds;
-the [benchmark suite](#benchmarks) shows 3–16 CU of overhead per instruction
-with a smaller binary than hand-written Pinocchio.
+The [benchmarks](#benchmarks) show 3-16 CU overhead per instruction and a smaller
+binary than hand-rolled pinocchio. Not a typo.
 
 ---
 
@@ -29,7 +28,7 @@ with a smaller binary than hand-written Pinocchio.
 
 ```toml
 [dependencies]
-jiminy = "0.2"
+jiminy = "0.3"
 ```
 
 ## Quick Start
@@ -38,14 +37,9 @@ jiminy = "0.2"
 use jiminy::prelude::*;
 ```
 
-The prelude re-exports all check functions, macros, cursors, header helpers,
-math utilities, `AccountList`, and the pinocchio core types (`AccountView`,
-`Address`, `ProgramResult`, `ProgramError`). One import, everything you need.
-
-> **No proc macros** is both an advantage and a conscious tradeoff. Less surface
-> area = fewer build surprises = fully auditable. The tradeoff: no auto-generated
-> IDL or client code. For the teams that care about CU budgets and binary size,
-> that's the right call.
+The prelude gives you everything: check functions, assert functions, token
+account readers, macros, cursors, math, `AccountList`, and the pinocchio
+core types. One import line.
 
 ---
 
@@ -114,14 +108,48 @@ fn process_transfer(
 | `check_pda(account, expected)` | `seeds + bump` | Address must match the derived PDA |
 | `check_system_program(account)` | `Program<System>` | Must be the system program |
 | `check_executable(account)` | `executable` | Must be an executable program |
-| `check_uninitialized(account)` | `init` | Data must be empty — prevents reinit attacks |
+| `check_uninitialized(account)` | `init` | Data must be empty (anti-reinit) |
 | `check_has_one(stored, account)` | `has_one` | Stored address field must match account key |
 | `check_rent_exempt(account)` | `rent_exempt` | Must hold enough lamports to be rent-exempt |
 | `check_lamports_gte(account, min)` | `constraint` | Must hold at least `min` lamports |
 | `check_closed(account)` | `close` | Must have zero lamports and empty data |
-| `check_size(data, min_len)` | — | Raw slice is at least N bytes |
+| `check_size(data, min_len)` | | Raw slice is at least N bytes |
 | `check_discriminator(data, expected)` | `discriminator` | First byte must match type tag |
 | `check_account(account, id, disc, len)` | composite | Owner + size + discriminator in one call |
+
+### Assert functions
+
+These do more than just check a condition. They derive, compare, and return useful data.
+
+| Function | What it does |
+| --- | --- |
+| `assert_pda(account, seeds, program_id)` | Derive PDA, verify match, **return bump** |
+| `assert_pda_with_bump(account, seeds, bump, id)` | Verify PDA with known bump (way cheaper) |
+| `assert_pda_external(account, seeds, id)` | Same as `assert_pda` for external program PDAs |
+| `assert_token_program(account)` | Must be SPL Token *or* Token-2022 |
+| `assert_address(account, expected)` | Account address must match exactly |
+| `assert_program(account, expected)` | Address match + must be executable |
+| `assert_not_initialized(account)` | Lamports == 0 (account doesn't exist yet) |
+
+### Token account readers
+
+Zero-copy field reads from SPL Token accounts. No deserialization, no borsh,
+just pointer math into the 165-byte layout.
+
+| Function | What it reads |
+| --- | --- |
+| `token_account_owner(account)` | Owner address (bytes 32..64) |
+| `token_account_amount(account)` | Token balance as u64 (bytes 64..72) |
+| `token_account_mint(account)` | Mint address (bytes 0..32) |
+| `token_account_delegate(account)` | Optional delegate address |
+
+```rust
+let owner = token_account_owner(user_token)?;
+require_keys_eq!(owner, authority.address(), ProgramError::InvalidArgument);
+
+let amount = token_account_amount(user_token)?;
+require_gte!(amount, min_collateral, MyError::Undercollateralized);
+```
 
 ### Macros
 
@@ -136,8 +164,8 @@ fn process_transfer(
 | `require_lte!(a, b, err)` | `require_lte!` | `a <= b` |
 | `require_keys_eq!(a, b, err)` | `require_keys_eq!` | Two `Address` values must be equal |
 | `require_keys_neq!(a, b, err)` | `require_keys_neq!` | Two `Address` values must differ |
-| `require_accounts_ne!(a, b, err)` | — | Two accounts must have different addresses |
-| `require_flag!(byte, n, err)` | — | Bit `n` must be set in `byte` |
+| `require_accounts_ne!(a, b, err)` | | Two accounts must have different addresses |
+| `require_flag!(byte, n, err)` | | Bit `n` must be set in `byte` |
 
 ### Math
 
@@ -156,20 +184,42 @@ fn process_transfer(
 
 ---
 
-## What Anchor doesn't give you
+## Things you can't do in Anchor
 
-Anchor is good at what it does. But once you step off the borsh treadmill and
-go zero-copy, a few things fall off the table. These are the gaps we built
-Jiminy to fill.
+Not a knock on Anchor. Different tool, different abstraction level. But once
+you're at the pinocchio level, you lose some things. Jiminy puts them back.
 
-### `SliceCursor` — field reads without the arithmetic
+### `assert_pda` - derive and verify with bump returned
 
-Reading fields from raw account data in pinocchio usually means keeping byte
-offsets in your head or in constants, then slicing manually. Fine for one or two
-fields, annoying for five, and a footgun when you change the layout and forget
-to update an offset three functions away.
+Anchor derives PDAs behind proc macros. In pinocchio you're calling syscalls
+manually and managing bumps yourself. `assert_pda` does the derivation, checks
+the match, and hands you the bump for storage or CPI signing.
 
-`SliceCursor` tracks the position for you:
+```rust
+let bump = assert_pda(vault, &[b"vault", authority.as_ref()], program_id)?;
+// bump is ready for CPI or storage
+```
+
+If you already have the bump (read it from account data), use `assert_pda_with_bump`
+to skip the search and save ~1500 CU per bump iteration avoided.
+
+### Token account reads without borsh
+
+Need to check a token account's owner or balance? In Anchor you deserialize
+the whole thing. Here you just read the bytes you need.
+
+```rust
+let owner = token_account_owner(user_token)?;
+let amount = token_account_amount(user_token)?;
+let mint = token_account_mint(user_token)?;
+```
+
+Zero-copy reads from the 165-byte SPL layout. No alloc, no schema.
+
+### `SliceCursor` - field reads without the arithmetic
+
+Reading fields from raw account data in pinocchio means keeping byte offsets
+in your head. `SliceCursor` tracks the position for you:
 
 ```rust
 let data = account.try_borrow()?;
@@ -177,19 +227,11 @@ let mut cur = SliceCursor::new(&data[1..]); // skip discriminator
 let balance   = cur.read_u64()?;
 let authority = cur.read_address()?;
 let is_locked = cur.read_bool()?;
-let padding   = cur.skip(3)?;
 ```
 
-No alloc. No schema. If you run off the end of the buffer you get
-`AccountDataTooSmall`, not a panic or silent garbage.
+Run off the end of the buffer and you get `AccountDataTooSmall`, not a panic.
 
-Supported reads: `u8`, `u16`, `u32`, `u64`, `i64`, `bool`, `Address`, `skip`.
-
-### `DataWriter` — field writes without the arithmetic
-
-The write-side complement to `SliceCursor`. Use it when initializing account
-data inside a create instruction. Same idea — position-tracked, bounds-checked,
-every write little-endian.
+### `DataWriter` - same thing for writes
 
 ```rust
 let mut raw = new_account.try_borrow_mut()?;
@@ -199,46 +241,24 @@ w.write_u64(0)?;               // initial balance
 w.write_address(&authority)?;  // 32-byte authority key
 ```
 
-The `write_discriminator` helper is separate so it's explicit that byte zero
-is special — it's the type tag that every other check function looks at first.
+### `require_accounts_ne!` - source != destination
 
-### `require_accounts_ne!` — source ≠ destination
-
-One of the oldest classes of token program bugs: pass the same account as both
-source and destination, end up with corrupted state or a free mint. Anchor doesn't
-have a built-in constraint for this. You'd need a custom constraint or an inline
-`if source.key() == destination.key() { return err; }`.
+Classic token program bug: same account as source and dest. Anchor doesn't
+have a built-in for this.
 
 ```rust
 require_accounts_ne!(source_vault, dest_vault, MyError::SameAccount);
 ```
 
-One line. Runs before you touch any balances.
+### `assert_not_initialized` - the account shouldn't exist yet
 
-### `check_lamports_gte` — collateral and fee floors
-
-```rust
-// Verify the collateral account holds enough before accepting a position
-check_lamports_gte(collateral, required_collateral_lamports)?;
-```
-
-Anchor's constraint system doesn't expose lamport checks directly. You'd write
-a custom constraint or inline the comparison. Here it's a named function with
-an obvious error return.
-
-### `check_closed` — verify a previous close actually happened
-
-In CPI-heavy programs you sometimes need to confirm that an account was fully
-closed by an earlier instruction before you proceed — whether that's reusing the
-address, completing a multi-step flow, or enforcing ordering guarantees.
+Different from `check_uninitialized` (which checks empty data). This checks
+lamports == 0, meaning the account hasn't been funded on-chain. Useful for
+create-if-not-exists patterns.
 
 ```rust
-// Confirm the escrow was already closed before releasing collateral
-check_closed(old_escrow)?;
+assert_not_initialized(new_vault)?;
 ```
-
-Zero lamports and empty data. If either condition isn't met, you get
-`InvalidAccountData` and stop.
 
 ---
 
@@ -250,32 +270,33 @@ Zero lamports and empty data. If either condition isn't met, you get
 | Borsh required | No | Yes | No |
 | Proc macros | No | Yes | No |
 | Account validation | Manual | `#[account(...)]` constraints | Functions + macros |
+| PDA derivation + bump | Manual syscall | `seeds + bump` constraint | `assert_pda` returns bump |
+| Token account reads | Manual offset math | `Account<'info, TokenAccount>` | `token_account_owner/amount/mint` |
 | Data reads | Manual index arithmetic | `Account<'info, T>` + borsh | `SliceCursor` |
 | Data writes | Manual index arithmetic | Automatic via borsh | `DataWriter` |
 | Overflow-safe math | Manual | Built-in | `checked_add/sub/mul` |
-| Source ≠ dest guard | Manual | Not built-in | `require_accounts_ne!` |
-| Lamport floor check | Manual | Not built-in | `check_lamports_gte` |
-| Close verification | Manual | Not built-in | `check_closed` |
+| Source != dest guard | Manual | Not built-in | `require_accounts_ne!` |
+| Token program check | Manual | `Program<Token>` | `assert_token_program` (handles both SPL + 2022) |
+| Existence check | Manual | Not built-in | `assert_not_initialized` |
 
-The point isn't that Anchor is bad — it's that once you're working at the
-pinocchio level, you shouldn't have to give up composable safety primitives
-to do it.
+Anchor isn't bad. But once you're at the pinocchio level, you shouldn't have to
+give up composable safety primitives.
 
 ---
 
 ## Used in SHIPyard
 
-Jiminy is being used in [SHIPyard](https://github.com/BluefootLabs/SHIPyard) —
-a platform for building, deploying, and sharing Solana programs. The on-chain
-program registry is built with Jiminy's check functions and layout convention,
-and the code generator targets Jiminy as a framework option.
+Jiminy powers the on-chain program registry in
+[SHIPyard](https://github.com/BluefootLabs/SHIPyard), a platform for building,
+deploying, and sharing Solana programs. The code generator targets Jiminy as a
+framework option.
 
 ---
 
 ## Account Layout Convention
 
 Jiminy ships an opinionated [Account Layout v1](docs/LAYOUT_CONVENTION.md)
-convention — an 8-byte header with discriminator, version, flags, and
+convention: an 8-byte header with discriminator, version, flags, and
 optional `data_len`. Use `write_header` / `check_header` / `header_payload`
 for versioned, evolvable account schemas without proc macros.
 
@@ -330,7 +351,7 @@ Both use the Jiminy Header v1 layout. Fork them as starting templates.
 Built by [MoonManQuark](https://x.com/moonmanquark) / [Bluefoot Labs](https://github.com/BluefootLabs).
 
 If jiminy has saved you some debugging time, donations are welcome
-at `SolanaDevDao.sol` — it goes toward keeping development going.
+at `SolanaDevDao.sol` - it goes toward keeping development going.
 
 ---
 
@@ -338,5 +359,5 @@ at `SolanaDevDao.sol` — it goes toward keeping development going.
 
 Apache-2.0. See [LICENSE](LICENSE).
 
-pinocchio is also Apache-2.0 — [anza-xyz/pinocchio](https://github.com/anza-xyz/pinocchio).
+pinocchio is also Apache-2.0: [anza-xyz/pinocchio](https://github.com/anza-xyz/pinocchio).
 Apache wrapping Apache, all the way down.
