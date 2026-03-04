@@ -3,6 +3,8 @@ use pinocchio::{error::ProgramError, AccountView, Address};
 use crate::checks::{
     check_account, check_executable, check_signer, check_system_program, check_writable,
 };
+use crate::token::{check_token_account_mint, check_token_account_owner, TOKEN_ACCOUNT_LEN};
+use crate::mint::MINT_LEN;
 
 /// Iterator-style account accessor with inline constraint checks.
 ///
@@ -159,6 +161,115 @@ impl<'a> AccountList<'a> {
     pub fn next_executable(&mut self) -> Result<&'a AccountView, ProgramError> {
         let acc = self.next()?;
         check_executable(acc)?;
+        Ok(acc)
+    }
+
+    /// Consume the next account as a writable signer state account.
+    ///
+    /// Combines signer + writable + ownership + size + discriminator checks.
+    /// The full equivalent of Anchor's `#[account(mut, signer)]` for a
+    /// program-owned state account.
+    ///
+    /// ```rust,ignore
+    /// let state = accs.next_signer_writable_account(program_id, STATE_DISC, STATE_LEN)?;
+    /// ```
+    #[inline(always)]
+    pub fn next_signer_writable_account(
+        &mut self,
+        program_id: &Address,
+        discriminator: u8,
+        min_len: usize,
+    ) -> Result<&'a AccountView, ProgramError> {
+        let acc = self.next()?;
+        check_signer(acc)?;
+        check_writable(acc)?;
+        check_account(acc, program_id, discriminator, min_len)?;
+        Ok(acc)
+    }
+
+    /// Consume the next account as a validated token account.
+    ///
+    /// Verifies: data size ≥ 165, mint matches, owner matches. This is
+    /// the zero-copy equivalent of Anchor's:
+    /// ```text
+    /// #[account(token::mint = expected_mint, token::authority = expected_owner)]
+    /// ```
+    ///
+    /// ```rust,ignore
+    /// let user_token = accs.next_token_account(&usdc_mint, user.address())?;
+    /// ```
+    #[inline(always)]
+    pub fn next_token_account(
+        &mut self,
+        expected_mint: &Address,
+        expected_owner: &Address,
+    ) -> Result<&'a AccountView, ProgramError> {
+        let acc = self.next()?;
+        // Verify data is large enough for a token account.
+        let data = acc.try_borrow()?;
+        if data.len() < TOKEN_ACCOUNT_LEN {
+            return Err(ProgramError::AccountDataTooSmall);
+        }
+        drop(data);
+        check_token_account_mint(acc, expected_mint)?;
+        check_token_account_owner(acc, expected_owner)?;
+        Ok(acc)
+    }
+
+    /// Consume the next account as a validated mint.
+    ///
+    /// Verifies: data size ≥ 82 and owned by the expected token program.
+    ///
+    /// ```rust,ignore
+    /// let mint = accs.next_mint(&programs::TOKEN)?;
+    /// ```
+    #[inline(always)]
+    pub fn next_mint(
+        &mut self,
+        expected_token_program: &Address,
+    ) -> Result<&'a AccountView, ProgramError> {
+        let acc = self.next()?;
+        if !acc.owned_by(expected_token_program) {
+            return Err(ProgramError::IncorrectProgramId);
+        }
+        let data = acc.try_borrow()?;
+        if data.len() < MINT_LEN {
+            return Err(ProgramError::AccountDataTooSmall);
+        }
+        Ok(acc)
+    }
+
+    /// Consume the next account and verify it is the Clock sysvar.
+    ///
+    /// ```rust,ignore
+    /// let clock = accs.next_clock()?;
+    /// let (slot, timestamp) = jiminy::sysvar::read_clock(clock)?;
+    /// ```
+    #[cfg(feature = "programs")]
+    #[inline(always)]
+    pub fn next_clock(&mut self) -> Result<&'a AccountView, ProgramError> {
+        let acc = self.next()?;
+        if *acc.address() != crate::programs::SYSVAR_CLOCK {
+            return Err(ProgramError::InvalidArgument);
+        }
+        Ok(acc)
+    }
+
+    /// Consume the next account and verify it is the Sysvar Instructions account.
+    ///
+    /// Required for CPI guard checks (`check_no_cpi_caller`).
+    ///
+    /// ```rust,ignore
+    /// let sysvar_ix = accs.next_sysvar_instructions()?;
+    /// jiminy::cpi_guard::check_no_cpi_caller(sysvar_ix, program_id)?;
+    /// ```
+    #[cfg(feature = "programs")]
+    #[inline(always)]
+    pub fn next_sysvar_instructions(&mut self) -> Result<&'a AccountView, ProgramError> {
+        let acc = self.next()?;
+        if *acc.address() != crate::programs::SYSVAR_INSTRUCTIONS {
+            return Err(ProgramError::InvalidArgument);
+        }
         Ok(acc)
     }
 }

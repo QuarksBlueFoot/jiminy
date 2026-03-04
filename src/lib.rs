@@ -99,12 +99,19 @@ mod asserts;
 mod bits;
 mod checks;
 mod close;
+pub mod cpi_guard;
 mod cursor;
 mod header;
 mod math;
+mod mint;
 mod pda;
 pub mod prelude;
+pub mod slippage;
+pub mod state;
+mod sysvar;
+mod time;
 mod token;
+pub mod token_2022;
 
 pub use accounts::AccountList;
 pub use asserts::*;
@@ -114,7 +121,10 @@ pub use close::*;
 pub use cursor::{write_discriminator, zero_init, DataWriter, SliceCursor};
 pub use header::*;
 pub use math::*;
+pub use mint::*;
 pub use pda::*;
+pub use sysvar::*;
+pub use time::*;
 pub use token::*;
 
 // Re-export pinocchio core types so users only need one import.

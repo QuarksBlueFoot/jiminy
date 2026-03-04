@@ -191,3 +191,101 @@ pub fn check_closed(account: &AccountView) -> ProgramResult {
     }
     Ok(())
 }
+
+// ── Instruction Data Validation ──────────────────────────────────────────────
+
+/// Verify instruction data is exactly the expected length.
+///
+/// Rejects both too-short (missing fields) and too-long (trailing data)
+/// instruction payloads. Trailing data is a common attack vector for
+/// passing extra parameters your program doesn't expect.
+///
+/// ```rust,ignore
+/// check_instruction_data_len(instruction_data, 9)?; // 1 tag + 8 amount
+/// ```
+#[inline(always)]
+pub fn check_instruction_data_len(data: &[u8], expected_len: usize) -> ProgramResult {
+    if data.len() != expected_len {
+        return Err(ProgramError::InvalidInstructionData);
+    }
+    Ok(())
+}
+
+/// Verify instruction data has at least N bytes.
+///
+/// More lenient than `check_instruction_data_len` — allows trailing data
+/// for forward compatibility. Use this when your instruction format may
+/// be extended in future versions.
+///
+/// ```rust,ignore
+/// check_instruction_data_min(instruction_data, 9)?;
+/// ```
+#[inline(always)]
+pub fn check_instruction_data_min(data: &[u8], min_len: usize) -> ProgramResult {
+    if data.len() < min_len {
+        return Err(ProgramError::InvalidInstructionData);
+    }
+    Ok(())
+}
+
+// ── Account Uniqueness ───────────────────────────────────────────────────────
+
+/// Verify two accounts have different addresses.
+///
+/// Function version of `require_accounts_ne!` — takes `&AccountView` directly
+/// so you don't need the macro for simple two-account checks.
+///
+/// ```rust,ignore
+/// check_accounts_unique_2(source, destination)?;
+/// ```
+#[inline(always)]
+pub fn check_accounts_unique_2(a: &AccountView, b: &AccountView) -> ProgramResult {
+    if a.address() == b.address() {
+        return Err(ProgramError::InvalidArgument);
+    }
+    Ok(())
+}
+
+/// Verify three accounts all have different addresses.
+///
+/// Covers the common DeFi pattern: source ≠ destination ≠ fee_account.
+/// Checks all three pairs: a≠b, a≠c, b≠c.
+///
+/// ```rust,ignore
+/// check_accounts_unique_3(source, destination, fee_account)?;
+/// ```
+#[inline(always)]
+pub fn check_accounts_unique_3(
+    a: &AccountView,
+    b: &AccountView,
+    c: &AccountView,
+) -> ProgramResult {
+    if a.address() == b.address()
+        || a.address() == c.address()
+        || b.address() == c.address()
+    {
+        return Err(ProgramError::InvalidArgument);
+    }
+    Ok(())
+}
+
+/// Verify the header version byte (`data[1]`) meets a minimum version.
+///
+/// Standalone version of the check inside `check_header`. Use this when
+/// you've already validated the discriminator separately and just need
+/// the version gate.
+///
+/// ```rust,ignore
+/// let data = account.try_borrow()?;
+/// check_version(&data, 2)?; // requires version >= 2
+/// ```
+#[inline(always)]
+pub fn check_version(data: &[u8], min_version: u8) -> ProgramResult {
+    if data.len() < 2 {
+        return Err(ProgramError::AccountDataTooSmall);
+    }
+    if data[1] < min_version {
+        return Err(ProgramError::InvalidAccountData);
+    }
+    Ok(())
+}

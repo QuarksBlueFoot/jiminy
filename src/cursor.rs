@@ -126,6 +126,59 @@ impl<'a> SliceCursor<'a> {
         Ok(())
     }
 
+    #[inline(always)]
+    pub fn read_i8(&mut self) -> Result<i8, ProgramError> {
+        Ok(self.read_u8()? as i8)
+    }
+
+    #[inline(always)]
+    pub fn read_i16(&mut self) -> Result<i16, ProgramError> {
+        let end = self.pos + 2;
+        if end > self.data.len() {
+            return Err(ProgramError::AccountDataTooSmall);
+        }
+        let val = i16::from_le_bytes(self.data[self.pos..end].try_into().unwrap());
+        self.pos = end;
+        Ok(val)
+    }
+
+    #[inline(always)]
+    pub fn read_i32(&mut self) -> Result<i32, ProgramError> {
+        let end = self.pos + 4;
+        if end > self.data.len() {
+            return Err(ProgramError::AccountDataTooSmall);
+        }
+        let val = i32::from_le_bytes(self.data[self.pos..end].try_into().unwrap());
+        self.pos = end;
+        Ok(val)
+    }
+
+    /// Read a u128 (16 bytes, little-endian). Essential for DeFi price
+    /// accumulators, LP math, and accumulated fee fields.
+    #[inline(always)]
+    pub fn read_u128(&mut self) -> Result<u128, ProgramError> {
+        let end = self.pos + 16;
+        if end > self.data.len() {
+            return Err(ProgramError::AccountDataTooSmall);
+        }
+        let val = u128::from_le_bytes(self.data[self.pos..end].try_into().unwrap());
+        self.pos = end;
+        Ok(val)
+    }
+
+    /// Read an i128 (16 bytes, little-endian). For PnL tracking and
+    /// signed price deltas.
+    #[inline(always)]
+    pub fn read_i128(&mut self) -> Result<i128, ProgramError> {
+        let end = self.pos + 16;
+        if end > self.data.len() {
+            return Err(ProgramError::AccountDataTooSmall);
+        }
+        let val = i128::from_le_bytes(self.data[self.pos..end].try_into().unwrap());
+        self.pos = end;
+        Ok(val)
+    }
+
     /// Return the remaining unread portion of the slice from the current position.
     ///
     /// This is useful for handing off the rest of instruction data to a
@@ -137,6 +190,24 @@ impl<'a> SliceCursor<'a> {
         } else {
             &self.data[self.pos..]
         }
+    }
+
+    /// Create a cursor for instruction data with minimum length validation.
+    ///
+    /// Returns an error if `data.len() < min_len`. Reinforces the pattern
+    /// of validating instruction data length before parsing.
+    ///
+    /// ```rust,ignore
+    /// let mut cur = SliceCursor::from_instruction(instruction_data, 9)?;
+    /// let tag = cur.read_u8()?;
+    /// let amount = cur.read_u64()?;
+    /// ```
+    #[inline(always)]
+    pub fn from_instruction(data: &'a [u8], min_len: usize) -> Result<Self, ProgramError> {
+        if data.len() < min_len {
+            return Err(ProgramError::InvalidInstructionData);
+        }
+        Ok(Self { data, pos: 0 })
     }
 }
 
@@ -242,6 +313,57 @@ impl<'a> DataWriter<'a> {
             return Err(ProgramError::AccountDataTooSmall);
         }
         self.data[self.pos..end].copy_from_slice(addr.as_array());
+        self.pos = end;
+        Ok(())
+    }
+
+    #[inline(always)]
+    pub fn write_i8(&mut self, val: i8) -> Result<(), ProgramError> {
+        self.write_u8(val as u8)
+    }
+
+    #[inline(always)]
+    pub fn write_i16(&mut self, val: i16) -> Result<(), ProgramError> {
+        let end = self.pos + 2;
+        if end > self.data.len() {
+            return Err(ProgramError::AccountDataTooSmall);
+        }
+        self.data[self.pos..end].copy_from_slice(&val.to_le_bytes());
+        self.pos = end;
+        Ok(())
+    }
+
+    #[inline(always)]
+    pub fn write_i32(&mut self, val: i32) -> Result<(), ProgramError> {
+        let end = self.pos + 4;
+        if end > self.data.len() {
+            return Err(ProgramError::AccountDataTooSmall);
+        }
+        self.data[self.pos..end].copy_from_slice(&val.to_le_bytes());
+        self.pos = end;
+        Ok(())
+    }
+
+    /// Write a u128 (16 bytes, little-endian).
+    #[inline(always)]
+    pub fn write_u128(&mut self, val: u128) -> Result<(), ProgramError> {
+        let end = self.pos + 16;
+        if end > self.data.len() {
+            return Err(ProgramError::AccountDataTooSmall);
+        }
+        self.data[self.pos..end].copy_from_slice(&val.to_le_bytes());
+        self.pos = end;
+        Ok(())
+    }
+
+    /// Write an i128 (16 bytes, little-endian).
+    #[inline(always)]
+    pub fn write_i128(&mut self, val: i128) -> Result<(), ProgramError> {
+        let end = self.pos + 16;
+        if end > self.data.len() {
+            return Err(ProgramError::AccountDataTooSmall);
+        }
+        self.data[self.pos..end].copy_from_slice(&val.to_le_bytes());
         self.pos = end;
         Ok(())
     }
