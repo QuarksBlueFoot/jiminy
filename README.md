@@ -23,7 +23,7 @@ parts by hand anymore.
 
 **No allocator. No borsh. No proc macros. No compromises.**
 
-The [benchmarks](#benchmarks) show 3-16 CU overhead per instruction and a smaller
+The [benchmarks](#benchmarks) show 7-14 CU overhead per instruction and a smaller
 binary than hand-rolled pinocchio. Not a typo.
 
 ---
@@ -474,20 +474,40 @@ Pinocchio vs the same logic using Jiminy. Measured via
 
 | Instruction | Pinocchio | Jiminy | Delta |
 |-------------|-----------|--------|-------|
-| Deposit     | 146 CU    | 149 CU | +3    |
-| Withdraw    | 253 CU    | 266 CU | +13   |
-| Close       | 214 CU    | 230 CU | +16   |
+| Deposit     | 147 CU    | 154 CU | +7    |
+| Withdraw    | 254 CU    | 266 CU | +12   |
+| Close       | 215 CU    | 228 CU | +13   |
+| Guarded Withdraw | 567 CU | 581 CU | +14 |
+
+**Guarded Withdraw** exercises the new DeFi safety modules: `check_nonzero`,
+`check_min_amount`, `check_accounts_unique_3`, `check_instruction_data_min`,
+and `checked_mul_div` for a 0.3% fee calculation.
+
+### Security Demo: Missing Signer Check
+
+The benchmark includes a `vuln_withdraw` that "forgot" the `is_signer()` check.
+An attacker reads a real user's vault on-chain, passes the stored authority pubkey
+(unsigned) and the real vault, and calls withdraw. All other checks pass -- the
+vault IS owned by the program. **2 SOL drained.**
+
+| Program | CU | Result |
+|---------|----|--------|
+| Pinocchio | 211 CU | **EXPLOITED** -- attacker drains 2 SOL |
+| Jiminy    |  78 CU | **SAFE** -- `next_signer()` rejects unsigned authority |
+
+In Jiminy, the signer check is bundled into `accs.next_signer()` -- there's no
+separate line to forget.
 
 ### Binary Size (release SBF)
 
 | Program | Size |
 |---------|------|
-| Pinocchio vault | 18.7 KB |
-| Jiminy vault    | 17.4 KB |
+| Pinocchio vault | 27.4 KB |
+| Jiminy vault    | 26.5 KB |
 
-Jiminy adds **3-16 CU** of overhead per instruction (a single `sol_log` costs
-~100 CU). The binary is actually **1.3 KB smaller** thanks to pattern
-deduplication from `AccountList` and the check functions.
+Jiminy adds **7-14 CU** of overhead per instruction (a single `sol_log` costs
+~100 CU). The binary is **0.9 KB smaller** thanks to pattern deduplication
+from `AccountList` and the check functions.
 
 See [BENCHMARKS.md](BENCHMARKS.md) for full details and instructions to run
 them yourself.
