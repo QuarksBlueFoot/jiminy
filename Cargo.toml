@@ -22,13 +22,13 @@ jiminy = { path = "." }
 
 [package]
 name = "jiminy"
-version = "0.3.0"
+version = "0.3.1"
 edition = "2021"
 license = "Apache-2.0"
 authors = ["MoonManQuark"]
-description = "Anchor-style safety checks for pinocchio programs. Token-2022 screening, CPI guards, DeFi math, slippage protection. Zero-copy, no_std, BPF-safe."
-repository = "https://github.com/BluefootLabs/jiminy"
-homepage = "https://github.com/BluefootLabs/jiminy"
+description = "Complete safety toolkit for pinocchio Solana programs. Account checks, token/mint readers, Token-2022 extension screening, CPI reentrancy guards, DeFi math (u128), slippage protection, time/deadline checks, state machines, PDA utilities. Zero-copy, no_std, no proc macros."
+repository = "https://github.com/QuarksBlueFoot/jiminy"
+homepage = "https://github.com/QuarksBlueFoot/jiminy"
 readme = "README.md"
 keywords = ["solana", "pinocchio", "bpf", "zero-copy", "anchor"]
 categories = ["no-std", "embedded"]
