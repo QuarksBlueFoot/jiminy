@@ -9,7 +9,7 @@
 //!
 //! ```rust,ignore
 //! // In your Cargo.toml:
-//! // jiminy = { version = "0.6", features = ["log"] }
+//! // jiminy = { version = "0.7", features = ["log"] }
 //!
 //! use jiminy::log::*;
 //!

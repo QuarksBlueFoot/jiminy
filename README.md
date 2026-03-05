@@ -32,7 +32,7 @@ binary than hand-rolled pinocchio. Not a typo.
 
 ```toml
 [dependencies]
-jiminy = "0.6"
+jiminy = "0.7"
 ```
 
 ## Adding Jiminy to an existing Pinocchio project
@@ -44,7 +44,7 @@ Already using pinocchio directly? You have two options:
 ```toml
 [dependencies]
 pinocchio = "0.10"
-jiminy = "0.6"
+jiminy = "0.7"
 ```
 
 This works fine. Cargo deduplicates the pinocchio crate as long as versions are
@@ -55,7 +55,7 @@ imports alongside them.
 
 ```toml
 [dependencies]
-jiminy = "0.6"
+jiminy = "0.7"
 ```
 
 Jiminy re-exports the entire pinocchio crate, plus `pinocchio-system` and
@@ -478,7 +478,7 @@ Zero-alloc diagnostic logging behind the `log` feature flag. Uses the raw
 `sol_log` syscall — no extra deps.
 
 ```toml
-jiminy = { version = "0.6", features = ["log"] }
+jiminy = { version = "0.7", features = ["log"] }
 ```
 
 | Function | What it logs |
