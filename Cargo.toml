@@ -18,11 +18,13 @@ unexpected_cfgs = { level = "allow", check-cfg = ['cfg(target_os, values("solana
 [workspace.dependencies]
 pinocchio = { version = "0.10", features = ["cpi"] }
 pinocchio-pubkey = "0.3"
+pinocchio-system = "0.5"
+pinocchio-token = "0.5"
 jiminy = { path = "." }
 
 [package]
 name = "jiminy"
-version = "0.4.0"
+version = "0.5.0"
 edition = "2021"
 license = "Apache-2.0"
 authors = ["MoonManQuark"]
@@ -40,6 +42,8 @@ name = "jiminy"
 [dependencies]
 pinocchio = { workspace = true }
 pinocchio-pubkey = { workspace = true }
+pinocchio-system = { workspace = true }
+pinocchio-token = { workspace = true }
 
 [features]
 default = ["programs"]

@@ -220,6 +220,10 @@ pub use token::*;
 // their imports to `jiminy::pinocchio::*` and drop the direct dependency.
 pub use pinocchio;
 
+// Re-export pinocchio companion crates for system and token CPI.
+pub use pinocchio_system;
+pub use pinocchio_token;
+
 // Also re-export the most common types at crate root for convenience.
 pub use pinocchio::{error::ProgramError, AccountView, Address, ProgramResult};
 

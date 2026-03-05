@@ -121,3 +121,13 @@ pub use pinocchio::{no_allocator, nostd_panic_handler, program_entrypoint};
 // ── CPI helpers (re-exported so programs don't need pinocchio feature flags) ──
 pub use pinocchio::cpi;
 pub use pinocchio::instruction::{InstructionAccount, InstructionView};
+
+// ── System program CPI (pinocchio-system) ────────────────────────────────────
+pub use pinocchio_system::instructions::{
+    CreateAccount, Transfer as SystemTransfer,
+};
+
+// ── Token program CPI (pinocchio-token) ──────────────────────────────────────
+pub use pinocchio_token::instructions::{
+    Burn, CloseAccount, InitializeAccount, MintTo, Transfer as TokenTransfer,
+};

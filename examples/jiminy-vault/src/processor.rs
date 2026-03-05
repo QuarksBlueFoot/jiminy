@@ -44,7 +44,7 @@ fn process_init_vault(
     let mut accs = AccountList::new(accounts);
     let payer = accs.next_writable_signer()?;
     let vault = accs.next_writable()?;
-    let system = accs.next_system_program()?;
+    let _system = accs.next_system_program()?;
 
     check_uninitialized(vault)?;
 
@@ -54,7 +54,14 @@ fn process_init_vault(
 
     // CPI: create the vault account.
     let lamports = rent_exempt_min(VAULT_LEN);
-    create_account(payer, vault, system, program_id, lamports, VAULT_LEN as u64)?;
+    CreateAccount {
+        from: payer,
+        to: vault,
+        lamports,
+        space: VAULT_LEN as u64,
+        owner: program_id,
+    }
+    .invoke()?;
 
     // Initialize the vault data.
     let mut raw = vault.try_borrow_mut()?;
@@ -198,38 +205,4 @@ fn process_close_vault(
     safe_close(vault, destination)?;
 
     Ok(())
-}
-
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
-/// CPI to the system program to create an account.
-fn create_account(
-    payer: &AccountView,
-    new_account: &AccountView,
-    _system_program: &AccountView,
-    owner: &Address,
-    lamports: u64,
-    space: u64,
-) -> ProgramResult {
-    let ix = InstructionView {
-        program_id: &jiminy::programs::SYSTEM,
-        accounts: &[
-            InstructionAccount::writable_signer(payer.address()),
-            InstructionAccount::writable_signer(new_account.address()),
-        ],
-        data: &create_account_data(lamports, space, owner),
-    };
-
-    cpi::invoke(&ix, &[payer, new_account])
-}
-
-/// Build the 4 + 8 + 8 + 32 = 52 byte instruction data for CreateAccount.
-fn create_account_data(lamports: u64, space: u64, owner: &Address) -> [u8; 52] {
-    let mut data = [0u8; 52];
-    // Instruction index 0 = CreateAccount
-    data[0..4].copy_from_slice(&0u32.to_le_bytes());
-    data[4..12].copy_from_slice(&lamports.to_le_bytes());
-    data[12..20].copy_from_slice(&space.to_le_bytes());
-    data[20..52].copy_from_slice(owner.as_array());
-    data
 }

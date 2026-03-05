@@ -42,7 +42,7 @@ fn process_create_escrow(
     let mut accs = AccountList::new(accounts);
     let creator = accs.next_writable_signer()?;
     let escrow = accs.next_writable()?;
-    let system = accs.next_system_program()?;
+    let _system = accs.next_system_program()?;
 
     check_uninitialized(escrow)?;
 
@@ -56,7 +56,14 @@ fn process_create_escrow(
     // CPI: create the escrow account.
     let rent = rent_exempt_min(ESCROW_LEN);
     let total_lamports = checked_add(rent, amount)?;
-    create_account(creator, escrow, system, program_id, total_lamports, ESCROW_LEN as u64)?;
+    CreateAccount {
+        from: creator,
+        to: escrow,
+        lamports: total_lamports,
+        space: ESCROW_LEN as u64,
+        owner: program_id,
+    }
+    .invoke()?;
 
     // Initialize escrow data.
     let mut raw = escrow.try_borrow_mut()?;
@@ -175,35 +182,4 @@ fn process_cancel_escrow(
     safe_close(escrow, destination)?;
 
     Ok(())
-}
-
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
-fn create_account(
-    payer: &AccountView,
-    new_account: &AccountView,
-    _system_program: &AccountView,
-    owner: &Address,
-    lamports: u64,
-    space: u64,
-) -> ProgramResult {
-    let ix = InstructionView {
-        program_id: &jiminy::programs::SYSTEM,
-        accounts: &[
-            InstructionAccount::writable_signer(payer.address()),
-            InstructionAccount::writable_signer(new_account.address()),
-        ],
-        data: &create_account_data(lamports, space, owner),
-    };
-
-    cpi::invoke(&ix, &[payer, new_account])
-}
-
-fn create_account_data(lamports: u64, space: u64, owner: &Address) -> [u8; 52] {
-    let mut data = [0u8; 52];
-    data[0..4].copy_from_slice(&0u32.to_le_bytes());
-    data[4..12].copy_from_slice(&lamports.to_le_bytes());
-    data[12..20].copy_from_slice(&space.to_le_bytes());
-    data[20..52].copy_from_slice(owner.as_array());
-    data
 }

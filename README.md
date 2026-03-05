@@ -32,7 +32,7 @@ binary than hand-rolled pinocchio. Not a typo.
 
 ```toml
 [dependencies]
-jiminy = "0.4"
+jiminy = "0.5"
 ```
 
 ## Adding Jiminy to an existing Pinocchio project
@@ -44,7 +44,7 @@ Already using pinocchio directly? You have two options:
 ```toml
 [dependencies]
 pinocchio = "0.10"
-jiminy = "0.4"
+jiminy = "0.5"
 ```
 
 This works fine. Cargo deduplicates the pinocchio crate as long as versions are
@@ -55,10 +55,11 @@ imports alongside them.
 
 ```toml
 [dependencies]
-jiminy = "0.4"
+jiminy = "0.5"
 ```
 
-Jiminy re-exports the entire pinocchio crate. Replace your pinocchio imports:
+Jiminy re-exports the entire pinocchio crate, plus `pinocchio-system` and
+`pinocchio-token`. Replace your pinocchio imports:
 
 ```rust
 // Before
@@ -75,7 +76,33 @@ use jiminy::prelude::*;
 
 The `pub use pinocchio;` re-export in `lib.rs` makes the **entire** pinocchio
 API available under `jiminy::pinocchio`, so there's no need for a direct
-dependency. One crate, one version, no duplication.
+dependency. Same for `jiminy::pinocchio_system` and `jiminy::pinocchio_token`.
+One crate, one version, no duplication.
+
+The prelude also re-exports the most common CPI structs:
+
+```rust
+use jiminy::prelude::*;
+
+// System program CPI - no more hand-rolling 52-byte instruction data
+CreateAccount {
+    from: payer,
+    to: new_account,
+    lamports,
+    space: 128,
+    owner: program_id,
+}
+.invoke()?;
+
+// Token program CPI
+TokenTransfer {
+    from: source_token,
+    to: dest_token,
+    authority: owner,
+    amount: 1_000_000,
+}
+.invoke()?;
+```
 
 ---
 
@@ -469,6 +496,8 @@ exploit vector.
 | Borsh required | No | Yes | **No** |
 | Proc macros | No | Yes | **No** |
 | Account validation | Manual | `#[account(...)]` | Functions + macros |
+| System CPI | Manual bytes | `system_program::create_account` | `CreateAccount { .. }.invoke()` |
+| Token CPI | Manual bytes | Anchor SPL | `TokenTransfer { .. }.invoke()` |
 | Token account reads | Manual offsets | Borsh deser | Zero-copy readers |
 | Mint account reads | Manual offsets | Borsh deser | Zero-copy readers |
 | Token-2022 screening | Manual | Not built-in | `check_safe_token_2022_mint` |

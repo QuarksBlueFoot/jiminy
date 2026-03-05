@@ -39,7 +39,14 @@ fn process_init_vault(
     let authority = args.read_address()?;
 
     let lamports = rent_exempt_min(VAULT_LEN);
-    create_account(payer, vault, program_id, lamports, VAULT_LEN as u64)?;
+    CreateAccount {
+        from: payer,
+        to: vault,
+        lamports,
+        space: VAULT_LEN as u64,
+        owner: program_id,
+    }
+    .invoke()?;
 
     let mut raw = vault.try_borrow_mut()?;
     zero_init(&mut raw);
@@ -248,29 +255,4 @@ fn process_vuln_withdraw(
     raw[1..9].copy_from_slice(&new_balance.to_le_bytes());
 
     Ok(())
-}
-
-fn create_account(
-    payer: &AccountView,
-    new_account: &AccountView,
-    owner: &Address,
-    lamports: u64,
-    space: u64,
-) -> ProgramResult {
-    let mut ix_data = [0u8; 52];
-    ix_data[0..4].copy_from_slice(&0u32.to_le_bytes());
-    ix_data[4..12].copy_from_slice(&lamports.to_le_bytes());
-    ix_data[12..20].copy_from_slice(&space.to_le_bytes());
-    ix_data[20..52].copy_from_slice(owner.as_array());
-
-    let system = jiminy::programs::SYSTEM;
-    let ix = InstructionView {
-        program_id: &system,
-        accounts: &[
-            InstructionAccount::writable_signer(payer.address()),
-            InstructionAccount::writable_signer(new_account.address()),
-        ],
-        data: &ix_data,
-    };
-    cpi::invoke(&ix, &[payer, new_account])
 }
