@@ -32,8 +32,52 @@ binary than hand-rolled pinocchio. Not a typo.
 
 ```toml
 [dependencies]
-jiminy = "0.3"
+jiminy = "0.4"
 ```
+
+## Adding Jiminy to an existing Pinocchio project
+
+Already using pinocchio directly? You have two options:
+
+### Option 1: Keep both dependencies
+
+```toml
+[dependencies]
+pinocchio = "0.10"
+jiminy = "0.4"
+```
+
+This works fine. Cargo deduplicates the pinocchio crate as long as versions are
+compatible. You keep your existing `use pinocchio::*` imports and add jiminy
+imports alongside them.
+
+### Option 2: Drop the direct pinocchio dependency (recommended)
+
+```toml
+[dependencies]
+jiminy = "0.4"
+```
+
+Jiminy re-exports the entire pinocchio crate. Replace your pinocchio imports:
+
+```rust
+// Before
+use pinocchio::{AccountView, Address, ProgramResult};
+use pinocchio::{program_entrypoint, no_allocator, nostd_panic_handler};
+
+// After
+use jiminy::pinocchio::{AccountView, Address, ProgramResult};
+use jiminy::pinocchio::{program_entrypoint, no_allocator, nostd_panic_handler};
+
+// Or just use the prelude for the most common types
+use jiminy::prelude::*;
+```
+
+The `pub use pinocchio;` re-export in `lib.rs` makes the **entire** pinocchio
+API available under `jiminy::pinocchio`, so there's no need for a direct
+dependency. One crate, one version, no duplication.
+
+---
 
 ## Quick Start
 

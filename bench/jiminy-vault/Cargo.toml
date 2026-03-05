@@ -10,7 +10,6 @@ crate-type = ["cdylib", "lib"]
 
 [dependencies]
 jiminy = { workspace = true }
-pinocchio = { workspace = true }
 
 [features]
 default = ["bpf-entrypoint"]

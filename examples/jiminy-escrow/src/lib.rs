@@ -11,7 +11,7 @@ pub mod state;
 
 #[cfg(feature = "bpf-entrypoint")]
 mod entrypoint {
-    use pinocchio::{program_entrypoint, no_allocator, nostd_panic_handler, AccountView, Address, ProgramResult};
+    use jiminy::prelude::{program_entrypoint, no_allocator, nostd_panic_handler, AccountView, Address, ProgramResult};
 
     program_entrypoint!(process_instruction);
     no_allocator!();

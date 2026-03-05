@@ -115,6 +115,9 @@ pub use crate::{
 // ── Pinocchio core types (so users only need `jiminy::prelude`) ──────────────
 pub use pinocchio::{error::ProgramError, AccountView, Address, ProgramResult};
 
+// ── Entrypoint macros (re-exported so programs don't need a direct pinocchio dep) ──
+pub use pinocchio::{no_allocator, nostd_panic_handler, program_entrypoint};
+
 // ── CPI helpers (re-exported so programs don't need pinocchio feature flags) ──
 pub use pinocchio::cpi;
 pub use pinocchio::instruction::{InstructionAccount, InstructionView};

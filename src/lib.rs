@@ -216,7 +216,11 @@ pub use sysvar::*;
 pub use time::*;
 pub use token::*;
 
-// Re-export pinocchio core types so users only need one import.
+// Re-export the full pinocchio crate so existing pinocchio users can switch
+// their imports to `jiminy::pinocchio::*` and drop the direct dependency.
+pub use pinocchio;
+
+// Also re-export the most common types at crate root for convenience.
 pub use pinocchio::{error::ProgramError, AccountView, Address, ProgramResult};
 
 // ── Macros ───────────────────────────────────────────────────────────────────
