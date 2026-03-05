@@ -183,3 +183,48 @@ macro_rules! derive_pda_const {
         ))
     };
 }
+
+/// Verify a token account is the correct ATA for a wallet + mint pair.
+///
+/// Derives the canonical ATA address using `find_program_address` and
+/// compares it to the account's address. Uses the SPL Token program.
+///
+/// This catches a critical exploit vector: an attacker passing their own
+/// token account (with the right mint/owner) instead of the canonical ATA.
+///
+/// ```rust,ignore
+/// check_ata(user_token_account, user.address(), mint.address())?;
+/// ```
+#[inline(always)]
+pub fn check_ata(
+    account: &pinocchio::AccountView,
+    wallet: &Address,
+    mint: &Address,
+) -> pinocchio::ProgramResult {
+    let (expected, _) = derive_ata(wallet, mint)?;
+    if *account.address() != expected {
+        return Err(ProgramError::InvalidSeeds);
+    }
+    Ok(())
+}
+
+/// Verify a token account is the correct ATA for a specific token program.
+///
+/// Same as [`check_ata`] but for Token-2022 or any explicit token program.
+///
+/// ```rust,ignore
+/// check_ata_with_program(user_ata, wallet.address(), mint.address(), &programs::TOKEN_2022)?;
+/// ```
+#[inline(always)]
+pub fn check_ata_with_program(
+    account: &pinocchio::AccountView,
+    wallet: &Address,
+    mint: &Address,
+    token_program: &Address,
+) -> pinocchio::ProgramResult {
+    let (expected, _) = derive_ata_with_program(wallet, mint, token_program)?;
+    if *account.address() != expected {
+        return Err(ProgramError::InvalidSeeds);
+    }
+    Ok(())
+}

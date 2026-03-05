@@ -272,4 +272,63 @@ impl<'a> AccountList<'a> {
         }
         Ok(acc)
     }
+
+    /// Consume the next account and verify it is one of the two token programs
+    /// (SPL Token or Token-2022).
+    ///
+    /// ```rust,ignore
+    /// let token_program = accs.next_token_program()?;
+    /// ```
+    #[cfg(feature = "programs")]
+    #[inline(always)]
+    pub fn next_token_program(&mut self) -> Result<&'a AccountView, ProgramError> {
+        let acc = self.next()?;
+        if *acc.address() != crate::programs::TOKEN
+            && *acc.address() != crate::programs::TOKEN_2022
+        {
+            return Err(ProgramError::IncorrectProgramId);
+        }
+        Ok(acc)
+    }
+
+    /// Consume the next account as a validated **writable** token account.
+    ///
+    /// Verifies: writable + data size >= 165 + mint matches + owner matches.
+    /// Use this for destination or source accounts that will be modified.
+    ///
+    /// ```rust,ignore
+    /// let user_ata = accs.next_writable_token_account(&usdc_mint, user.address())?;
+    /// ```
+    #[inline(always)]
+    pub fn next_writable_token_account(
+        &mut self,
+        expected_mint: &Address,
+        expected_owner: &Address,
+    ) -> Result<&'a AccountView, ProgramError> {
+        let acc = self.next()?;
+        check_writable(acc)?;
+        let data = acc.try_borrow()?;
+        if data.len() < TOKEN_ACCOUNT_LEN {
+            return Err(ProgramError::AccountDataTooSmall);
+        }
+        drop(data);
+        check_token_account_mint(acc, expected_mint)?;
+        check_token_account_owner(acc, expected_owner)?;
+        Ok(acc)
+    }
+
+    /// Consume the next account and verify it is the Rent sysvar.
+    ///
+    /// ```rust,ignore
+    /// let rent = accs.next_rent()?;
+    /// ```
+    #[cfg(feature = "programs")]
+    #[inline(always)]
+    pub fn next_rent(&mut self) -> Result<&'a AccountView, ProgramError> {
+        let acc = self.next()?;
+        if *acc.address() != crate::programs::SYSVAR_RENT {
+            return Err(ProgramError::InvalidArgument);
+        }
+        Ok(acc)
+    }
 }

@@ -188,13 +188,17 @@ mod asserts;
 mod bits;
 mod checks;
 mod close;
+pub mod cpi;
 pub mod cpi_guard;
 mod cursor;
 mod header;
+#[cfg(feature = "log")]
+pub mod log;
 mod math;
 mod mint;
 mod pda;
 pub mod prelude;
+pub mod realloc;
 pub mod slippage;
 pub mod state;
 mod sysvar;

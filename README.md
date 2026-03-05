@@ -32,7 +32,7 @@ binary than hand-rolled pinocchio. Not a typo.
 
 ```toml
 [dependencies]
-jiminy = "0.5"
+jiminy = "0.6"
 ```
 
 ## Adding Jiminy to an existing Pinocchio project
@@ -44,7 +44,7 @@ Already using pinocchio directly? You have two options:
 ```toml
 [dependencies]
 pinocchio = "0.10"
-jiminy = "0.5"
+jiminy = "0.6"
 ```
 
 This works fine. Cargo deduplicates the pinocchio crate as long as versions are
@@ -55,7 +55,7 @@ imports alongside them.
 
 ```toml
 [dependencies]
-jiminy = "0.5"
+jiminy = "0.6"
 ```
 
 Jiminy re-exports the entire pinocchio crate, plus `pinocchio-system` and
@@ -214,7 +214,9 @@ let payer         = accs.next_writable_signer()?;
 let vault         = accs.next_writable_account(program_id, VAULT_DISC, VAULT_LEN)?;
 let user_token    = accs.next_token_account(&usdc_mint, user.address())?;
 let mint          = accs.next_mint(&programs::TOKEN)?;
-let token_program = accs.next_executable()?;
+let token_program = accs.next_token_program()?;  // validates SPL Token or Token-2022
+let any_token     = accs.next_writable_token_account(&usdc_mint, user.address())?;
+let rent          = accs.next_rent()?;
 let clock         = accs.next_clock()?;
 let sysvar_ix     = accs.next_sysvar_instructions()?;
 ```
@@ -242,6 +244,7 @@ Zero-copy reads from the 165-byte SPL Token layout. No deserialization.
 | `check_no_close_authority(account)` | No close authority set |
 | `check_token_balance_gte(account, min)` | Token balance >= minimum |
 | `check_token_program_match(account, prog)` | Account owned by the right token program |
+| `check_not_frozen(account)` | Reject frozen token accounts upfront |
 
 ### Mint account readers + checks
 
@@ -392,6 +395,8 @@ Also: `check_state_not`, `check_state_in` (multiple valid states).
 | `derive_ata_with_program(wallet, mint, token_prog)` | ATA with explicit token program |
 | `derive_ata_with_bump(wallet, mint, bump)` | ATA with known bump (cheap) |
 | `derive_ata_const!(wallet_bytes, mint_bytes, bump)` | Compile-time ATA derivation |
+| `check_ata(account, wallet, mint)` | Verify account is the canonical ATA |
+| `check_ata_with_program(account, wallet, mint, prog)` | Same, for Token-2022 ATAs |
 
 ### Macros
 
@@ -427,6 +432,62 @@ Supports: `u8`, `u16`, `u32`, `u64`, `u128`, `i8`, `i16`, `i32`, `i64`, `i128`,
 | Function | What it does |
 |---|---|
 | `safe_close(account, destination)` | Move all lamports + close atomically |
+| `safe_realloc(account, new_size, payer)` | Resize account + top up rent from payer |
+| `safe_realloc_shrink(account, new_size, dest)` | Shrink account + return excess rent |
+
+### Safe CPI wrappers
+
+Bundle validation + invocation so you can't forget a writable or signer check
+before issuing a CPI. All zero-copy, all `#[inline(always)]`.
+
+| Function | What it does |
+|---|---|
+| `safe_create_account(payer, account, space, owner)` | System CPI: create account with rent-exempt balance |
+| `safe_create_account_signed(payer, account, space, owner, signers)` | Same, with PDA signer seeds |
+| `safe_transfer_sol(from, to, amount)` | System CPI: transfer SOL with nonzero check |
+| `safe_transfer_tokens(from, to, authority, amount)` | Token CPI: SPL transfer with validation |
+| `safe_transfer_tokens_signed(from, to, authority, amount, signers)` | Same, with PDA signer seeds |
+| `safe_checked_transfer(from, to, auth, mint, from_owner, to_owner, amount)` | Paranoid transfer: mint + owner checks first |
+| `safe_burn(account, mint, authority, amount)` | Token CPI: burn with validation |
+| `safe_mint_to(mint, account, authority, amount)` | Token CPI: mint tokens with validation |
+| `safe_mint_to_signed(mint, account, authority, amount, signers)` | Same, with PDA signer seeds |
+| `safe_close_token_account(account, destination, authority)` | Token CPI: close account |
+
+```rust
+// One-liner CPI — checks signer, writable, nonzero for you
+safe_transfer_tokens(source_ata, dest_ata, owner, amount)?;
+
+// Paranoid transfer — also validates mint + owners match before CPI
+safe_checked_transfer(
+    source_ata, dest_ata, owner,
+    &usdc_mint, source_wallet.address(), dest_wallet.address(),
+    amount,
+)?;
+```
+
+### ATA validation
+
+| Function | What it does |
+|---|---|
+| `check_ata(account, wallet, mint)` | Verify account is the canonical ATA |
+| `check_ata_with_program(account, wallet, mint, token_prog)` | Same, for Token-2022 ATAs |
+
+### Logging (opt-in)
+
+Zero-alloc diagnostic logging behind the `log` feature flag. Uses the raw
+`sol_log` syscall — no extra deps.
+
+```toml
+jiminy = { version = "0.6", features = ["log"] }
+```
+
+| Function | What it logs |
+|---|---|
+| `log_msg("text")` | Static message |
+| `log_val("label", u64)` | Label + u64 value |
+| `log_signed("label", i64)` | Label + signed value |
+| `log_addr("label", &address)` | Label + first/last 4 bytes hex |
+| `log_bool("label", bool)` | Label + Y/N |
 
 ### Well-known program IDs
 

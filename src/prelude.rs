@@ -68,7 +68,10 @@ pub use crate::bits::{
 pub use crate::close::safe_close;
 
 // ── PDA utilities ────────────────────────────────────────────────────────────
-pub use crate::pda::{derive_ata, derive_ata_with_bump, derive_ata_with_program};
+pub use crate::pda::{
+    check_ata, check_ata_with_program, derive_ata, derive_ata_with_bump,
+    derive_ata_with_program,
+};
 // Also: find_pda!, derive_pda!, derive_pda_const!, derive_ata_const! (macros, auto-exported)
 
 // ── Account iteration ────────────────────────────────────────────────────────
@@ -87,6 +90,16 @@ pub use crate::cpi_guard::{
     check_no_cpi_caller, check_cpi_caller, check_sysvar_instructions,
     get_instruction_index, get_num_instructions,
 };
+
+// ── Safe CPI wrappers ───────────────────────────────────────────────────────
+pub use crate::cpi::{
+    safe_burn, safe_checked_transfer, safe_close_token_account, safe_create_account,
+    safe_create_account_signed, safe_mint_to, safe_mint_to_signed, safe_transfer_sol,
+    safe_transfer_tokens, safe_transfer_tokens_signed,
+};
+
+// ── Account reallocation ─────────────────────────────────────────────────────
+pub use crate::realloc::{safe_realloc, safe_realloc_shrink};
 
 // ── Time / deadline checks ───────────────────────────────────────────────────
 pub use crate::time::{

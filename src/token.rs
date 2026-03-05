@@ -273,6 +273,26 @@ pub fn check_token_account_frozen(account: &AccountView) -> ProgramResult {
     Ok(())
 }
 
+/// Reject frozen token accounts.
+///
+/// Transfers to/from frozen accounts will fail at the token program level,
+/// but checking upfront saves CU and gives a clearer error. Use this
+/// before any transfer, burn, or close CPI.
+///
+/// ```rust,ignore
+/// check_not_frozen(source_token)?;
+/// check_not_frozen(dest_token)?;
+/// safe_transfer_tokens(source_token, dest_token, authority, amount)?;
+/// ```
+#[inline(always)]
+pub fn check_not_frozen(account: &AccountView) -> ProgramResult {
+    let state = token_account_state(account)?;
+    if state == 2 {
+        return Err(ProgramError::InvalidAccountData);
+    }
+    Ok(())
+}
+
 /// Reject token accounts that have an active delegate.
 ///
 /// Delegated token accounts can have funds pulled by the delegate at any

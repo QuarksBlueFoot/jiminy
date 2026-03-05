@@ -24,11 +24,11 @@ jiminy = { path = "." }
 
 [package]
 name = "jiminy"
-version = "0.5.0"
+version = "0.6.0"
 edition = "2021"
 license = "Apache-2.0"
 authors = ["MoonManQuark"]
-description = "Complete safety toolkit for pinocchio Solana programs. Account checks, token/mint readers, Token-2022 extension screening, CPI reentrancy guards, DeFi math (u128), slippage protection, time/deadline checks, state machines, PDA utilities. Zero-copy, no_std, no proc macros."
+description = "Complete safety toolkit for pinocchio Solana programs. Safe CPI wrappers, account reallocation, account checks, token/mint readers, Token-2022 extension screening, CPI reentrancy guards, DeFi math (u128), slippage protection, time/deadline checks, state machines, PDA/ATA utilities, zero-alloc logging. Zero-copy, no_std, no proc macros."
 repository = "https://github.com/QuarksBlueFoot/jiminy"
 homepage = "https://github.com/QuarksBlueFoot/jiminy"
 readme = "README.md"
@@ -48,6 +48,7 @@ pinocchio-token = { workspace = true }
 [features]
 default = ["programs"]
 programs = []
+log = []
 
 [lints]
 workspace = true
