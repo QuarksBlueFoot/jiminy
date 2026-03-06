@@ -198,9 +198,8 @@ pub fn token_account_delegated_amount(account: &AccountView) -> Result<u64, Prog
 
 /// Verify a token account's mint matches the expected mint address.
 ///
-/// This is the #1 most-exploited missing check in Solana DeFi: without it,
-/// an attacker passes a token account for the wrong mint. Equivalent to
-/// Anchor's `token::mint = expected_mint` constraint.
+/// Without this, an attacker passes a token account for the wrong mint.
+/// Equivalent to Anchor's `token::mint = expected_mint` constraint.
 ///
 /// ```rust,ignore
 /// check_token_account_mint(user_token, &usdc_mint)?;

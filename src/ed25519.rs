@@ -6,9 +6,8 @@
 //! the Sysvar Instructions to verify the precompile ran with the expected
 //! signer and message.
 //!
-//! This is how gasless relayers, signed price feeds, and off-chain
-//! authorization work. Anchor doesn't provide this. Neither does pinocchio
-//! or any pinocchio helper crate.
+//! Used for gasless relayers, signed price feeds, and off-chain
+//! authorization.
 //!
 //! ## Ed25519 precompile instruction data layout
 //!

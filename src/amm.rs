@@ -1,10 +1,7 @@
 //! AMM math primitives: integer square root, constant-product swap, LP minting.
 //!
-//! Every DEX on Solana uses constant-product AMMs. These functions provide
-//! the core math with u128 intermediates, overflow protection, and no alloc.
-//!
-//! No pinocchio crate provides these. Without them, every swap program
-//! copy-pastes flawed integer sqrt and constant-product formulas.
+//! Core constant-product math with u128 intermediates and overflow protection.
+//! Zero alloc.
 
 use pinocchio::error::ProgramError;
 

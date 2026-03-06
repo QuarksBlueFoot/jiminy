@@ -9,8 +9,8 @@ use pinocchio::{error::ProgramError, ProgramResult};
 
 /// Verify actual output meets the user's minimum (slippage protection).
 ///
-/// This is the **#1 most important check** in any swap/AMM/DEX program.
-/// Without it, an attacker can sandwich the trade and extract value.
+/// Fails if `actual < minimum`. Put this between the swap math and the
+/// transfer to the user.
 ///
 /// ```rust,ignore
 /// let output = do_swap(input_amount, pool)?;

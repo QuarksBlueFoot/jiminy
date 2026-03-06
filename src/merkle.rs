@@ -1,13 +1,8 @@
 //! Zero-alloc Merkle proof verification via `sol_sha256`.
 //!
-//! Whitelists, airdrops, allowlists - all use merkle trees on Solana.
-//! Anchor programs typically pull in `solana-program` for hashing or use
-//! `keccak` from OpenZeppelin. In pinocchio land, nobody provides a
-//! merkle verifier that uses the native `sol_sha256` syscall.
-//!
-//! This module gives you a single function: `verify_merkle_proof`. Pass
-//! the root, leaf, and proof slices. Zero alloc, stack only, uses the
-//! BPF `sol_sha256` syscall for each hash step.
+//! Verify inclusion proofs against a known root. Pass the root, leaf,
+//! and proof slices. Stack only, uses the BPF `sol_sha256` syscall for
+//! each hash step.
 //!
 //! ```rust,ignore
 //! let leaf_hash = sha256_leaf(&user_data);

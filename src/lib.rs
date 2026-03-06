@@ -7,11 +7,14 @@
 //! readers, Token-2022 extension screening, CPI reentrancy guards, DeFi math
 //! with u128 intermediates, slippage protection, zero-alloc event emission,
 //! merkle proof verification, Ed25519 precompile helpers, transaction
-//! introspection, authority handoff, Pyth oracle readers, AMM math (isqrt,
-//! constant-product), balance delta guards, close revival sentinels, staking
-//! reward accumulators, vesting schedules, multi-signer thresholds,
-//! time/deadline checks, state machine validation, zero-copy cursors,
-//! and more. All `#[inline(always)]`.
+//! introspection and composition guards (flash-loan detection), authority
+//! handoff, Pyth oracle readers, AMM math (isqrt, constant-product), TWAP
+//! accumulators, balance delta guards, close revival sentinels, staking
+//! reward accumulators, lending/liquidation math, vesting schedules,
+//! multi-signer thresholds, dust-safe distribution, CPI return data readers,
+//! compute budget guards, program upgrade authority checks, time/deadline
+//! checks, state machine validation, zero-copy cursors, and more.
+//! All `#[inline(always)]`.
 //!
 //! # Quick-start
 //!
@@ -265,6 +268,49 @@
 //! [`programs`] module: `SYSTEM`, `TOKEN`, `TOKEN_2022`, `ASSOCIATED_TOKEN`,
 //! `METADATA`, `BPF_LOADER`, `COMPUTE_BUDGET`, `SYSVAR_CLOCK`, `SYSVAR_RENT`,
 //! `SYSVAR_INSTRUCTIONS`. Also [`ed25519::ED25519_PROGRAM`].
+//!
+//! # Compute budget guards
+//!
+//! [`compute::remaining_compute_units`], [`compute::check_compute_remaining`],
+//! [`compute::require_compute_remaining`]. Read remaining CU from the runtime
+//! and bail early when a batch can't finish.
+//!
+//! # Transaction composition guards
+//!
+//! [`compose::check_no_other_invocation`],
+//! [`compose::detect_flash_loan_bracket`],
+//! [`compose::count_program_invocations`]. Inspect the full transaction for
+//! flash-loan sandwiches, duplicate calls, and ordering violations.
+//!
+//! # CPI return data
+//!
+//! [`cpi_return::read_return_data`], [`cpi_return::read_return_u64`].
+//! Read values returned by a CPI callee and verify the source program.
+//!
+//! # Program upgrade verification
+//!
+//! [`upgrade::read_upgrade_authority`],
+//! [`upgrade::check_program_immutable`],
+//! [`upgrade::check_upgrade_authority`]. Read BPF Upgradeable Loader state
+//! to verify external programs are frozen or governance-controlled.
+//!
+//! # TWAP accumulators
+//!
+//! [`twap::update_twap_cumulative`], [`twap::compute_twap`],
+//! [`twap::check_twap_deviation`]. Maintain and query time-weighted average
+//! prices.
+//!
+//! # Lending math
+//!
+//! [`lending::collateralization_ratio_bps`], [`lending::check_healthy`],
+//! [`lending::check_liquidatable`], [`lending::max_liquidation_amount`],
+//! [`lending::simple_interest`], [`lending::utilization_rate_bps`].
+//! Basis-point denominated lending protocol primitives.
+//!
+//! # Proportional distribution
+//!
+//! [`distribute::proportional_split`], [`distribute::extract_fee`].
+//! Dust-safe N-way splits and fee extraction where `sum == total`.
 
 #[cfg(feature = "programs")]
 pub mod programs;
@@ -277,13 +323,18 @@ pub mod balance;
 mod bits;
 mod checks;
 mod close;
+pub mod compose;
+pub mod compute;
 pub mod cpi;
 pub mod cpi_guard;
+pub mod cpi_return;
 mod cursor;
+pub mod distribute;
 pub mod ed25519;
 pub mod event;
 mod header;
 pub mod introspect;
+pub mod lending;
 #[cfg(feature = "log")]
 pub mod log;
 mod math;
@@ -301,6 +352,9 @@ mod sysvar;
 mod time;
 mod token;
 pub mod token_2022;
+pub mod twap;
+#[cfg(feature = "programs")]
+pub mod upgrade;
 pub mod vesting;
 
 pub use accounts::AccountList;

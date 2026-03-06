@@ -238,7 +238,7 @@ Zero-copy reads from the 165-byte SPL Token layout. No deserialization.
 | `token_account_state(account)` | State byte (0=uninit, 1=init, 2=frozen) |
 | `token_account_close_authority(account)` | Optional close authority |
 | `token_account_delegated_amount(account)` | Delegated amount (u64) |
-| `check_token_account_mint(account, mint)` | Mint matches expected -- **#1 most exploited missing check** |
+| `check_token_account_mint(account, mint)` | Mint matches expected |
 | `check_token_account_owner(account, owner)` | Owner matches expected |
 | `check_token_account_initialized(account)` | State == 1 |
 | `check_no_delegate(account)` | No active delegate (prevents fund pulling) |
@@ -562,9 +562,7 @@ token program exploit vector.
 ### Oracle staleness (slot-based)
 
 `check_slot_staleness` compares the slot of the last oracle update against the
-current slot. Every program integrating Pyth, Switchboard, or any on-chain
-price feed needs this check. Without it, stale prices lead to liquidation
-errors and arbitrage exploits.
+current slot. Stale prices lead to liquidation errors and arbitrage exploits.
 
 ### Decimal-aware amount scaling
 
@@ -577,15 +575,14 @@ bugs.
 ### Direct lamport transfer (no CPI)
 
 `transfer_lamports` moves SOL directly between two program-owned accounts
-without a system program CPI. This is the correct and cheapest pattern for
-moving lamports between PDAs your program controls. No signer required,
+without a system program CPI. Cheapest way to
+move lamports between PDAs your program controls. No signer required,
 no CPI overhead.
 
 ### Zero-alloc event emission
 
 `emit!` and `emit_slices` write structured event data to the transaction log
-via `sol_log_data`. Indexers (Helius, Triton, etc.) pick these up. Anchor has
-events but they require borsh + proc macros + an allocator. This is raw bytes
+via `sol_log_data`. Indexers (Helius, Triton, etc.) pick these up. Raw bytes
 on the stack, single syscall, done.
 
 ```rust
@@ -599,7 +596,7 @@ emit!(&disc, user.address().as_ref(), &amt);
 `read_program_id_at`, `read_instruction_data_range`, `read_instruction_account_key`,
 and `check_has_compute_budget`. Read any instruction in the current transaction
 directly from Sysvar Instructions data. Verify transaction shape before
-touching any state. No other pinocchio crate provides this.
+touching any state.
 
 ### Ed25519 precompile verification
 
@@ -659,9 +656,9 @@ let lp = isqrt(amount_a as u128 * amount_b as u128)?;
 `snapshot_token_balance`, `check_balance_increased`, `check_balance_decreased`,
 `check_balance_delta`, `check_lamport_balance_increased`.
 
-THE security pattern for swap aggregators: read balance before CPI, execute
-CPI, verify balance changed correctly after. Every audit flags programs that
-skip this. Named functions make the pattern auditor-visible.
+Read balance before CPI, execute
+CPI, verify balance changed correctly after. Named functions make the pattern
+auditor-visible.
 
 ```rust
 let before = snapshot_token_balance(vault)?;
@@ -688,9 +685,9 @@ check_not_revived(vault)?;
 `update_reward_per_token`, `pending_rewards`, `update_reward_debt`,
 `emission_rate`, `rewards_earned`.
 
-The canonical MasterChef reward-per-token accumulator. u128 precision with
-1e12 scaling factor. Every staking/farming program on Solana uses this exact
-pattern. Getting the math wrong leads to reward theft or stuck funds.
+Reward-per-token accumulator with u128 precision and
+1e12 scaling factor. Getting the math wrong leads to reward theft or stuck
+funds.
 
 ```rust
 let new_rpt = update_reward_per_token(pool.rpt, new_rewards, pool.total_staked)?;
@@ -721,6 +718,111 @@ slots to inflate the count).
 
 ```rust
 check_threshold(&[admin_a, admin_b, admin_c], 2)?; // 2-of-3 multisig
+```
+
+### Compute budget guards
+
+`remaining_compute_units`, `check_compute_remaining`, `require_compute_remaining`.
+
+Wraps `sol_remaining_compute_units()` so batch-processing loops can bail
+with a clean error instead of running into a wall. Also useful for adaptive
+code paths that choose between expensive and cheap logic.
+
+```rust
+for item in items.iter() {
+    check_compute_remaining(5_000)?; // need ~5K CU per item
+    process(item)?;
+}
+```
+
+### Transaction composition analysis
+
+`check_no_other_invocation`, `check_no_subsequent_invocation`,
+`detect_flash_loan_bracket`, `count_program_invocations`.
+
+Higher-level introspection: detect flash-loan sandwiches, prevent specific
+programs from appearing in the same transaction, count invocations. Builds
+on `introspect` but answers structural questions about the whole tx.
+
+```rust
+let data = sysvar_ix.try_borrow()?;
+let me = cpi_guard::get_instruction_index(&data)?;
+if detect_flash_loan_bracket(&data, me, &FLASH_LENDER)? {
+    return Err(MyError::FlashLoanNotAllowed.into());
+}
+```
+
+### CPI return data
+
+`read_return_data`, `read_return_data_from`, `read_return_u64`.
+
+Read values returned by a CPI callee via `sol_get_return_data`. Verify the
+return data came from the expected program (prevents a malicious intermediary
+from overwriting results).
+
+```rust
+let output_amount = read_return_u64(&SWAP_PROGRAM)?;
+check_slippage(output_amount, user_min_output)?;
+```
+
+### Program upgrade verification
+
+`read_upgrade_authority`, `check_program_immutable`, `check_upgrade_authority`.
+
+Read BPF Upgradeable Loader state from a program's data account. Verify an
+external program is frozen (immutable) or that a known governance key
+controls upgrades before integrating with it.
+
+```rust
+check_program_immutable(amm_program_data)?;        // must be frozen
+check_upgrade_authority(lend_data, &dao_multisig)?; // known upgrade auth
+```
+
+### TWAP accumulators
+
+`update_twap_cumulative`, `compute_twap`, `check_twap_deviation`.
+
+Time-weighted average price math. Maintain a cumulative price sum, compute
+TWAP between any two observations, and check spot/TWAP deviation as an
+anti-manipulation guard.
+
+```rust
+pool.cumulative = update_twap_cumulative(pool.cumulative, spot, pool.last_ts, now)?;
+let twap = compute_twap(old.cumulative, new.cumulative, old.ts, new.ts)?;
+check_twap_deviation(spot, twap, 500)?; // max 5% spread
+```
+
+### Lending math
+
+`collateralization_ratio_bps`, `check_healthy`, `check_liquidatable`,
+`max_liquidation_amount`, `liquidation_seize_amount`, `simple_interest`,
+`utilization_rate_bps`.
+
+Lending protocol primitives. All basis-point denominated, u128
+intermediates, overflow-checked.
+
+```rust
+check_healthy(collateral_val, debt_val, 12_500)?; // 125% min
+let max_repay = max_liquidation_amount(debt, 5_000)?; // 50% close factor
+let seized = liquidation_seize_amount(repay, 500)?;   // 5% bonus
+```
+
+### Proportional distribution
+
+`proportional_split`, `extract_fee`.
+
+Dust-safe N-way splits where `sum(parts) == total` is guaranteed. Fee
+extraction where `net + fee == amount` holds exactly. Uses the
+largest-remainder method for the integer division leftovers.
+
+```rust
+let shares = [50u64, 30, 20];
+let mut amounts = [0u64; 3];
+proportional_split(1_000_003, &shares, &mut amounts)?;
+// amounts sums to exactly 1_000_003
+
+let (net, fee) = extract_fee(1_000_000, 30, 1_000)?; // 0.3% + 1000 flat
+assert_eq!(net + fee, 1_000_000);
 ```
 
 ---
@@ -759,6 +861,13 @@ check_threshold(&[admin_a, admin_b, admin_c], 2)?; // 2-of-3 multisig
 | Staking rewards math | Manual | Not built-in | `update_reward_per_token` |
 | Vesting schedules | Manual | Not built-in | `vested_amount` / `unlocked_at_step` |
 | M-of-N multisig | Manual | Not built-in | `check_threshold` |
+| Compute budget guard | Manual | Not built-in | `check_compute_remaining` |
+| Flash loan detection | Manual | Not built-in | `detect_flash_loan_bracket` |
+| CPI return data | Manual syscall | Framework-internal | `read_return_u64` |
+| Program upgrade check | Manual | `ProgramData` type | `check_program_immutable` |
+| TWAP math | Manual | Not built-in | `compute_twap` / `check_twap_deviation` |
+| Lending/liquidation math | Manual | Not built-in | `check_healthy` / `max_liquidation_amount` |
+| Dust-safe distribution | Manual | Not built-in | `proportional_split` / `extract_fee` |
 | PDA derivation + bump | Manual syscall | `seeds + bump` constraint | `assert_pda` / `find_pda!` / `derive_pda!` |
 | Data reads/writes | Manual index math | Borsh | `SliceCursor` / `DataWriter` |
 
@@ -766,7 +875,7 @@ check_threshold(&[admin_a, admin_b, admin_c], 2)?; // 2-of-3 multisig
 
 Anchor is great for what it does. But if you're at the pinocchio level,
 you shouldn't lose safety primitives just because you dropped the framework.
-Jiminy gives you more guards than Anchor ships out of the box. Zero overhead.
+Jiminy fills the gap with zero overhead.
 
 ---
 

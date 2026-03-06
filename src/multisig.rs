@@ -1,11 +1,8 @@
 //! Multi-signer threshold verification.
 //!
-//! M-of-N signature checking for DAO governance, multisig wallets, and admin
+//! M-of-N signature checking for governance, multisig wallets, and admin
 //! operations. Counts signers, checks thresholds, and prevents the
 //! duplicate-signer attack (same account passed in multiple slots).
-//!
-//! No pinocchio crate provides generic threshold verification. Without it,
-//! devs hand-roll loops with off-by-one errors or forget to check uniqueness.
 
 use pinocchio::{error::ProgramError, AccountView, ProgramResult};
 

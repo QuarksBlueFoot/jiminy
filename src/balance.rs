@@ -1,12 +1,8 @@
-//! Balance delta pattern for safe CPI composition.
+//! Balance delta checks for CPI composition.
 //!
 //! When your program CPIs into an AMM or lending protocol, you can't trust
-//! return values. You must independently verify the balance changed correctly
-//! by reading before CPI, then re-reading after CPI.
-//!
-//! This is THE security pattern for swap aggregators, yield optimizers, and
-//! any program that composes with external DeFi protocols. Every audit
-//! report flags programs that skip this check.
+//! return values. Snapshot balances before the CPI, re-read after, and
+//! assert the delta is what you expect.
 //!
 //! ```rust,ignore
 //! // 1. Snapshot balance before CPI

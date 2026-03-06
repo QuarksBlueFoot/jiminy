@@ -1,8 +1,8 @@
-//! Staking rewards math (MasterChef / reward-per-token pattern).
+//! Staking rewards math (reward-per-token accumulator).
 //!
-//! The reward-per-token accumulator is the canonical pattern used by virtually
-//! every staking/farming program on Solana (and EVM). It distributes rewards
-//! proportionally to stakers without iterating over all users.
+//! Distributes rewards proportionally to stakers without iterating over
+//! all users. A global accumulator tracks rewards per staked unit; each
+//! user stores a debt checkpoint.
 //!
 //! The pattern:
 //! 1. Global accumulator: `reward_per_token += rewards_earned / total_staked`

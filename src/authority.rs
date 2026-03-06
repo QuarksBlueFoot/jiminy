@@ -1,11 +1,7 @@
 //! Two-step authority handoff (propose + accept).
 //!
-//! The standard pattern for safe authority rotation: current authority
-//! writes a `pending_authority` field, then the new authority calls
+//! Current authority writes a `pending_authority` field, new authority calls
 //! `accept` to finalize. Prevents fat-finger transfers to the wrong key.
-//!
-//! Every serious DeFi protocol uses this pattern. Nobody in the pinocchio
-//! ecosystem provides check functions for it. Now you get it for free.
 //!
 //! ## Account layout assumption
 //!

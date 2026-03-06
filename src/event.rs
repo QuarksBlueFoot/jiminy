@@ -18,9 +18,7 @@
 //! emit!(&disc, user.address().as_ref(), &amount_bytes);
 //! ```
 //!
-//! Nobody else in the pinocchio ecosystem provides this. Anchor has events
-//! but they require borsh + proc macros + an allocator. This is raw bytes,
-//! zero overhead.
+//! Raw bytes, zero overhead, no serialization framework.
 
 /// Emit one or more byte slices as a single `sol_log_data` entry.
 ///

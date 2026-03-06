@@ -24,11 +24,11 @@ jiminy = { path = "." }
 
 [package]
 name = "jiminy"
-version = "0.9.0"
+version = "0.10.0"
 edition = "2021"
 license = "Apache-2.0"
 authors = ["MoonManQuark"]
-description = "Complete safety toolkit for pinocchio Solana programs. Pyth oracle readers, AMM math (isqrt, constant-product), balance delta guards, close revival sentinels, staking reward accumulators, vesting schedules, M-of-N multisig, safe CPI wrappers, account checks, token/mint readers, Token-2022 screening, CPI reentrancy guards, DeFi math (u128), slippage, events, introspection, ed25519, authority handoff, merkle proofs. Zero-copy, no_std, no proc macros."
+description = "Safety toolkit for pinocchio Solana programs. Compute budget guards, flash-loan detection, CPI return data, program upgrade verification, TWAP accumulators, lending/liquidation math, dust-safe distribution, Pyth oracle readers, AMM math, balance delta guards, close revival sentinels, staking rewards, vesting, multisig, CPI wrappers, account checks, token/mint readers, Token-2022 screening, reentrancy guards, DeFi math, slippage, events, introspection, ed25519, authority handoff, merkle proofs. Zero-copy, no_std, no proc macros."
 repository = "https://github.com/QuarksBlueFoot/jiminy"
 homepage = "https://github.com/QuarksBlueFoot/jiminy"
 readme = "README.md"

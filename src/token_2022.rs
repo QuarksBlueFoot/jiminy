@@ -1,9 +1,8 @@
 //! Token-2022 extension reader and safety checks.
 //!
 //! Token-2022 accounts use a TLV (Type-Length-Value) extension format
-//! appended after the base account/mint data. This module provides
-//! zero-copy accessors to detect, read, and validate extensions without
-//! deserialization.
+//! appended after the base account/mint data. Zero-copy accessors to
+//! detect, read, and validate extensions without deserialization.
 //!
 //! ## Extension layout
 //!

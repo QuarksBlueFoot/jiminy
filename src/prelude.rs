@@ -179,6 +179,41 @@ pub use crate::slippage::{
     check_price_bounds, check_slippage, check_within_bps,
 };
 
+// ── Compute budget guards ────────────────────────────────────────────────────
+pub use crate::compute::{
+    remaining_compute_units, check_compute_remaining, require_compute_remaining,
+};
+
+// ── Transaction composition guards ───────────────────────────────────────────
+pub use crate::compose::{
+    check_no_other_invocation, check_no_subsequent_invocation,
+    detect_flash_loan_bracket, count_program_invocations,
+};
+
+// ── CPI return data ─────────────────────────────────────────────────────────
+pub use crate::cpi_return::{
+    read_return_data, read_return_data_from, read_return_u64, MAX_RETURN_DATA,
+};
+
+// ── Program upgrade verification ─────────────────────────────────────────────
+#[cfg(feature = "programs")]
+pub use crate::upgrade::{
+    read_upgrade_authority, check_program_immutable, check_upgrade_authority,
+};
+
+// ── TWAP accumulators ────────────────────────────────────────────────────────
+pub use crate::twap::{update_twap_cumulative, compute_twap, check_twap_deviation};
+
+// ── Lending math ─────────────────────────────────────────────────────────────
+pub use crate::lending::{
+    collateralization_ratio_bps, check_healthy, check_liquidatable,
+    max_liquidation_amount, liquidation_seize_amount, simple_interest,
+    utilization_rate_bps,
+};
+
+// ── Proportional distribution ────────────────────────────────────────────────
+pub use crate::distribute::{proportional_split, extract_fee};
+
 // ── Macros (re-exported from crate root via #[macro_export]) ─────────────────
 pub use crate::{
     require, require_accounts_ne, require_eq, require_flag, require_gt, require_gte,
