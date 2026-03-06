@@ -1,6 +1,6 @@
 # jiminy-escrow
 
-A two-party escrow program demonstrating close checks and ordering guarantees with Jiminy.
+Two-party escrow with close checks and ordering guarantees, built on Jiminy.
 
 ## Instructions
 

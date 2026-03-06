@@ -1,6 +1,6 @@
 # jiminy-vault
 
-A minimal vault program demonstrating Jiminy's safety primitives on top of Pinocchio.
+Minimal vault program built with Jiminy + Pinocchio.
 
 ## Instructions
 

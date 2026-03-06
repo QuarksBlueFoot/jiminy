@@ -33,7 +33,7 @@ pub const BASE_MINT_LEN: usize = 82;
 /// Base token account length before extensions.
 pub const BASE_ACCOUNT_LEN: usize = 165;
 
-/// The MultisigAccount length — the padding boundary for TLV extensions.
+/// The MultisigAccount length - the padding boundary for TLV extensions.
 /// Both mints and accounts are padded to this length before the account
 /// type byte and TLV data begin.
 const MULTISIG_LEN: usize = 355;
@@ -171,7 +171,7 @@ pub fn find_extension(data: &[u8], ext_type: ExtensionType) -> Option<&[u8]> {
         let payload_end = payload_start + len;
 
         if ty == 0 && len == 0 {
-            // Uninitialized/padding entry — stop walking.
+            // Uninitialized/padding entry - stop walking.
             break;
         }
 
@@ -183,7 +183,7 @@ pub fn find_extension(data: &[u8], ext_type: ExtensionType) -> Option<&[u8]> {
         }
 
         if payload_end > data.len() {
-            break; // Truncated — stop walking.
+            break; // Truncated - stop walking.
         }
         offset = payload_end;
     }
@@ -198,7 +198,7 @@ pub fn find_extension(data: &[u8], ext_type: ExtensionType) -> Option<&[u8]> {
 /// ```rust,ignore
 /// let data = mint_account.try_borrow()?;
 /// if has_extension(&data, ExtensionType::TransferHook) {
-///     // This mint has a transfer hook — extra accounts required.
+///     // This mint has a transfer hook - extra accounts required.
 /// }
 /// ```
 #[inline(always)]
@@ -322,7 +322,7 @@ pub fn check_no_default_account_state(data: &[u8]) -> ProgramResult {
 pub struct TransferFeeEpochConfig {
     /// Fee in basis points (100 = 1%).
     pub transfer_fee_basis_points: u16,
-    /// Maximum fee in token amount — fees are capped at this value.
+    /// Maximum fee in token amount - fees are capped at this value.
     pub maximum_fee: u64,
     /// The epoch at which this config activates.
     pub epoch: u64,

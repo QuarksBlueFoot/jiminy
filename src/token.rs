@@ -241,7 +241,7 @@ pub fn check_token_account_owner(
 /// Verify a token account is in the `Initialized` state (state byte == 1).
 ///
 /// Rejects both uninitialized (0) and frozen (2) accounts. Frozen token
-/// accounts will cause CPI transfers to fail opaquely — checking state
+/// accounts will cause CPI transfers to fail opaquely. Checking state
 /// upfront gives a clear error.
 ///
 /// ```rust,ignore

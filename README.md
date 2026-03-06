@@ -6,22 +6,23 @@
 
 **Pinocchio is the engine. Jiminy keeps it honest.**
 
-You're writing Solana programs with [pinocchio](https://github.com/anza-xyz/pinocchio).
-No allocator, no borsh, raw bytes, full control. Fastest thing on the network. But
-every instruction ends up with the same wall of boilerplate: signer? owner?
-discriminator? overflow math? PDA derivation? You copy-paste it, something slips,
-you get rekt.
+Writing Solana programs with [pinocchio](https://github.com/anza-xyz/pinocchio)?
+Good. Fastest runtime on the network. Zero alloc, raw bytes, full control.
 
-Jiminy is a complete safety toolkit that sits on top of pinocchio. Composable check
-functions, PDA assertions that return bumps, zero-copy token + mint readers,
+But you already know what happens next. Every instruction turns into the same
+wall of signer checks, owner checks, discriminator checks, overflow math, PDA
+derivations. You copy-paste, something slips, someone drains your vault at 3am.
+
+Jiminy is the complete safety layer for pinocchio. One import, you get every
+check that matters: account validation, zero-copy token + mint readers,
 Token-2022 extension screening, CPI reentrancy guards, DeFi math with u128
-intermediates, slippage protection, time/deadline checks, state machine validation,
-and more. All `#[inline(always)]`, all `no_std`, all BPF-safe.
+intermediates, slippage protection, zero-alloc event emission, merkle proof
+verification, transaction introspection, authority handoff patterns, and more.
+All `#[inline(always)]`, all `no_std`, all BPF-safe.
 
-You're still writing pinocchio. You're just not writing the boring (and dangerous)
-parts by hand anymore.
+Still pinocchio under the hood. Just not writing the footgun parts by hand.
 
-**No allocator. No borsh. No proc macros. No compromises.**
+**No allocator. No borsh. No proc macros. Ship faster.**
 
 The [benchmarks](#benchmarks) show 7-14 CU overhead per instruction and a smaller
 binary than hand-rolled pinocchio. Not a typo.
@@ -114,8 +115,9 @@ use jiminy::prelude::*;
 
 One import. You get everything: account checks, token readers, mint readers,
 Token-2022 extension screening, CPI guards, DeFi math, slippage checks,
-time validation, state machines, cursors, macros, `AccountList`, and the
-pinocchio core types.
+time validation, state machines, event emission, merkle proofs, Ed25519
+verification, transaction introspection, authority handoff, cursors, macros,
+`AccountList`, and the pinocchio core types.
 
 All public functions are available both via the prelude and through their
 module paths (`jiminy::slippage::*`, `jiminy::state::*`, etc.).
@@ -457,10 +459,10 @@ before issuing a CPI. All zero-copy, all `#[inline(always)]`.
 | `safe_close_token_account(account, destination, authority)` | Token CPI: close account |
 
 ```rust
-// One-liner CPI — checks signer, writable, nonzero for you
+// One-liner CPI - checks signer, writable, nonzero for you
 safe_transfer_tokens(source_ata, dest_ata, owner, amount)?;
 
-// Paranoid transfer — also validates mint + owners match before CPI
+// Paranoid transfer - also validates mint + owners match before CPI
 safe_checked_transfer(
     source_ata, dest_ata, owner,
     &usdc_mint, source_wallet.address(), dest_wallet.address(),
@@ -481,7 +483,7 @@ transfer_lamports(pool_pda, user_pda, withdrawal_amount)?;
 ### Logging (opt-in)
 
 Zero-alloc diagnostic logging behind the `log` feature flag. Uses the raw
-`sol_log` syscall — no extra deps.
+`sol_log` syscall, no extra deps.
 
 ```toml
 jiminy = { version = "0.7", features = ["log"] }
@@ -576,8 +578,50 @@ bugs.
 
 `transfer_lamports` moves SOL directly between two program-owned accounts
 without a system program CPI. This is the correct and cheapest pattern for
-moving lamports between PDAs your program controls — no signer required,
+moving lamports between PDAs your program controls. No signer required,
 no CPI overhead.
+
+### Zero-alloc event emission
+
+`emit!` and `emit_slices` write structured event data to the transaction log
+via `sol_log_data`. Indexers (Helius, Triton, etc.) pick these up. Anchor has
+events but they require borsh + proc macros + an allocator. This is raw bytes
+on the stack, single syscall, done.
+
+```rust
+let disc = [0x01u8]; // your event discriminator
+let amt = amount.to_le_bytes();
+emit!(&disc, user.address().as_ref(), &amt);
+```
+
+### Transaction introspection
+
+`read_program_id_at`, `read_instruction_data_range`, `read_instruction_account_key`,
+and `check_has_compute_budget`. Read any instruction in the current transaction
+directly from Sysvar Instructions data. Verify transaction shape before
+touching any state. No other pinocchio crate provides this.
+
+### Ed25519 precompile verification
+
+`check_ed25519_signature` and `check_ed25519_signer`. Verify that an Ed25519
+precompile instruction in the transaction was signed by an expected key over
+an expected message. Used for gasless relayers, signed price feeds, off-chain
+authorization flows. The runtime already did the crypto - you just need to
+check it was the right signer and message. Zero-copy from the sysvar.
+
+### Authority handoff (two-step rotation)
+
+`check_pending_authority`, `write_pending_authority`, `accept_authority`. The
+standard DeFi pattern for safe authority transfer: current authority proposes,
+new authority accepts. Prevents fat-finger key transfers. Zero-copy reads at
+byte offsets you define.
+
+### Merkle proof verification
+
+`verify_merkle_proof` and `sha256_leaf`. Verify merkle proofs using the native
+`sol_sha256` syscall. Sorted pair hashing with domain separators (matches the
+OpenZeppelin / SPL convention). Whitelists, airdrops, allowlists - all on the
+stack, no alloc.
 
 ---
 
@@ -603,14 +647,19 @@ no CPI overhead.
 | Oracle staleness | Manual | Not built-in | `check_slot_staleness` |
 | Source != dest guard | Manual | Not built-in* | `check_accounts_unique_2/3/4` |
 | Direct lamport xfer | Manual | Not built-in | `transfer_lamports` |
+| Event emission | Manual | Borsh + proc macros | `emit!` / `emit_slices` (zero alloc) |
+| Tx introspection | Manual | Not built-in | `read_program_id_at` / `check_has_compute_budget` |
+| Ed25519 sig verify | Manual | Not built-in | `check_ed25519_signature` |
+| Authority handoff | Manual | Not built-in | `accept_authority` |
+| Merkle proofs | Manual | Not built-in | `verify_merkle_proof` |
 | PDA derivation + bump | Manual syscall | `seeds + bump` constraint | `assert_pda` / `find_pda!` / `derive_pda!` |
 | Data reads/writes | Manual index math | Borsh | `SliceCursor` / `DataWriter` |
 
 *\* Anchor's upcoming 1.0 adds struct-level duplicate mutable account detection. Jiminy's checks are explicit per-operation runtime guards.*
 
-Anchor is great for what it does. But once you're at the pinocchio level, you
-shouldn't have to give up safety primitives. Jiminy gives you more checks than
-Anchor provides out of the box, with zero runtime overhead.
+Anchor is great for what it does. But if you're at the pinocchio level,
+you shouldn't lose safety primitives just because you dropped the framework.
+Jiminy gives you more guards than Anchor ships out of the box. Zero overhead.
 
 ---
 

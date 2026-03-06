@@ -101,7 +101,7 @@ pub fn checked_mul_div_ceil(a: u64, b: u64, c: u64) -> Result<u64, ProgramError>
 /// Compute basis-point fee: `amount * bps / 10_000` (floor).
 ///
 /// Uses u128 intermediate to prevent overflow. Nearly every DeFi program
-/// computes fees in basis points — this one-liner eliminates a whole class
+/// computes fees in basis points. This one-liner eliminates a whole class
 /// of bugs.
 ///
 /// ```rust,ignore
@@ -227,7 +227,7 @@ pub fn scale_amount_ceil(amount: u64, from_decimals: u8, to_decimals: u8) -> Res
         return Ok(amount);
     }
     if to_decimals > from_decimals {
-        // Scale up — same as floor (no rounding needed when multiplying)
+        // Scale up - same as floor (no rounding needed when multiplying)
         let factor = 10u128.checked_pow((to_decimals - from_decimals) as u32)
             .ok_or(ProgramError::ArithmeticOverflow)?;
         let result = (amount as u128)

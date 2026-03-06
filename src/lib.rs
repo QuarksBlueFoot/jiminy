@@ -1,12 +1,14 @@
 #![no_std]
-//! **Jiminy** — Anchor-style safety abstractions for [pinocchio](https://docs.rs/pinocchio) programs.
+//! **Jiminy** - safety abstractions for [pinocchio](https://docs.rs/pinocchio) programs, minus the footguns.
 //!
 //! Pinocchio is the engine. Jiminy keeps it honest.
 //!
 //! Zero-copy, `no_std`, `no_alloc`, BPF-safe. Account checks, token + mint
 //! readers, Token-2022 extension screening, CPI reentrancy guards, DeFi math
-//! with u128 intermediates, slippage protection, time/deadline checks, state
-//! machine validation, zero-copy cursors, and more. All `#[inline(always)]`.
+//! with u128 intermediates, slippage protection, zero-alloc event emission,
+//! merkle proof verification, Ed25519 precompile helpers, transaction
+//! introspection, authority handoff, time/deadline checks, state machine
+//! validation, zero-copy cursors, and more. All `#[inline(always)]`.
 //!
 //! # Quick-start
 //!
@@ -105,6 +107,36 @@
 //! detect CPI callers: [`cpi_guard::check_no_cpi_caller`],
 //! [`cpi_guard::check_cpi_caller`].
 //!
+//! # Transaction introspection
+//!
+//! See the [`introspect`] module. Read any instruction in the current
+//! transaction: [`introspect::read_program_id_at`],
+//! [`introspect::read_instruction_data_range`],
+//! [`introspect::read_instruction_account_key`],
+//! [`introspect::check_has_compute_budget`].
+//!
+//! # Ed25519 precompile verification
+//!
+//! See the [`ed25519`] module. Verify Ed25519 precompile signatures
+//! from the Sysvar Instructions data: [`ed25519::check_ed25519_signature`],
+//! [`ed25519::check_ed25519_signer`].
+//!
+//! # Authority handoff (two-step rotation)
+//!
+//! See the [`authority`] module. Safe propose + accept authority transfer:
+//! [`authority::check_pending_authority`], [`authority::write_pending_authority`],
+//! [`authority::accept_authority`].
+//!
+//! # Merkle proof verification
+//!
+//! See the [`merkle`] module. Zero-alloc tree verification via `sol_sha256`:
+//! [`merkle::verify_merkle_proof`], [`merkle::sha256_leaf`].
+//!
+//! # Zero-alloc event emission
+//!
+//! See the [`event`] module. Emit structured events via `sol_log_data`:
+//! [`event::emit_slices`] and the [`emit!`] macro.
+//!
 //! # DeFi math
 //!
 //! | Function | What it does |
@@ -182,23 +214,28 @@
 //!
 //! [`programs`] module: `SYSTEM`, `TOKEN`, `TOKEN_2022`, `ASSOCIATED_TOKEN`,
 //! `METADATA`, `BPF_LOADER`, `COMPUTE_BUDGET`, `SYSVAR_CLOCK`, `SYSVAR_RENT`,
-//! `SYSVAR_INSTRUCTIONS`.
+//! `SYSVAR_INSTRUCTIONS`. Also [`ed25519::ED25519_PROGRAM`].
 
 #[cfg(feature = "programs")]
 pub mod programs;
 
 mod accounts;
 mod asserts;
+pub mod authority;
 mod bits;
 mod checks;
 mod close;
 pub mod cpi;
 pub mod cpi_guard;
 mod cursor;
+pub mod ed25519;
+pub mod event;
 mod header;
+pub mod introspect;
 #[cfg(feature = "log")]
 pub mod log;
 mod math;
+pub mod merkle;
 mod mint;
 mod pda;
 pub mod prelude;

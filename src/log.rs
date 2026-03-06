@@ -1,9 +1,9 @@
 //! Lightweight logging helpers for debugging on-chain programs.
 //!
 //! Gated behind the `log` feature to keep production builds tiny.
-//! Uses the raw `sol_log_` syscall under the hood — zero alloc, zero deps.
+//! Uses the raw `sol_log_` syscall under the hood. Zero alloc, zero deps.
 //!
-//! These are diagnostic aids — they print a label + value so you can see
+//! These are diagnostic aids. They print a label + value so you can see
 //! which check failed or what value was computed without manually
 //! constructing log strings.
 //!

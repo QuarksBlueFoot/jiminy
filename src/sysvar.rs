@@ -49,7 +49,7 @@ pub fn check_clock_sysvar(account: &AccountView) -> ProgramResult {
 /// Read both slot and unix_timestamp from the Clock sysvar account.
 ///
 /// Validates the sysvar address, then returns `(slot, unix_timestamp)`.
-/// This is the most common Clock usage — almost every DeFi instruction
+/// This is the most common Clock usage. Almost every DeFi instruction
 /// needs both the slot (for oracle staleness) and timestamp (for deadlines).
 ///
 /// ```rust,ignore

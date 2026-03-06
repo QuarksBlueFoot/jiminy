@@ -144,7 +144,7 @@ pub fn check_no_cpi_caller(
     // Walk to the instruction at current_index to read its program_id.
     let program_id_key = read_instruction_program_id(&data, current_index)?;
     if program_id_key != *program_id {
-        // The instruction at the current index is NOT our program —
+        // The instruction at the current index is NOT our program,
         // we were invoked via CPI.
         return Err(ProgramError::InvalidArgument);
     }

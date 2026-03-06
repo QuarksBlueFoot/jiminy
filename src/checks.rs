@@ -213,7 +213,7 @@ pub fn check_instruction_data_len(data: &[u8], expected_len: usize) -> ProgramRe
 
 /// Verify instruction data has at least N bytes.
 ///
-/// More lenient than `check_instruction_data_len` — allows trailing data
+/// More lenient than `check_instruction_data_len` - allows trailing data
 /// for forward compatibility. Use this when your instruction format may
 /// be extended in future versions.
 ///
@@ -232,7 +232,7 @@ pub fn check_instruction_data_min(data: &[u8], min_len: usize) -> ProgramResult 
 
 /// Verify two accounts have different addresses.
 ///
-/// Function version of `require_accounts_ne!` — takes `&AccountView` directly
+/// Function version of `require_accounts_ne!` - takes `&AccountView` directly
 /// so you don't need the macro for simple two-account checks.
 ///
 /// ```rust,ignore

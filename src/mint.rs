@@ -112,7 +112,7 @@ pub fn mint_is_initialized(account: &AccountView) -> Result<bool, ProgramError> 
 /// A freeze authority can freeze any token account for this mint, blocking
 /// transfers out.
 ///
-/// DeFi programs should be aware of mints with freeze authorities — a
+/// DeFi programs should be aware of mints with freeze authorities. A
 /// malicious authority could freeze pool token accounts, locking funds.
 ///
 /// ```rust,ignore

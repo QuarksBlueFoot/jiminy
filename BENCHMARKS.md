@@ -1,8 +1,8 @@
 # Benchmarks
 
-Jiminy's `#[inline(always)]` functions are designed to compile down to
-nearly the same BPF instructions as hand-written Pinocchio. The benchmark
-suite validates this by comparing two implementations of the same vault program:
+Jiminy's `#[inline(always)]` functions compile down to nearly the same
+BPF instructions as hand-written Pinocchio. The benchmarks compare two
+implementations of the same vault program:
 
 | Variant | Description |
 |---------|-------------|

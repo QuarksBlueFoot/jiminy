@@ -93,6 +93,26 @@ pub use crate::cpi_guard::{
     get_instruction_index, get_num_instructions,
 };
 
+// ── Transaction introspection ────────────────────────────────────────────────
+pub use crate::introspect::{
+    read_program_id_at, read_instruction_data_range, read_instruction_account_key,
+};
+#[cfg(feature = "programs")]
+pub use crate::introspect::check_has_compute_budget;
+
+// ── Ed25519 precompile verification ─────────────────────────────────────────
+pub use crate::ed25519::{check_ed25519_signature, check_ed25519_signer, ED25519_PROGRAM};
+
+// ── Authority handoff (two-step rotation) ────────────────────────────────────
+pub use crate::authority::{accept_authority, check_pending_authority, write_pending_authority};
+
+// ── Merkle proof verification ────────────────────────────────────────────────
+pub use crate::merkle::{sha256_leaf, verify_merkle_proof};
+
+// ── Zero-alloc event emission ────────────────────────────────────────────────
+pub use crate::event::emit_slices;
+// Also: emit! macro (auto-exported via #[macro_export])
+
 // ── Safe CPI wrappers ───────────────────────────────────────────────────────
 pub use crate::cpi::{
     safe_burn, safe_checked_transfer, safe_close_token_account, safe_create_account,
