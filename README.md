@@ -117,17 +117,15 @@ Token-2022 extension screening, CPI guards, DeFi math, slippage checks,
 time validation, state machines, cursors, macros, `AccountList`, and the
 pinocchio core types.
 
+All public functions are available both via the prelude and through their
+module paths (`jiminy::slippage::*`, `jiminy::state::*`, etc.).
+
 ---
 
 ## A real example
 
 ```rust
-use jiminy::{
-    check_account, check_signer, check_writable,
-    checked_sub, check_slippage, check_not_expired,
-    require_accounts_ne, token_account_amount,
-    AccountList, SliceCursor,
-};
+use jiminy::prelude::*;
 
 fn process_swap(
     program_id: &Address,
@@ -185,6 +183,7 @@ fn process_swap(
 | `check_account(account, id, disc, len)` | composite | Owner + size + discriminator in one call |
 | `check_accounts_unique_2(a, b)` | -- | Two accounts have different addresses |
 | `check_accounts_unique_3(a, b, c)` | -- | Three accounts all different (src != dest != fee) |
+| `check_accounts_unique_4(a, b, c, d)` | -- | Four accounts all different (two-hop swaps) |
 | `check_instruction_data_len(data, n)` | -- | Exact instruction data length |
 | `check_instruction_data_min(data, n)` | -- | Minimum instruction data length |
 | `check_version(data, min)` | -- | Header version byte >= minimum |
@@ -327,6 +326,8 @@ above ~4.2B. Jiminy handles it:
 | `bps_of_ceil(amount, bps)` | Same, ceiling |
 | `checked_pow(base, exp)` | Exponentiation via repeated squaring |
 | `to_u64(val)` | Safe u128 -> u64 narrowing |
+| `scale_amount(amount, from, to)` | Decimal-aware token amount conversion (u128 intermediate) |
+| `scale_amount_ceil(amount, from, to)` | Same, ceiling (protocol-side math) |
 
 ### Slippage + economic bounds
 
@@ -350,6 +351,7 @@ above ~4.2B. Jiminy handles it:
 | `check_cooldown(last, cooldown, now)` | Rate limiting (oracle updates, admin changes) |
 | `check_deadline(clock, deadline)` | Combined: read Clock sysvar + check not expired |
 | `check_after(clock, deadline)` | Combined: read Clock sysvar + check expired |
+| `check_slot_staleness(last, current, max)` | Slot-based oracle/data feed staleness check |
 
 ### Sysvar readers
 
@@ -434,6 +436,7 @@ Supports: `u8`, `u16`, `u32`, `u64`, `u128`, `i8`, `i16`, `i32`, `i64`, `i128`,
 | `safe_close(account, destination)` | Move all lamports + close atomically |
 | `safe_realloc(account, new_size, payer)` | Resize account + top up rent from payer |
 | `safe_realloc_shrink(account, new_size, dest)` | Shrink account + return excess rent |
+| `transfer_lamports(from, to, amount)` | Direct lamport transfer between program-owned accounts (no CPI) |
 
 ### Safe CPI wrappers
 
@@ -463,6 +466,9 @@ safe_checked_transfer(
     &usdc_mint, source_wallet.address(), dest_wallet.address(),
     amount,
 )?;
+
+// Direct lamport transfer between program-owned PDAs (no CPI needed)
+transfer_lamports(pool_pda, user_pda, withdrawal_amount)?;
 ```
 
 ### ATA validation
@@ -497,7 +503,7 @@ use jiminy::programs;
 programs::SYSTEM             // 11111111111111111111111111111111
 programs::TOKEN              // TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA
 programs::TOKEN_2022         // TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb
-programs::ASSOCIATED_TOKEN   // ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL
+programs::ASSOCIATED_TOKEN   // ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJe1bTu
 programs::METADATA           // metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s
 programs::SYSVAR_CLOCK       // SysvarC1ock11111111111111111111111111111111
 programs::SYSVAR_RENT        // SysvarRent111111111111111111111111111111111
@@ -543,9 +549,35 @@ Define your transitions as a const table, validate in one call.
 
 ### Source != destination guard
 
-`check_accounts_unique_2` and `check_accounts_unique_3`. Anchor doesn't have a
-built-in for this. Same-account-as-source-and-dest is a classic token program
-exploit vector.
+`check_accounts_unique_2`, `check_accounts_unique_3`, and `check_accounts_unique_4`.
+Anchor's released versions (through 0.32.x) don't have a built-in for this.
+The upcoming Anchor 1.0 adds duplicate mutable account validation at the
+accounts-struct level, which guards against the same account occupying two
+mutable positions. Jiminy's functions are explicit per-operation checks you
+call inside instruction logic. Same-account-as-source-and-dest is a classic
+token program exploit vector.
+
+### Oracle staleness (slot-based)
+
+`check_slot_staleness` compares the slot of the last oracle update against the
+current slot. Every program integrating Pyth, Switchboard, or any on-chain
+price feed needs this check. Without it, stale prices lead to liquidation
+errors and arbitrage exploits.
+
+### Decimal-aware amount scaling
+
+`scale_amount` and `scale_amount_ceil` convert token amounts between different
+decimal precisions using u128 intermediates. Comparing USDC (6 decimals) to
+SOL (9 decimals) or pricing tokens with different precision is the most common
+cross-mint arithmetic operation in DeFi. Getting it wrong leads to off-by-1000
+bugs.
+
+### Direct lamport transfer (no CPI)
+
+`transfer_lamports` moves SOL directly between two program-owned accounts
+without a system program CPI. This is the correct and cheapest pattern for
+moving lamports between PDAs your program controls — no signer required,
+no CPI overhead.
 
 ---
 
@@ -559,17 +591,22 @@ exploit vector.
 | Account validation | Manual | `#[account(...)]` | Functions + macros |
 | System CPI | Manual bytes | `system_program::create_account` | `CreateAccount { .. }.invoke()` |
 | Token CPI | Manual bytes | Anchor SPL | `TokenTransfer { .. }.invoke()` |
-| Token account reads | Manual offsets | Borsh deser | Zero-copy readers |
-| Mint account reads | Manual offsets | Borsh deser | Zero-copy readers |
+| Token account reads | Manual offsets | Borsh deser | Zero-copy readers + check functions |
+| Mint account reads | Manual offsets | Borsh deser | Zero-copy readers + check functions |
 | Token-2022 screening | Manual | Not built-in | `check_safe_token_2022_mint` |
 | CPI reentrancy guard | Manual | Not built-in | `check_no_cpi_caller` |
 | Slippage protection | Manual | Not built-in | `check_slippage` |
 | DeFi math (u128) | Manual | Not built-in | `checked_mul_div` / `bps_of` |
+| Decimal scaling | Manual | Not built-in | `scale_amount` / `scale_amount_ceil` |
 | State machine checks | Manual | Not built-in | `check_state_transition` |
 | Time/deadline checks | Manual | Not built-in | `check_not_expired` / `check_cooldown` |
-| Source != dest guard | Manual | Not built-in | `check_accounts_unique_2` |
+| Oracle staleness | Manual | Not built-in | `check_slot_staleness` |
+| Source != dest guard | Manual | Not built-in* | `check_accounts_unique_2/3/4` |
+| Direct lamport xfer | Manual | Not built-in | `transfer_lamports` |
 | PDA derivation + bump | Manual syscall | `seeds + bump` constraint | `assert_pda` / `find_pda!` / `derive_pda!` |
 | Data reads/writes | Manual index math | Borsh | `SliceCursor` / `DataWriter` |
+
+*\* Anchor's upcoming 1.0 adds struct-level duplicate mutable account detection. Jiminy's checks are explicit per-operation runtime guards.*
 
 Anchor is great for what it does. But once you're at the pinocchio level, you
 shouldn't have to give up safety primitives. Jiminy gives you more checks than

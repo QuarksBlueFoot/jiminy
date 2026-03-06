@@ -169,3 +169,75 @@ pub fn to_u64(val: u128) -> Result<u64, ProgramError> {
     }
     Ok(val as u64)
 }
+
+/// Scale a token amount between different decimal precisions.
+///
+/// Converts `amount` denominated in `from_decimals` to the equivalent
+/// value in `to_decimals`. Uses u128 intermediate to prevent overflow
+/// when scaling up.
+///
+/// This is the #1 most common cross-mint arithmetic operation in DeFi:
+/// comparing USDC (6 decimals) amounts to SOL (9 decimals), or pricing
+/// a token with 8 decimals against one with 18.
+///
+/// ```rust,ignore
+/// // Convert 1_000_000 USDC (6 decimals) to SOL-precision (9 decimals)
+/// let scaled = scale_amount(1_000_000, 6, 9)?;
+/// assert_eq!(scaled, 1_000_000_000);
+///
+/// // Convert 1_000_000_000 (9 decimals) down to 6 decimals
+/// let scaled = scale_amount(1_000_000_000, 9, 6)?;
+/// assert_eq!(scaled, 1_000_000);
+/// ```
+#[inline(always)]
+pub fn scale_amount(amount: u64, from_decimals: u8, to_decimals: u8) -> Result<u64, ProgramError> {
+    if from_decimals == to_decimals {
+        return Ok(amount);
+    }
+    if to_decimals > from_decimals {
+        // Scale up: amount * 10^(to - from)
+        let factor = 10u128.checked_pow((to_decimals - from_decimals) as u32)
+            .ok_or(ProgramError::ArithmeticOverflow)?;
+        let result = (amount as u128)
+            .checked_mul(factor)
+            .ok_or(ProgramError::ArithmeticOverflow)?;
+        to_u64(result)
+    } else {
+        // Scale down: amount / 10^(from - to) (truncates)
+        let factor = 10u64.checked_pow((from_decimals - to_decimals) as u32)
+            .ok_or(ProgramError::ArithmeticOverflow)?;
+        checked_div(amount, factor)
+    }
+}
+
+/// Scale a token amount between decimal precisions, rounding up.
+///
+/// Same as [`scale_amount`] but uses ceiling division when scaling down.
+/// Use this for protocol-side calculations where truncating would
+/// short-change the protocol (e.g., minimum collateral requirements).
+///
+/// ```rust,ignore
+/// // 999 units at 9 decimals → 6 decimals, rounds up to 1
+/// let scaled = scale_amount_ceil(999, 9, 6)?;
+/// assert_eq!(scaled, 1);
+/// ```
+#[inline(always)]
+pub fn scale_amount_ceil(amount: u64, from_decimals: u8, to_decimals: u8) -> Result<u64, ProgramError> {
+    if from_decimals == to_decimals {
+        return Ok(amount);
+    }
+    if to_decimals > from_decimals {
+        // Scale up — same as floor (no rounding needed when multiplying)
+        let factor = 10u128.checked_pow((to_decimals - from_decimals) as u32)
+            .ok_or(ProgramError::ArithmeticOverflow)?;
+        let result = (amount as u128)
+            .checked_mul(factor)
+            .ok_or(ProgramError::ArithmeticOverflow)?;
+        to_u64(result)
+    } else {
+        // Scale down with ceiling
+        let factor = 10u64.checked_pow((from_decimals - to_decimals) as u32)
+            .ok_or(ProgramError::ArithmeticOverflow)?;
+        checked_div_ceil(amount, factor)
+    }
+}

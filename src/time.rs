@@ -119,3 +119,34 @@ pub fn check_after(
     let timestamp = crate::sysvar::read_clock_timestamp(clock_account)?;
     check_expired(timestamp, deadline)
 }
+
+/// Verify an on-chain data feed (oracle, price feed, etc.) is not stale.
+///
+/// Compares the slot when the data was last updated against the current slot,
+/// rejecting if the gap exceeds `max_age_slots`. Every program integrating
+/// Pyth, Switchboard, or any on-chain oracle should call this before using
+/// the price.
+///
+/// Typical staleness thresholds:
+/// - Aggressive DeFi (liquidations): 5-25 slots (~2-10 seconds)
+/// - Standard DeFi (swaps): 50-150 slots (~20-60 seconds)
+/// - Relaxed (display/analytics): 300+ slots
+///
+/// ```rust,ignore
+/// let (current_slot, _) = read_clock(clock)?;
+/// let oracle_data = oracle_account.try_borrow()?;
+/// let last_update_slot = u64::from_le_bytes(oracle_data[8..16].try_into().unwrap());
+/// check_slot_staleness(last_update_slot, current_slot, 50)?; // max 50 slots old
+/// ```
+#[inline(always)]
+pub fn check_slot_staleness(
+    last_update_slot: u64,
+    current_slot: u64,
+    max_age_slots: u64,
+) -> ProgramResult {
+    let age = current_slot.saturating_sub(last_update_slot);
+    if age > max_age_slots {
+        return Err(ProgramError::InvalidArgument);
+    }
+    Ok(())
+}

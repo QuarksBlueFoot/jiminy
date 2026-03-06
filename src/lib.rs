@@ -40,6 +40,7 @@
 //! | [`check_account`] | owner + size + discriminator in one call |
 //! | [`check_accounts_unique_2`] | two accounts have different addresses |
 //! | [`check_accounts_unique_3`] | three accounts all different (src ≠ dest ≠ fee) |
+//! | [`check_accounts_unique_4`] | four accounts all different (two-hop swaps) |
 //! | [`check_instruction_data_len`] | exact instruction data length |
 //! | [`check_instruction_data_min`] | minimum instruction data length |
 //! | [`check_version`] | header version byte ≥ minimum |
@@ -119,6 +120,8 @@
 //! | [`bps_of_ceil`] | same, ceiling |
 //! | [`checked_pow`] | exponentiation via repeated squaring |
 //! | [`to_u64`] | safe u128 → u64 narrowing |
+//! | [`scale_amount`] | decimal-aware token amount conversion |
+//! | [`scale_amount_ceil`] | same, ceiling (protocol-side math) |
 //!
 //! # Slippage + economic bounds
 //!
@@ -136,6 +139,7 @@
 //! | [`check_cooldown`] | rate limiting (oracle updates, admin changes) |
 //! | [`check_deadline`] | read Clock sysvar + check not expired |
 //! | [`check_after`] | read Clock sysvar + check expired |
+//! | [`check_slot_staleness`] | slot-based oracle/data feed staleness |
 //!
 //! # Sysvar readers
 //!

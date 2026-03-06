@@ -334,3 +334,43 @@ pub fn safe_checked_transfer(
     }
     .invoke()
 }
+
+/// Transfer lamports directly between two program-owned accounts.
+///
+/// This performs a direct lamport manipulation (no CPI to the system
+/// program) which is valid when both accounts are owned by your program.
+/// This is significantly cheaper than a system transfer CPI and is the
+/// correct pattern for moving SOL between PDAs your program controls.
+///
+/// Checks:
+/// - Both accounts are writable
+/// - `amount` > 0
+/// - `from` has sufficient lamports
+/// - Addition to `to` doesn't overflow
+///
+/// ```rust,ignore
+/// // Move 1 SOL from pool PDA to user PDA (both owned by your program)
+/// transfer_lamports(pool, user_account, 1_000_000_000)?;
+/// ```
+#[inline(always)]
+pub fn transfer_lamports(
+    from: &AccountView,
+    to: &AccountView,
+    amount: u64,
+) -> ProgramResult {
+    if amount == 0 {
+        return Err(ProgramError::InvalidArgument);
+    }
+    check_writable(from)?;
+    check_writable(to)?;
+
+    let from_lamports = from.lamports();
+    if from_lamports < amount {
+        return Err(ProgramError::InsufficientFunds);
+    }
+    let new_from = from_lamports - amount; // safe: checked above
+    let new_to = crate::math::checked_add(to.lamports(), amount)?;
+    from.set_lamports(new_from);
+    to.set_lamports(new_to);
+    Ok(())
+}

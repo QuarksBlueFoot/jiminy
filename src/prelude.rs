@@ -6,11 +6,11 @@
 
 // ── Check functions ──────────────────────────────────────────────────────────
 pub use crate::checks::{
-    check_account, check_accounts_unique_2, check_accounts_unique_3, check_closed,
-    check_discriminator, check_executable, check_has_one, check_instruction_data_len,
-    check_instruction_data_min, check_keys_eq, check_lamports_gte, check_owner, check_pda,
-    check_rent_exempt, check_signer, check_size, check_system_program, check_uninitialized,
-    check_version, check_writable, rent_exempt_min,
+    check_account, check_accounts_unique_2, check_accounts_unique_3, check_accounts_unique_4,
+    check_closed, check_discriminator, check_executable, check_has_one,
+    check_instruction_data_len, check_instruction_data_min, check_keys_eq,
+    check_lamports_gte, check_owner, check_pda, check_rent_exempt, check_signer, check_size,
+    check_system_program, check_uninitialized, check_version, check_writable, rent_exempt_min,
 };
 
 // ── Assert functions (PDA, address, program) ─────────────────────────────────
@@ -21,11 +21,12 @@ pub use crate::asserts::{
 
 // ── Token account readers & assertions ───────────────────────────────────────
 pub use crate::token::{
-    check_no_close_authority, check_no_delegate, check_token_account_frozen,
-    check_token_account_initialized, check_token_account_mint, check_token_account_owner,
-    check_token_balance_gte, check_token_program_match, token_account_amount,
-    token_account_close_authority, token_account_delegate, token_account_delegated_amount,
-    token_account_mint, token_account_owner, token_account_state, TOKEN_ACCOUNT_LEN,
+    check_no_close_authority, check_no_delegate, check_not_frozen,
+    check_token_account_frozen, check_token_account_initialized, check_token_account_mint,
+    check_token_account_owner, check_token_balance_gte, check_token_program_match,
+    token_account_amount, token_account_close_authority, token_account_delegate,
+    token_account_delegated_amount, token_account_mint, token_account_owner,
+    token_account_state, TOKEN_ACCOUNT_LEN,
 };
 
 // ── Mint account readers & checks ────────────────────────────────────────────
@@ -55,7 +56,8 @@ pub use crate::header::{
 // ── Math ─────────────────────────────────────────────────────────────────────
 pub use crate::math::{
     bps_of, bps_of_ceil, checked_add, checked_div, checked_div_ceil, checked_mul,
-    checked_mul_div, checked_mul_div_ceil, checked_pow, checked_sub, to_u64,
+    checked_mul_div, checked_mul_div_ceil, checked_pow, checked_sub, scale_amount,
+    scale_amount_ceil, to_u64,
 };
 
 // ── Bit helpers ──────────────────────────────────────────────────────────────
@@ -95,7 +97,7 @@ pub use crate::cpi_guard::{
 pub use crate::cpi::{
     safe_burn, safe_checked_transfer, safe_close_token_account, safe_create_account,
     safe_create_account_signed, safe_mint_to, safe_mint_to_signed, safe_transfer_sol,
-    safe_transfer_tokens, safe_transfer_tokens_signed,
+    safe_transfer_tokens, safe_transfer_tokens_signed, transfer_lamports,
 };
 
 // ── Account reallocation ─────────────────────────────────────────────────────
@@ -103,7 +105,8 @@ pub use crate::realloc::{safe_realloc, safe_realloc_shrink};
 
 // ── Time / deadline checks ───────────────────────────────────────────────────
 pub use crate::time::{
-    check_cooldown, check_expired, check_not_expired, check_within_window,
+    check_cooldown, check_expired, check_not_expired, check_slot_staleness,
+    check_within_window,
 };
 #[cfg(feature = "programs")]
 pub use crate::time::{check_after, check_deadline};

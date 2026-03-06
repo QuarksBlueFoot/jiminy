@@ -269,6 +269,34 @@ pub fn check_accounts_unique_3(
     Ok(())
 }
 
+/// Verify four accounts all have different addresses.
+///
+/// For complex DeFi instructions with multiple token accounts (e.g.,
+/// two-hop swaps: source ≠ intermediate ≠ destination ≠ fee).
+/// Checks all six pairs.
+///
+/// ```rust,ignore
+/// check_accounts_unique_4(source, intermediate, destination, fee_account)?;
+/// ```
+#[inline(always)]
+pub fn check_accounts_unique_4(
+    a: &AccountView,
+    b: &AccountView,
+    c: &AccountView,
+    d: &AccountView,
+) -> ProgramResult {
+    if a.address() == b.address()
+        || a.address() == c.address()
+        || a.address() == d.address()
+        || b.address() == c.address()
+        || b.address() == d.address()
+        || c.address() == d.address()
+    {
+        return Err(ProgramError::InvalidArgument);
+    }
+    Ok(())
+}
+
 /// Verify the header version byte (`data[1]`) meets a minimum version.
 ///
 /// Standalone version of the check inside `check_header`. Use this when
