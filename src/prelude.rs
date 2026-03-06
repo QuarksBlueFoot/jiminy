@@ -67,7 +67,7 @@ pub use crate::bits::{
 };
 
 // ── Account lifecycle ────────────────────────────────────────────────────────
-pub use crate::close::safe_close;
+pub use crate::close::{safe_close, safe_close_with_sentinel, check_not_revived, check_alive, CLOSE_SENTINEL};
 
 // ── PDA utilities ────────────────────────────────────────────────────────────
 pub use crate::pda::{
@@ -112,6 +112,43 @@ pub use crate::merkle::{sha256_leaf, verify_merkle_proof};
 // ── Zero-alloc event emission ────────────────────────────────────────────────
 pub use crate::event::emit_slices;
 // Also: emit! macro (auto-exported via #[macro_export])
+
+// ── Pyth oracle readers ─────────────────────────────────────────────────────
+pub use crate::oracle::{
+    read_pyth_price, read_pyth_ema, pyth_agg_pub_slot,
+    check_pyth_price_fresh, check_pyth_confidence,
+    PythPrice, PythEma,
+    PYTH_MAGIC, PYTH_VERSION, PYTH_PRICE_TYPE, STATUS_TRADING, PYTH_HEADER_LEN,
+};
+
+// ── AMM math ─────────────────────────────────────────────────────────────────
+pub use crate::amm::{
+    isqrt, constant_product_out, constant_product_in, check_k_invariant,
+    price_impact_bps, initial_lp_amount, proportional_lp_amount,
+};
+
+// ── Balance delta (safe swap guard) ──────────────────────────────────────────
+pub use crate::balance::{
+    snapshot_token_balance, snapshot_lamport_balance,
+    check_balance_increased, check_balance_decreased, check_balance_delta,
+    check_lamport_balance_increased,
+};
+
+// ── Staking rewards math ─────────────────────────────────────────────────────
+pub use crate::staking::{
+    update_reward_per_token, pending_rewards, update_reward_debt,
+    emission_rate, rewards_earned, REWARD_PRECISION,
+};
+
+// ── Vesting schedules ────────────────────────────────────────────────────────
+pub use crate::vesting::{
+    vested_amount, check_cliff_reached, unlocked_at_step, claimable, elapsed_steps,
+};
+
+// ── Multi-signer threshold ───────────────────────────────────────────────────
+pub use crate::multisig::{
+    count_signers, check_threshold, check_all_signers, check_any_signer,
+};
 
 // ── Safe CPI wrappers ───────────────────────────────────────────────────────
 pub use crate::cpi::{

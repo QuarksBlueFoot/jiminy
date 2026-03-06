@@ -623,6 +623,106 @@ byte offsets you define.
 OpenZeppelin / SPL convention). Whitelists, airdrops, allowlists - all on the
 stack, no alloc.
 
+### Pyth oracle readers
+
+`read_pyth_price`, `read_pyth_ema`, `check_pyth_price_fresh`, `check_pyth_confidence`.
+Zero-copy Pyth V2 price feed reading at fixed byte offsets. No `pyth-sdk-solana`
+dependency, no borsh, no alloc. Validates magic/version/account-type/status.
+One function call replaces 6 crate dependencies.
+
+```rust
+let data = pyth_account.try_borrow()?;
+let p = read_pyth_price(&data)?;
+// p.price * 10^(p.expo) = human-readable price
+check_pyth_price_fresh(p.publish_time, current_time, 30)?; // max 30s stale
+check_pyth_confidence(p.price, p.conf, 5)?; // max 5% band
+```
+
+### AMM math
+
+`isqrt`, `constant_product_out`, `constant_product_in`, `check_k_invariant`,
+`price_impact_bps`, `initial_lp_amount`, `proportional_lp_amount`.
+
+Integer square root via Newton's method for LP token minting. Constant-product
+swap math with u128 intermediates and fee support. K-invariant verification
+for post-swap safety. Price impact estimation. Every DEX needs these, no
+pinocchio crate provides them.
+
+```rust
+let out = constant_product_out(reserve_a, reserve_b, amount_in, 30)?; // 30 bps fee
+check_k_invariant(ra_before, rb_before, ra_after, rb_after)?;
+let lp = isqrt(amount_a as u128 * amount_b as u128)?;
+```
+
+### Balance delta (safe swap composition)
+
+`snapshot_token_balance`, `check_balance_increased`, `check_balance_decreased`,
+`check_balance_delta`, `check_lamport_balance_increased`.
+
+THE security pattern for swap aggregators: read balance before CPI, execute
+CPI, verify balance changed correctly after. Every audit flags programs that
+skip this. Named functions make the pattern auditor-visible.
+
+```rust
+let before = snapshot_token_balance(vault)?;
+safe_transfer_tokens(...)?; // CPI into AMM
+check_balance_increased(vault, before, min_output)?;
+```
+
+### Close revival sentinel
+
+`safe_close_with_sentinel`, `check_not_revived`, `check_alive`.
+Defends against Sealevel Attack #9: attacker revives a closed account within
+the same transaction by transferring lamports back. The sentinel writes
+`[0xFF; 8]` to the first 8 bytes before zeroing, so revived accounts are
+detectable on re-entry.
+
+```rust
+safe_close_with_sentinel(vault, destination)?; // writes dead sentinel
+// Later, in any instruction that accepts this account:
+check_not_revived(vault)?;
+```
+
+### Staking rewards math
+
+`update_reward_per_token`, `pending_rewards`, `update_reward_debt`,
+`emission_rate`, `rewards_earned`.
+
+The canonical MasterChef reward-per-token accumulator. u128 precision with
+1e12 scaling factor. Every staking/farming program on Solana uses this exact
+pattern. Getting the math wrong leads to reward theft or stuck funds.
+
+```rust
+let new_rpt = update_reward_per_token(pool.rpt, new_rewards, pool.total_staked)?;
+let claimable = pending_rewards(user.staked, new_rpt, user.reward_debt)?;
+user.reward_debt = update_reward_debt(user.staked, new_rpt);
+```
+
+### Vesting schedules
+
+`vested_amount`, `check_cliff_reached`, `unlocked_at_step`, `claimable`,
+`elapsed_steps`.
+
+Linear vesting with cliff, stepped/periodic unlocks, safe claimable
+computation. Pure arithmetic for team tokens, investor unlocks, grant programs.
+
+```rust
+let vested = vested_amount(total_grant, start, cliff, end, now);
+let claim = claimable(vested, user.already_claimed);
+```
+
+### Multi-signer threshold
+
+`check_threshold`, `count_signers`, `check_all_signers`, `check_any_signer`.
+
+M-of-N signature checking with built-in duplicate address prevention.
+Prevents the duplicate-signer attack (same key passed in multiple account
+slots to inflate the count).
+
+```rust
+check_threshold(&[admin_a, admin_b, admin_c], 2)?; // 2-of-3 multisig
+```
+
 ---
 
 ## Compared to the alternatives
@@ -652,6 +752,13 @@ stack, no alloc.
 | Ed25519 sig verify | Manual | Not built-in | `check_ed25519_signature` |
 | Authority handoff | Manual | Not built-in | `accept_authority` |
 | Merkle proofs | Manual | Not built-in | `verify_merkle_proof` |
+| Oracle price feeds | `pyth-sdk-solana` (6 deps) | `pyth-sdk-solana` | `read_pyth_price` (zero deps) |
+| AMM math / isqrt | Manual | Not built-in | `constant_product_out` / `isqrt` |
+| Balance delta guard | Manual | Not built-in | `check_balance_increased` |
+| Close revival defense | Manual | Not built-in | `safe_close_with_sentinel` |
+| Staking rewards math | Manual | Not built-in | `update_reward_per_token` |
+| Vesting schedules | Manual | Not built-in | `vested_amount` / `unlocked_at_step` |
+| M-of-N multisig | Manual | Not built-in | `check_threshold` |
 | PDA derivation + bump | Manual syscall | `seeds + bump` constraint | `assert_pda` / `find_pda!` / `derive_pda!` |
 | Data reads/writes | Manual index math | Borsh | `SliceCursor` / `DataWriter` |
 

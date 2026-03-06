@@ -7,8 +7,11 @@
 //! readers, Token-2022 extension screening, CPI reentrancy guards, DeFi math
 //! with u128 intermediates, slippage protection, zero-alloc event emission,
 //! merkle proof verification, Ed25519 precompile helpers, transaction
-//! introspection, authority handoff, time/deadline checks, state machine
-//! validation, zero-copy cursors, and more. All `#[inline(always)]`.
+//! introspection, authority handoff, Pyth oracle readers, AMM math (isqrt,
+//! constant-product), balance delta guards, close revival sentinels, staking
+//! reward accumulators, vesting schedules, multi-signer thresholds,
+//! time/deadline checks, state machine validation, zero-copy cursors,
+//! and more. All `#[inline(always)]`.
 //!
 //! # Quick-start
 //!
@@ -137,6 +140,53 @@
 //! See the [`event`] module. Emit structured events via `sol_log_data`:
 //! [`event::emit_slices`] and the [`emit!`] macro.
 //!
+//! # Pyth oracle readers
+//!
+//! See the [`oracle`] module. Zero-copy Pyth V2 price feed reading at fixed
+//! byte offsets, no `pyth-sdk-solana` dependency:
+//! [`oracle::read_pyth_price`], [`oracle::read_pyth_ema`],
+//! [`oracle::check_pyth_price_fresh`], [`oracle::check_pyth_confidence`].
+//!
+//! # AMM math
+//!
+//! See the [`amm`] module. Integer square root, constant-product swap math,
+//! k-invariant verification, LP token minting:
+//! [`amm::isqrt`], [`amm::constant_product_out`], [`amm::constant_product_in`],
+//! [`amm::check_k_invariant`], [`amm::price_impact_bps`],
+//! [`amm::initial_lp_amount`], [`amm::proportional_lp_amount`].
+//!
+//! # Balance delta (safe swap guard)
+//!
+//! See the [`balance`] module. Pre/post CPI balance verification for safe
+//! swap composition:
+//! [`balance::snapshot_token_balance`], [`balance::check_balance_increased`],
+//! [`balance::check_balance_decreased`], [`balance::check_balance_delta`].
+//!
+//! # Close revival sentinel
+//!
+//! The [`close`] module now includes [`safe_close_with_sentinel`] to defend
+//! against Sealevel Attack #9 (account revival). Also:
+//! [`check_not_revived`], [`check_alive`].
+//!
+//! # Staking rewards math
+//!
+//! See the [`staking`] module. MasterChef reward-per-token accumulator:
+//! [`staking::update_reward_per_token`], [`staking::pending_rewards`],
+//! [`staking::update_reward_debt`], [`staking::emission_rate`].
+//!
+//! # Vesting schedules
+//!
+//! See the [`vesting`] module. Linear + cliff, stepped, and periodic unlock:
+//! [`vesting::vested_amount`], [`vesting::unlocked_at_step`],
+//! [`vesting::claimable`], [`vesting::elapsed_steps`].
+//!
+//! # Multi-signer threshold
+//!
+//! See the [`multisig`] module. M-of-N signature checking with duplicate
+//! prevention:
+//! [`multisig::check_threshold`], [`multisig::count_signers`],
+//! [`multisig::check_all_signers`], [`multisig::check_any_signer`].
+//!
 //! # DeFi math
 //!
 //! | Function | What it does |
@@ -220,8 +270,10 @@
 pub mod programs;
 
 mod accounts;
+pub mod amm;
 mod asserts;
 pub mod authority;
+pub mod balance;
 mod bits;
 mod checks;
 mod close;
@@ -237,15 +289,19 @@ pub mod log;
 mod math;
 pub mod merkle;
 mod mint;
+pub mod multisig;
+pub mod oracle;
 mod pda;
 pub mod prelude;
 pub mod realloc;
 pub mod slippage;
+pub mod staking;
 pub mod state;
 mod sysvar;
 mod time;
 mod token;
 pub mod token_2022;
+pub mod vesting;
 
 pub use accounts::AccountList;
 pub use asserts::*;
