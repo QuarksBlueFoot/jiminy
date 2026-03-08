@@ -1,0 +1,22 @@
+[package]
+name = "jiminy-multisig"
+version = "0.11.0"
+edition = "2021"
+license = "Apache-2.0"
+authors = ["MoonManQuark"]
+description = "M-of-N multi-signer threshold checks for Jiminy. Zero-copy, no_std, no_alloc, BPF-safe."
+repository = "https://github.com/QuarksBlueFoot/jiminy"
+keywords = ["solana", "pinocchio", "multisig", "threshold", "zero-copy"]
+categories = ["no-std", "embedded"]
+
+[lib]
+name = "jiminy_multisig"
+
+[dependencies]
+pinocchio = { workspace = true }
+
+[features]
+default = []
+
+[lints]
+workspace = true

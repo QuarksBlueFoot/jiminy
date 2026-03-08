@@ -53,6 +53,18 @@ pub use crate::header::{
     read_version, write_header, write_header_with_len, HEADER_LEN,
 };
 
+// ── vNext: Account header struct ─────────────────────────────────────────────
+pub use jiminy_core::AccountHeader;
+
+// ── vNext: Zero-copy IO ──────────────────────────────────────────────────────
+pub use jiminy_core::account_io::{AccountReader, AccountWriter};
+
+// ── vNext: POD casting ───────────────────────────────────────────────────────
+pub use jiminy_core::pod::{pod_from_bytes, pod_from_bytes_mut, pod_write, FixedLayout, Pod};
+
+// ── vNext: Unified instruction access ────────────────────────────────────────
+pub use jiminy_core::instruction;
+
 // ── Math ─────────────────────────────────────────────────────────────────────
 pub use crate::math::{
     bps_of, bps_of_ceil, checked_add, checked_div, checked_div_ceil, checked_mul,

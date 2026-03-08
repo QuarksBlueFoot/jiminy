@@ -1,0 +1,22 @@
+[package]
+name = "jiminy-vesting"
+version = "0.11.0"
+edition = "2021"
+license = "Apache-2.0"
+authors = ["MoonManQuark"]
+description = "Vesting schedule helpers for Jiminy: linear+cliff, stepped, periodic unlock, claimable calculations. Zero-copy, no_std, no_alloc, BPF-safe."
+repository = "https://github.com/QuarksBlueFoot/jiminy"
+keywords = ["solana", "pinocchio", "vesting", "token-lock", "zero-copy"]
+categories = ["no-std", "embedded"]
+
+[lib]
+name = "jiminy_vesting"
+
+[dependencies]
+pinocchio = { workspace = true }
+
+[features]
+default = []
+
+[lints]
+workspace = true

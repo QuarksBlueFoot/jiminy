@@ -1,0 +1,23 @@
+[package]
+name = "jiminy-finance"
+version = "0.11.0"
+edition = "2021"
+license = "Apache-2.0"
+authors = ["MoonManQuark"]
+description = "DeFi math primitives for Jiminy: AMM math, slippage/economic bounds, balance-delta guards. Zero-copy, no_std, no_alloc, BPF-safe."
+repository = "https://github.com/QuarksBlueFoot/jiminy"
+keywords = ["solana", "pinocchio", "defi", "amm", "zero-copy"]
+categories = ["no-std", "embedded"]
+
+[lib]
+name = "jiminy_finance"
+
+[dependencies]
+pinocchio = { workspace = true }
+jiminy-core = { path = "../jiminy-core", default-features = false }
+
+[features]
+default = []
+
+[lints]
+workspace = true

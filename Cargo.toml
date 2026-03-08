@@ -1,6 +1,14 @@
 [workspace]
 members = [
     ".",
+    "crates/jiminy-core",
+    "crates/jiminy-solana",
+    "crates/jiminy-finance",
+    "crates/jiminy-lending",
+    "crates/jiminy-staking",
+    "crates/jiminy-vesting",
+    "crates/jiminy-multisig",
+    "crates/jiminy-distribute",
     "examples/jiminy-vault",
     "examples/jiminy-escrow",
     "bench/pinocchio-vault",
@@ -21,6 +29,14 @@ pinocchio-system = "0.5"
 pinocchio-token = "0.5"
 sha2-const-stable = "0.1"
 jiminy = { path = "." }
+jiminy-core = { path = "crates/jiminy-core" }
+jiminy-solana = { path = "crates/jiminy-solana" }
+jiminy-finance = { path = "crates/jiminy-finance" }
+jiminy-lending = { path = "crates/jiminy-lending" }
+jiminy-staking = { path = "crates/jiminy-staking" }
+jiminy-vesting = { path = "crates/jiminy-vesting" }
+jiminy-multisig = { path = "crates/jiminy-multisig" }
+jiminy-distribute = { path = "crates/jiminy-distribute" }
 
 [package]
 name = "jiminy"
@@ -44,6 +60,14 @@ pinocchio = { workspace = true }
 pinocchio-system = { workspace = true }
 pinocchio-token = { workspace = true }
 sha2-const-stable = { workspace = true }
+jiminy-core = { workspace = true }
+jiminy-solana = { workspace = true }
+jiminy-finance = { workspace = true }
+jiminy-lending = { workspace = true }
+jiminy-staking = { workspace = true }
+jiminy-vesting = { workspace = true }
+jiminy-multisig = { workspace = true }
+jiminy-distribute = { workspace = true }
 
 [features]
 default = ["programs"]

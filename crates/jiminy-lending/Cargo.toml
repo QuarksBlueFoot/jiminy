@@ -1,0 +1,22 @@
+[package]
+name = "jiminy-lending"
+version = "0.11.0"
+edition = "2021"
+license = "Apache-2.0"
+authors = ["MoonManQuark"]
+description = "Lending protocol primitives for Jiminy: collateralization ratios, health checks, liquidation math, interest calculations. Zero-copy, no_std, no_alloc, BPF-safe."
+repository = "https://github.com/QuarksBlueFoot/jiminy"
+keywords = ["solana", "pinocchio", "lending", "defi", "zero-copy"]
+categories = ["no-std", "embedded"]
+
+[lib]
+name = "jiminy_lending"
+
+[dependencies]
+pinocchio = { workspace = true }
+
+[features]
+default = []
+
+[lints]
+workspace = true

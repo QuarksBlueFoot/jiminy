@@ -311,6 +311,36 @@
 //!
 //! [`distribute::proportional_split`], [`distribute::extract_fee`].
 //! Dust-safe N-way splits and fee extraction where `sum == total`.
+//!
+//! # Modular crates (vNext)
+//!
+//! Starting with vNext, Jiminy is split into focused crates:
+//!
+//! | Crate | What it provides |
+//! |---|---|
+//! | [`jiminy_core`] | Account layout, zero-copy IO, validation, PDA, sysvar, lifecycle, math, time |
+//! | [`jiminy_solana`] | Token/mint readers, Token-2022, CPI guards, introspection, Ed25519, Merkle, Pyth, TWAP |
+//! | [`jiminy_finance`] | AMM math, constant-product swaps, LP minting |
+//! | [`jiminy_lending`] | Lending protocol primitives (collateralization, liquidation, interest) |
+//! | [`jiminy_staking`] | Staking reward accumulators |
+//! | [`jiminy_vesting`] | Vesting schedule helpers |
+//! | [`jiminy_multisig`] | M-of-N multi-signer threshold checks |
+//! | [`jiminy_distribute`] | Dust-safe proportional distribution |
+//!
+//! The root `jiminy` crate re-exports everything for backward compatibility.
+//! You can also depend on individual crates for a leaner build.
+
+// ── Re-export subcrates ──────────────────────────────────────────────────────
+pub use jiminy_core;
+pub use jiminy_solana;
+pub use jiminy_finance;
+pub use jiminy_lending;
+pub use jiminy_staking;
+pub use jiminy_vesting;
+pub use jiminy_multisig;
+pub use jiminy_distribute;
+
+// ── Original modules (kept for backward compatibility) ───────────────────────
 
 #[cfg(feature = "programs")]
 pub mod programs;
@@ -356,6 +386,13 @@ pub mod twap;
 #[cfg(feature = "programs")]
 pub mod upgrade;
 pub mod vesting;
+
+// ── New vNext types re-exported at root ──────────────────────────────────────
+pub use jiminy_core::{
+    AccountReader, AccountWriter, AccountHeader,
+    Pod, FixedLayout, pod_from_bytes, pod_from_bytes_mut, pod_write,
+    lifecycle, instruction, account_io, pod,
+};
 
 pub use accounts::AccountList;
 pub use asserts::*;
