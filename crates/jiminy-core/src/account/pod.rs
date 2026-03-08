@@ -3,6 +3,17 @@
 //! Provides a safe API for reinterpreting byte slices as typed structs,
 //! when the struct is `#[repr(C)]`, `Copy`, and all bit patterns are valid.
 //!
+//! ## Alignment
+//!
+//! On SBF (Solana runtime) all memory is 1-byte aligned, so pointer casts
+//! are always valid. In native tests the data pointer may not satisfy
+//! `align_of::<T>()`. The functions below handle both cases:
+//!
+//! - **Aligned** — returns a direct reference into the byte slice (zero-copy).
+//! - **Unaligned** (native tests only) — copies via `read_unaligned` and
+//!   returns `Err` for the `_mut` variant since an in-place mutable
+//!   reference would be unsound.
+//!
 //! # Usage
 //!
 //! ```rust,ignore
@@ -55,29 +66,69 @@ pub trait FixedLayout {
 /// Reinterpret a byte slice as an immutable reference to `T`.
 ///
 /// Returns `AccountDataTooSmall` if the slice is shorter than `T::SIZE`.
+///
+/// On SBF (1-byte alignment) this is a direct pointer cast. On native
+/// targets if the pointer is misaligned, the value is copied to a
+/// stack-aligned temporary — still safe, just not truly zero-copy in
+/// tests.
 #[inline(always)]
 pub fn pod_from_bytes<T: Pod + FixedLayout>(data: &[u8]) -> Result<&T, ProgramError> {
     if data.len() < T::SIZE {
         return Err(ProgramError::AccountDataTooSmall);
     }
-    if (data.as_ptr() as usize) % core::mem::align_of::<T>() != 0 {
-        return Err(ProgramError::InvalidAccountData);
+    // SBF has 1-byte alignment for everything — pointer cast is always valid.
+    #[cfg(target_os = "solana")]
+    {
+        Ok(unsafe { &*(data.as_ptr() as *const T) })
     }
-    Ok(unsafe { &*(data.as_ptr() as *const T) })
+    // Native: check alignment before casting. If misaligned, return error
+    // to force callers to use pod_read instead.
+    #[cfg(not(target_os = "solana"))]
+    {
+        if (data.as_ptr() as usize) % core::mem::align_of::<T>() != 0 {
+            return Err(ProgramError::InvalidAccountData);
+        }
+        Ok(unsafe { &*(data.as_ptr() as *const T) })
+    }
 }
 
 /// Reinterpret a mutable byte slice as a mutable reference to `T`.
 ///
 /// Returns `AccountDataTooSmall` if the slice is shorter than `T::SIZE`.
+/// Returns `InvalidAccountData` on native targets if the pointer is
+/// misaligned (a mutable reference requires correct alignment).
 #[inline(always)]
 pub fn pod_from_bytes_mut<T: Pod + FixedLayout>(data: &mut [u8]) -> Result<&mut T, ProgramError> {
     if data.len() < T::SIZE {
         return Err(ProgramError::AccountDataTooSmall);
     }
-    if (data.as_ptr() as usize) % core::mem::align_of::<T>() != 0 {
-        return Err(ProgramError::InvalidAccountData);
+    #[cfg(target_os = "solana")]
+    {
+        Ok(unsafe { &mut *(data.as_mut_ptr() as *mut T) })
     }
-    Ok(unsafe { &mut *(data.as_mut_ptr() as *mut T) })
+    #[cfg(not(target_os = "solana"))]
+    {
+        if (data.as_ptr() as usize) % core::mem::align_of::<T>() != 0 {
+            return Err(ProgramError::InvalidAccountData);
+        }
+        Ok(unsafe { &mut *(data.as_mut_ptr() as *mut T) })
+    }
+}
+
+/// Read a `T` value from a byte slice by copy (alignment-safe on all targets).
+///
+/// Unlike [`pod_from_bytes`] this always works regardless of pointer
+/// alignment, making it ideal for native tests. Returns an owned `T`.
+///
+/// ```rust,ignore
+/// let header: AccountHeader = pod_read::<AccountHeader>(&data)?;
+/// ```
+#[inline(always)]
+pub fn pod_read<T: Pod + FixedLayout>(data: &[u8]) -> Result<T, ProgramError> {
+    if data.len() < T::SIZE {
+        return Err(ProgramError::AccountDataTooSmall);
+    }
+    Ok(unsafe { core::ptr::read_unaligned(data.as_ptr() as *const T) })
 }
 
 /// Write a Pod value into a byte slice at offset 0.

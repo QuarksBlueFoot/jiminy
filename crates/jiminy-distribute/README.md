@@ -1,11 +1,9 @@
 # jiminy-distribute
 
-Split a token amount across N recipients by weight. Remainder goes to last
-recipient so the sum always equals the input. Also does basis-point fee
-extraction.
+Split a token amount across N recipients by weight. Remainder goes to the last recipient so the sum always equals the input. Also does basis-point fee extraction.
 
 ```toml
-jiminy-distribute = "0.11"
+jiminy-distribute = "0.12"
 ```
 
 Two functions:
@@ -21,6 +19,6 @@ proportional_split(total_amount, &weights, &mut amounts)?;
 let (net, fee) = extract_fee(gross_amount, fee_bps)?;
 ```
 
-`#![no_std]` · `no_alloc` · BPF-safe · Apache-2.0
+`#![no_std]` / `no_alloc` / BPF-safe / Apache-2.0
 
 [MoonManQuark](https://x.com/moonmanquark) / [Bluefoot Labs](https://github.com/BluefootLabs)

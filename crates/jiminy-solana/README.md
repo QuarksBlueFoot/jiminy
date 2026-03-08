@@ -1,19 +1,17 @@
 # jiminy-solana
 
-Token/mint readers, Token-2022 screening, CPI guards, Ed25519, Merkle proofs,
-Pyth oracles, authority rotation, TWAP, compute guards. The Solana platform
-layer that sits on top of `jiminy-core`.
+Token/mint readers, Token-2022 screening, CPI guards, Ed25519, Merkle proofs, Pyth oracles, authority rotation, TWAP, compute guards. The Solana platform layer on top of `jiminy-core`.
 
-`#![no_std]` · `no_alloc` · BPF-safe
+`#![no_std]` / `no_alloc` / BPF-safe
 
 ```toml
 [dependencies]
-jiminy-solana = "0.11"
+jiminy-solana = "0.12"
 ```
 
-Pulls in `jiminy-core`, `pinocchio-token`, and `pinocchio-system` automatically.
+Pulls in `jiminy-core`, `pinocchio-token`, and `pinocchio-system` for you.
 
-## Modules
+## What's in here
 
 | | |
 |---|---|
@@ -32,10 +30,10 @@ Pulls in `jiminy-core`, `pinocchio-token`, and `pinocchio-system` automatically.
 ```rust,ignore
 use jiminy_solana::prelude::*;
 
-let balance = token_amount(token_account)?;
-let valid = crypto::merkle::verify_proof(&proof, &root, &leaf);
+let balance = token_account_amount(token_account)?;
+let valid = verify_merkle_proof(&proof, &root, &leaf);
 ```
 
 ---
 
-[MoonManQuark](https://x.com/moonmanquark) / [Bluefoot Labs](https://github.com/BluefootLabs) · Apache-2.0
+[MoonManQuark](https://x.com/moonmanquark) / [Bluefoot Labs](https://github.com/BluefootLabs) / Apache-2.0

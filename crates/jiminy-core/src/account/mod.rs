@@ -7,10 +7,12 @@
 //! ```
 
 pub mod bits;
+pub mod collection;
 pub mod cursor;
 pub mod header;
 pub mod lifecycle;
 pub mod list;
+pub mod overlay;
 pub mod pod;
 pub mod reader;
 pub mod writer;
@@ -25,7 +27,8 @@ pub use header::{
 pub use reader::AccountReader;
 pub use writer::AccountWriter;
 pub use cursor::{DataWriter, SliceCursor, write_discriminator, zero_init};
-pub use pod::{Pod, FixedLayout, pod_from_bytes, pod_from_bytes_mut, pod_write};
+pub use pod::{Pod, FixedLayout, pod_from_bytes, pod_from_bytes_mut, pod_read, pod_write};
+pub use collection::{ZeroCopySlice, ZeroCopySliceMut, ZeroCopyIter};
 pub use lifecycle::{
     CLOSE_SENTINEL, safe_close, safe_close_with_sentinel, check_not_revived,
     check_alive, safe_realloc, safe_realloc_shrink,

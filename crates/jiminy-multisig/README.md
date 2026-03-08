@@ -3,7 +3,7 @@
 M-of-N signer checks. Four functions, zero allocation.
 
 ```toml
-jiminy-multisig = "0.11"
+jiminy-multisig = "0.12"
 ```
 
 `count_signers` counts how many accounts in a slice signed.
@@ -16,6 +16,6 @@ use jiminy_multisig::*;
 check_threshold(&signer_accounts, 3)?; // 3-of-N
 ```
 
-`#![no_std]` · `no_alloc` · BPF-safe · Apache-2.0
+`#![no_std]` / `no_alloc` / BPF-safe / Apache-2.0
 
 [MoonManQuark](https://x.com/moonmanquark) / [Bluefoot Labs](https://github.com/BluefootLabs)

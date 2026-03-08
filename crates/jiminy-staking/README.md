@@ -1,10 +1,9 @@
 # jiminy-staking
 
-MasterChef-style staking math. Global reward-per-token accumulator, per-user
-pending rewards, reward debt snapshots, emission rates.
+MasterChef-style staking math. Global reward-per-token accumulator, per-user pending rewards, reward debt snapshots, emission rates.
 
 ```toml
-jiminy-staking = "0.11"
+jiminy-staking = "0.12"
 ```
 
 - `update_reward_per_token` - advance the global accumulator
@@ -24,6 +23,6 @@ let new_rpt = update_reward_per_token(
 let pending = pending_rewards(user_staked, new_rpt, user_reward_debt)?;
 ```
 
-`#![no_std]` · `no_alloc` · BPF-safe · Apache-2.0
+`#![no_std]` / `no_alloc` / BPF-safe / Apache-2.0
 
 [MoonManQuark](https://x.com/moonmanquark) / [Bluefoot Labs](https://github.com/BluefootLabs)

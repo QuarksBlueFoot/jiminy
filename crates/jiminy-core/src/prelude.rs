@@ -31,7 +31,8 @@ pub use crate::account::{
 // ── Zero-copy IO ─────────────────────────────────────────────────────────────
 pub use crate::account::{AccountReader, AccountWriter};
 pub use crate::account::{write_discriminator, zero_init, DataWriter, SliceCursor};
-pub use crate::account::{pod_from_bytes, pod_from_bytes_mut, pod_write, FixedLayout, Pod};
+pub use crate::account::{pod_from_bytes, pod_from_bytes_mut, pod_read, pod_write, FixedLayout, Pod};
+pub use crate::account::{ZeroCopySlice, ZeroCopySliceMut};
 
 // ── Math ─────────────────────────────────────────────────────────────────────
 pub use crate::math::{
@@ -64,6 +65,10 @@ pub use crate::check::pda::{
 pub use crate::account::AccountList;
 
 // ── Sysvar readers ───────────────────────────────────────────────────────────
+pub use crate::sysvar::{
+    clock_timestamp, clock_slot, clock_slot_and_timestamp, clock_epoch,
+    rent_lamports_per_byte_year,
+};
 #[cfg(feature = "programs")]
 pub use crate::sysvar::{
     check_clock_sysvar, check_rent_sysvar, read_clock, read_clock_epoch, read_clock_slot,
@@ -100,6 +105,7 @@ pub use crate::state::{
 pub use crate::{
     require, require_accounts_ne, require_eq, require_flag, require_gt, require_gte,
     require_keys_eq, require_keys_neq, require_lt, require_lte, require_neq,
+    zero_copy_layout,
 };
 
 // ── Pinocchio core types ─────────────────────────────────────────────────────

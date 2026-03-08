@@ -1,8 +1,14 @@
 //! Zero-copy sysvar readers.
 //!
-//! Read Clock and Rent fields directly from sysvar account data without
-//! deserialization. Each reader validates the sysvar address first, then
-//! reads the fixed-layout fields using cursor-style offset reads.
+//! Two access paths:
+//!
+//! 1. **Syscall** (`clock_timestamp()`, `clock_slot()`, etc.) — reads via
+//!    `sol_get_clock_sysvar` / `sol_get_rent_sysvar`. No account needed,
+//!    saves one account slot in your instruction. Available on-chain only.
+//!
+//! 2. **Account-based** (`read_clock()`, `read_clock_slot()`, etc.) — reads
+//!    from a passed-in Clock or Rent sysvar account. Works in tests and
+//!    anywhere you already have the account.
 //!
 //! ## Clock layout (40 bytes)
 //!
@@ -27,7 +33,125 @@ use pinocchio::{error::ProgramError, AccountView, ProgramResult};
 #[cfg(feature = "programs")]
 use crate::programs;
 
-// ── Clock Sysvar ─────────────────────────────────────────────────────────────
+// ── Syscall-based Clock access (no account needed) ───────────────────────────
+
+#[cfg(target_os = "solana")]
+extern "C" {
+    fn sol_get_clock_sysvar(addr: *mut u8) -> u64;
+    fn sol_get_rent_sysvar(addr: *mut u8) -> u64;
+}
+
+/// Read the unix timestamp from the Clock sysvar via syscall.
+///
+/// No account needed. Saves one account slot per instruction compared
+/// to passing the Clock sysvar account.
+///
+/// ```rust,ignore
+/// let now = clock_timestamp()?;
+/// check_not_expired(now, order.expiry)?;
+/// ```
+#[inline(always)]
+pub fn clock_timestamp() -> Result<i64, ProgramError> {
+    let buf = get_clock_buf()?;
+    Ok(i64::from_le_bytes([
+        buf[32], buf[33], buf[34], buf[35], buf[36], buf[37], buf[38], buf[39],
+    ]))
+}
+
+/// Read the current slot from the Clock sysvar via syscall.
+///
+/// ```rust,ignore
+/// let slot = clock_slot()?;
+/// check_slot_staleness(oracle_slot, slot, 50)?;
+/// ```
+#[inline(always)]
+pub fn clock_slot() -> Result<u64, ProgramError> {
+    let buf = get_clock_buf()?;
+    Ok(u64::from_le_bytes([
+        buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6], buf[7],
+    ]))
+}
+
+/// Read both slot and unix_timestamp from the Clock sysvar via syscall.
+///
+/// ```rust,ignore
+/// let (slot, ts) = clock_slot_and_timestamp()?;
+/// ```
+#[inline(always)]
+pub fn clock_slot_and_timestamp() -> Result<(u64, i64), ProgramError> {
+    let buf = get_clock_buf()?;
+    let slot = u64::from_le_bytes([
+        buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6], buf[7],
+    ]);
+    let ts = i64::from_le_bytes([
+        buf[32], buf[33], buf[34], buf[35], buf[36], buf[37], buf[38], buf[39],
+    ]);
+    Ok((slot, ts))
+}
+
+/// Read the epoch from the Clock sysvar via syscall.
+///
+/// ```rust,ignore
+/// let epoch = clock_epoch()?;
+/// ```
+#[inline(always)]
+pub fn clock_epoch() -> Result<u64, ProgramError> {
+    let buf = get_clock_buf()?;
+    Ok(u64::from_le_bytes([
+        buf[16], buf[17], buf[18], buf[19], buf[20], buf[21], buf[22], buf[23],
+    ]))
+}
+
+/// Read the lamports_per_byte_year from the Rent sysvar via syscall.
+///
+/// ```rust,ignore
+/// let rate = rent_lamports_per_byte_year()?;
+/// ```
+#[inline(always)]
+pub fn rent_lamports_per_byte_year() -> Result<u64, ProgramError> {
+    let buf = get_rent_buf()?;
+    Ok(u64::from_le_bytes([
+        buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6], buf[7],
+    ]))
+}
+
+/// Read the full Clock sysvar into a stack buffer via syscall.
+#[inline(always)]
+fn get_clock_buf() -> Result<[u8; CLOCK_LEN], ProgramError> {
+    #[cfg(target_os = "solana")]
+    {
+        let mut buf = [0u8; CLOCK_LEN];
+        let rc = unsafe { sol_get_clock_sysvar(buf.as_mut_ptr()) };
+        if rc != 0 {
+            return Err(ProgramError::InvalidArgument);
+        }
+        Ok(buf)
+    }
+    #[cfg(not(target_os = "solana"))]
+    {
+        Err(ProgramError::InvalidArgument)
+    }
+}
+
+/// Read the full Rent sysvar into a stack buffer via syscall.
+#[inline(always)]
+fn get_rent_buf() -> Result<[u8; RENT_LEN], ProgramError> {
+    #[cfg(target_os = "solana")]
+    {
+        let mut buf = [0u8; RENT_LEN];
+        let rc = unsafe { sol_get_rent_sysvar(buf.as_mut_ptr()) };
+        if rc != 0 {
+            return Err(ProgramError::InvalidArgument);
+        }
+        Ok(buf)
+    }
+    #[cfg(not(target_os = "solana"))]
+    {
+        Err(ProgramError::InvalidArgument)
+    }
+}
+
+// ── Account-based Clock access ───────────────────────────────────────────────
 
 /// Minimum size of the Clock sysvar data.
 const CLOCK_LEN: usize = 40;
@@ -142,7 +266,7 @@ pub fn read_clock_epoch(account: &AccountView) -> Result<u64, ProgramError> {
     Ok(epoch)
 }
 
-// ── Rent Sysvar ──────────────────────────────────────────────────────────────
+// ── Account-based Rent access ─────────────────────────────────────────────────
 
 /// Minimum size of the Rent sysvar data.
 const RENT_LEN: usize = 17;
