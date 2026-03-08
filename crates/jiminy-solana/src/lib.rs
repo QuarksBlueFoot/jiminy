@@ -10,26 +10,39 @@
 //! use jiminy_solana::prelude::*;
 //! ```
 //!
+//! # Module organisation
+//!
+//! | Module | Purpose |
+//! |---|---|
+//! | [`token`] | SPL Token account readers, mint readers, Token-2022 extension screening |
+//! | [`cpi`] | Safe CPI wrappers, reentrancy guards, return data readers |
+//! | [`crypto`] | Ed25519 precompile verification, Merkle proof verification |
+//! | [`authority`] | Two-step authority rotation (propose + accept) |
+//! | [`balance`] | Pre/post CPI balance delta guards |
+//! | [`compute`] | Compute budget guards |
+//! | [`compose`] | Transaction composition guards (flash-loan detection) |
+//! | [`introspect`] | Raw transaction introspection |
+//! | [`oracle`] | Pyth V2 price feed readers |
+//! | [`twap`] | TWAP accumulators |
+//! | [`upgrade`] | Program upgrade authority verification *(feature: `programs`)* |
+//!
 //! Depends on [`jiminy_core`] for validation, math, and account IO.
 
-// ── Modules ──────────────────────────────────────────────────────────────────
+// ── Domain modules ───────────────────────────────────────────────────────────
+
+pub mod token;
+pub mod cpi;
+pub mod crypto;
 
 pub mod authority;
 pub mod balance;
 pub mod compute;
 pub mod compose;
-pub mod cpi;
-pub mod cpi_guard;
-pub mod cpi_return;
-pub mod ed25519;
 pub mod introspect;
-pub mod merkle;
-pub mod mint;
 pub mod oracle;
 pub mod prelude;
-pub mod token;
-pub mod token_2022;
 pub mod twap;
+
 #[cfg(feature = "programs")]
 pub mod upgrade;
 

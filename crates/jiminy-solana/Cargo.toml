@@ -5,6 +5,7 @@ edition = "2021"
 license = "Apache-2.0"
 authors = ["MoonManQuark"]
 description = "Solana platform helpers for Jiminy: token/mint readers, Token-2022 screening, CPI guards, introspection, Ed25519, Merkle proofs, Pyth oracles, authority handoff, TWAP, compute guards. Zero-copy, no_std, no_alloc, BPF-safe."
+readme = "README.md"
 repository = "https://github.com/QuarksBlueFoot/jiminy"
 keywords = ["solana", "pinocchio", "bpf", "zero-copy", "spl-token"]
 categories = ["no-std", "embedded"]
@@ -16,7 +17,7 @@ name = "jiminy_solana"
 pinocchio = { workspace = true }
 pinocchio-system = { workspace = true }
 pinocchio-token = { workspace = true }
-jiminy-core = { path = "../jiminy-core", default-features = false }
+jiminy-core = { path = "../jiminy-core", version = "0.11.0", default-features = false }
 
 [features]
 default = ["programs"]

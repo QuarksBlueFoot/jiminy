@@ -10,7 +10,7 @@
 
 use pinocchio::{error::ProgramError, Address, ProgramResult};
 
-use crate::cpi_guard::get_num_instructions;
+use crate::cpi::get_num_instructions;
 use crate::introspect::read_program_id_at;
 
 

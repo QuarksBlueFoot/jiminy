@@ -28,27 +28,27 @@ pinocchio = { version = "0.10", features = ["cpi"] }
 pinocchio-system = "0.5"
 pinocchio-token = "0.5"
 sha2-const-stable = "0.1"
-jiminy = { path = "." }
-jiminy-core = { path = "crates/jiminy-core" }
-jiminy-solana = { path = "crates/jiminy-solana" }
-jiminy-finance = { path = "crates/jiminy-finance" }
-jiminy-lending = { path = "crates/jiminy-lending" }
-jiminy-staking = { path = "crates/jiminy-staking" }
-jiminy-vesting = { path = "crates/jiminy-vesting" }
-jiminy-multisig = { path = "crates/jiminy-multisig" }
-jiminy-distribute = { path = "crates/jiminy-distribute" }
+jiminy = { path = ".", version = "0.11.0" }
+jiminy-core = { path = "crates/jiminy-core", version = "0.11.0" }
+jiminy-solana = { path = "crates/jiminy-solana", version = "0.11.0" }
+jiminy-finance = { path = "crates/jiminy-finance", version = "0.11.0" }
+jiminy-lending = { path = "crates/jiminy-lending", version = "0.11.0" }
+jiminy-staking = { path = "crates/jiminy-staking", version = "0.11.0" }
+jiminy-vesting = { path = "crates/jiminy-vesting", version = "0.11.0" }
+jiminy-multisig = { path = "crates/jiminy-multisig", version = "0.11.0" }
+jiminy-distribute = { path = "crates/jiminy-distribute", version = "0.11.0" }
 
 [package]
 name = "jiminy"
-version = "0.10.0"
+version = "0.11.0"
 edition = "2021"
 license = "Apache-2.0"
 authors = ["MoonManQuark"]
-description = "Safety toolkit for pinocchio Solana programs. Compute budget guards, flash-loan detection, CPI return data, program upgrade verification, TWAP accumulators, lending/liquidation math, dust-safe distribution, Pyth oracle readers, AMM math, balance delta guards, close revival sentinels, staking rewards, vesting, multisig, CPI wrappers, account checks, token/mint readers, Token-2022 screening, reentrancy guards, DeFi math, slippage, events, introspection, ed25519, authority handoff, merkle proofs. Zero-copy, no_std, no proc macros."
+description = "Zero-copy safety toolkit for pinocchio Solana programs. Modular crate architecture: jiminy-core (account layout, validation, math, PDA), jiminy-solana (SPL Token/Mint readers, Token-2022 screening, CPI guards, Ed25519, Merkle, Pyth oracle), jiminy-finance (AMM math, slippage), plus lending, staking, vesting, multisig, distribution. no_std, no_alloc, no proc macros, BPF-safe."
 repository = "https://github.com/QuarksBlueFoot/jiminy"
 homepage = "https://github.com/QuarksBlueFoot/jiminy"
 readme = "README.md"
-keywords = ["solana", "pinocchio", "bpf", "zero-copy", "anchor"]
+keywords = ["solana", "pinocchio", "bpf", "zero-copy", "no-std"]
 categories = ["no-std", "embedded"]
 exclude = [".github", "*.sh", "examples", "bench", "docs", "BENCHMARKS.md"]
 
@@ -71,8 +71,8 @@ jiminy-distribute = { workspace = true }
 
 [features]
 default = ["programs"]
-programs = []
-log = []
+programs = ["jiminy-core/programs", "jiminy-solana/programs"]
+log = ["jiminy-core/log"]
 
 [lints]
 workspace = true

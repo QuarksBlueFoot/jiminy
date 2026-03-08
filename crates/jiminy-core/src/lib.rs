@@ -10,21 +10,19 @@
 //! use jiminy_core::prelude::*;
 //! ```
 //!
-//! # Ring 1: what lives here
+//! # Module organisation
 //!
-//! | Layer | Types / Functions |
+//! | Module | Purpose |
 //! |---|---|
-//! | **Account grammar** | [`AccountHeader`], [`HEADER_LEN`], [`body`], [`body_mut`], [`check_header`] |
-//! | **Zero-copy IO** | [`AccountReader`], [`AccountWriter`], [`SliceCursor`], [`DataWriter`] |
-//! | **POD casting** | [`Pod`], [`FixedLayout`], [`pod_from_bytes`], [`pod_from_bytes_mut`] |
-//! | **Validation** | [`check_signer`], [`check_owner`], [`check_account`], [`assert_pda`] … |
-//! | **PDA utilities** | [`find_pda!`], [`derive_pda!`], [`derive_ata`], [`check_ata`] … |
-//! | **Instruction access** | [`instruction::current_index`], [`instruction::program_id_at`] … |
-//! | **Lifecycle** | [`safe_close`], [`safe_realloc`], [`zero_init`], [`check_not_revived`] |
-//! | **Math** | [`checked_add`], [`checked_mul_div`], [`bps_of`], [`scale_amount`] … |
-//! | **Time & state** | [`check_not_expired`], [`check_state_transition`], [`write_state`] |
-//! | **Events** | [`emit!`], [`emit_slices`] |
-//! | **Well-known IDs** | [`programs::TOKEN`], [`programs::SYSTEM`], [`programs::BPF_LOADER`] … |
+//! | [`account`] | Header, reader, writer, cursor, lifecycle, pod, list, bits |
+//! | [`check`] | Validation checks, asserts, PDA derivation & verification |
+//! | [`instruction`] | Transaction introspection (sysvar Instructions) |
+//! | [`math`] | Checked arithmetic, BPS, scaling |
+//! | [`sysvar`] | Clock & Rent sysvar readers |
+//! | [`state`] | State machine transition checks |
+//! | [`time`] | Deadline, cooldown, staleness checks |
+//! | [`event`] | Zero-alloc event emission via `sol_log_data` |
+//! | [`programs`] | Well-known program IDs *(feature: `programs`)* |
 //!
 //! # What does NOT belong here
 //!
@@ -32,55 +30,29 @@
 //! oracles, AMM math, lending, staking, vesting — see `jiminy-solana`,
 //! `jiminy-finance`, and other optional crates.
 
-// ── Modules ──────────────────────────────────────────────────────────────────
+// ── Domain modules ───────────────────────────────────────────────────────────
+
+pub mod account;
+pub mod check;
+pub mod event;
+pub mod instruction;
+pub mod math;
+pub mod prelude;
+pub mod state;
+pub mod sysvar;
+pub mod time;
+
+#[cfg(feature = "log")]
+pub mod log;
 
 #[cfg(feature = "programs")]
 pub mod programs;
 
-mod accounts;
-pub mod account_io;
-mod asserts;
-mod bits;
-mod checks;
-pub mod cursor;
-pub mod event;
-mod header;
-pub mod instruction;
-pub mod lifecycle;
-#[cfg(feature = "log")]
-pub mod log;
-mod math;
-mod pda;
-pub mod pod;
-pub mod prelude;
-pub mod slippage;
-pub mod state;
-mod sysvar;
-mod time;
+// ── Pinocchio re-exports ─────────────────────────────────────────────────────
+//
+// Downstream crates depend on just jiminy-core; they get pinocchio for free.
 
-// ── Re-exports at crate root ─────────────────────────────────────────────────
-
-pub use accounts::AccountList;
-pub use account_io::{AccountReader, AccountWriter};
-pub use asserts::*;
-pub use bits::*;
-pub use checks::*;
-pub use cursor::{write_discriminator, zero_init, DataWriter, SliceCursor};
-pub use header::*;
-pub use lifecycle::{
-    safe_close, safe_close_with_sentinel, check_not_revived, check_alive,
-    safe_realloc, safe_realloc_shrink, CLOSE_SENTINEL,
-};
-pub use math::*;
-pub use pda::*;
-pub use pod::{Pod, FixedLayout, pod_from_bytes, pod_from_bytes_mut, pod_write};
-pub use sysvar::*;
-pub use time::*;
-
-// Re-export pinocchio so downstream crates and programs can depend on just jiminy-core.
 pub use pinocchio;
-
-// Re-export common types at crate root.
 pub use pinocchio::{error::ProgramError, AccountView, Address, ProgramResult};
 
 // ── Macros ───────────────────────────────────────────────────────────────────

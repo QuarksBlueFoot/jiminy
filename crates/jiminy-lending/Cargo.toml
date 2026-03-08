@@ -5,6 +5,7 @@ edition = "2021"
 license = "Apache-2.0"
 authors = ["MoonManQuark"]
 description = "Lending protocol primitives for Jiminy: collateralization ratios, health checks, liquidation math, interest calculations. Zero-copy, no_std, no_alloc, BPF-safe."
+readme = "README.md"
 repository = "https://github.com/QuarksBlueFoot/jiminy"
 keywords = ["solana", "pinocchio", "lending", "defi", "zero-copy"]
 categories = ["no-std", "embedded"]

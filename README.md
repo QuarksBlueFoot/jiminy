@@ -29,11 +29,87 @@ binary than hand-rolled pinocchio. Not a typo.
 
 ---
 
+## Architecture
+
+Jiminy is split into focused, dependency-minimal crates organized in three
+concentric rings. Use the umbrella crate for the full toolkit, or depend on
+individual rings for a leaner build.
+
+```text
+┌──────────────────────────────────────────────────────────────┐
+│  jiminy  (umbrella - pure re-exports, zero local code)       │
+│                                                              │
+│  ┌────────────────────────────────────────────────────────┐  │
+│  │  Ring 3+  jiminy-finance · jiminy-lending · staking    │  │
+│  │           jiminy-vesting · multisig · distribute       │  │
+│  │                                                        │  │
+│  │  ┌──────────────────────────────────────────────────┐  │  │
+│  │  │  Ring 2   jiminy-solana                          │  │  │
+│  │  │           token/ · cpi/ · crypto/ · oracle ···   │  │  │
+│  │  │                                                  │  │  │
+│  │  │  ┌────────────────────────────────────────────┐  │  │  │
+│  │  │  │  Ring 1   jiminy-core                      │  │  │  │
+│  │  │  │           account/ · check/ · math · ···   │  │  │  │
+│  │  │  └────────────────────────────────────────────┘  │  │  │
+│  │  └──────────────────────────────────────────────────┘  │  │
+│  └────────────────────────────────────────────────────────┘  │
+└──────────────────────────────────────────────────────────────┘
+```
+
+### Ring 1 - Systems layer (`jiminy-core`)
+
+| Module | Purpose |
+|---|---|
+| `account` | Header, reader, writer, cursor, lifecycle, pod, list, bits |
+| `check` | Validation checks, asserts, PDA derivation & verification |
+| `instruction` | Transaction introspection, composition guards, flash-loan detection |
+| `math` | Checked arithmetic, BPS, scaling (u128 intermediates) |
+| `sysvar` | Clock & Rent sysvar readers |
+| `state` | State machine transition checks |
+| `time` | Deadline, cooldown, staleness checks |
+| `event` | Zero-alloc event emission via `sol_log_data` |
+| `programs` | Well-known program IDs *(feature: `programs`)* |
+
+### Ring 2 - Platform helpers (`jiminy-solana`)
+
+| Module | Purpose |
+|---|---|
+| `token` | SPL Token account/mint readers, Token-2022 extension screening |
+| `cpi` | Safe CPI wrappers, reentrancy guards, return data readers |
+| `crypto` | Ed25519 precompile verification, Merkle proof verification |
+| `authority` | Two-step authority rotation (propose + accept) |
+| `balance` | Pre/post CPI balance delta guards |
+| `compute` | Compute budget guards |
+| `compose` | Transaction composition guards (flash-loan detection) |
+| `introspect` | Raw transaction introspection |
+| `oracle` | Pyth V2 price feed readers (zero external deps) |
+| `twap` | TWAP accumulators |
+| `upgrade` | Program upgrade authority verification *(feature: `programs`)* |
+
+### Ring 3+ - Protocol math & domain crates
+
+| Crate | Purpose |
+|---|---|
+| `jiminy-finance` | AMM math, constant-product swaps, slippage & economic bounds |
+| `jiminy-lending` | Lending protocol primitives (collateralization, liquidation, interest) |
+| `jiminy-staking` | Staking reward accumulators (MasterChef-style) |
+| `jiminy-vesting` | Vesting schedule helpers (linear, cliff, stepped, periodic) |
+| `jiminy-multisig` | M-of-N multi-signer threshold checks |
+| `jiminy-distribute` | Dust-safe proportional distribution & fee extraction |
+
+---
+
 ## Install
 
 ```toml
+# Full toolkit (recommended)
 [dependencies]
-jiminy = "0.7"
+jiminy = "0.11"
+
+# Or pick individual crates for minimal deps
+jiminy-core = "0.11"      # Account layout, checks, math, PDA
+jiminy-solana = "0.11"    # Token, CPI, crypto, oracle
+jiminy-finance = "0.11"   # AMM math, slippage
 ```
 
 ## Adding Jiminy to an existing Pinocchio project
@@ -45,7 +121,7 @@ Already using pinocchio directly? You have two options:
 ```toml
 [dependencies]
 pinocchio = "0.10"
-jiminy = "0.7"
+jiminy = "0.11"
 ```
 
 This works fine. Cargo deduplicates the pinocchio crate as long as versions are
@@ -56,7 +132,7 @@ imports alongside them.
 
 ```toml
 [dependencies]
-jiminy = "0.7"
+jiminy = "0.11"
 ```
 
 Jiminy re-exports the entire pinocchio crate, plus `pinocchio-system` and
@@ -120,7 +196,7 @@ verification, transaction introspection, authority handoff, cursors, macros,
 `AccountList`, and the pinocchio core types.
 
 All public functions are available both via the prelude and through their
-module paths (`jiminy::slippage::*`, `jiminy::state::*`, etc.).
+module paths (`jiminy::token::*`, `jiminy::cpi::*`, `jiminy::math::*`, etc.).
 
 ---
 
@@ -486,7 +562,7 @@ Zero-alloc diagnostic logging behind the `log` feature flag. Uses the raw
 `sol_log` syscall, no extra deps.
 
 ```toml
-jiminy = { version = "0.7", features = ["log"] }
+jiminy = { version = "0.11", features = ["log"] }
 ```
 
 | Function | What it logs |
@@ -746,7 +822,7 @@ on `introspect` but answers structural questions about the whole tx.
 
 ```rust
 let data = sysvar_ix.try_borrow()?;
-let me = cpi_guard::get_instruction_index(&data)?;
+let me = cpi::get_instruction_index(&data)?;
 if detect_flash_loan_bracket(&data, me, &FLASH_LENDER)? {
     return Err(MyError::FlashLoanNotAllowed.into());
 }
@@ -824,6 +900,50 @@ proportional_split(1_000_003, &shares, &mut amounts)?;
 let (net, fee) = extract_fee(1_000_000, 30, 1_000)?; // 0.3% + 1000 flat
 assert_eq!(net + fee, 1_000_000);
 ```
+
+---
+
+## Modular crates (v0.11+)
+
+Starting with v0.11, Jiminy is split into focused crates that can be used
+independently:
+
+```toml
+# Full toolkit - zero local code, re-exports everything
+jiminy = "0.11"
+
+# Or pick what you need
+jiminy-core = "0.11"        # Account layout, checks, math, PDA, sysvar
+jiminy-solana = "0.11"      # Token, CPI, crypto, oracle, introspection
+jiminy-finance = "0.11"     # AMM math, slippage
+jiminy-lending = "0.11"     # Lending/liquidation primitives
+jiminy-staking = "0.11"     # Reward accumulators
+jiminy-vesting = "0.11"     # Vesting schedules
+jiminy-multisig = "0.11"    # M-of-N threshold
+jiminy-distribute = "0.11"  # Dust-safe splits
+```
+
+The root `jiminy` crate is a pure re-export facade. Zero implementation code.
+Every function lives in exactly one subcrate. Module paths are unchanged:
+
+```rust
+// These all still work
+use jiminy::prelude::*;
+use jiminy::token::token_account_amount;
+use jiminy::cpi::safe_transfer_tokens;
+use jiminy::math::checked_mul_div;
+
+// Or use subcrates directly for minimal dependency trees
+use jiminy_core::check::check_signer;
+use jiminy_solana::crypto::verify_merkle_proof;
+```
+
+### Migration from 0.10
+
+The API surface is identical. If you depend on `jiminy = "0.10"`, upgrade
+to `"0.11"` and everything compiles unchanged. The only differences are
+internal: flat module files have been reorganized into domain directories
+(`account/`, `check/`, `token/`, `cpi/`, `crypto/`).
 
 ---
 
@@ -957,7 +1077,31 @@ them yourself.
 | [`examples/jiminy-vault`](examples/jiminy-vault) | Init / deposit / withdraw / close with `AccountList`, cursors, `safe_close` |
 | [`examples/jiminy-escrow`](examples/jiminy-escrow) | Two-party escrow, flag-based state, `check_closed`, ordering guarantees |
 
-Both use the Jiminy Header v1 layout. Fork them as starting templates.
+Both use the Jiminy Header v1 layout and the `jiminy::prelude` import.
+Fork them as starting templates.
+
+---
+
+## Workspace layout
+
+```
+jiminy/
+├── src/                   # Root facade (lib.rs + prelude.rs only)
+├── crates/
+│   ├── jiminy-core/       # Ring 1: account/, check/, math, sysvar, …
+│   ├── jiminy-solana/     # Ring 2: token/, cpi/, crypto/, oracle, …
+│   ├── jiminy-finance/    # Ring 3: amm, slippage
+│   ├── jiminy-lending/    #         lending/liquidation
+│   ├── jiminy-staking/    #         staking rewards
+│   ├── jiminy-vesting/    #         vesting schedules
+│   ├── jiminy-multisig/   #         M-of-N threshold
+│   └── jiminy-distribute/ #         proportional splits
+├── examples/
+│   ├── jiminy-vault/      # Full vault CRUD example
+│   └── jiminy-escrow/     # Two-party escrow example
+├── bench/                 # CU benchmarks vs raw pinocchio & Anchor
+└── docs/                  # Layout convention spec
+```
 
 ---
 
@@ -965,7 +1109,7 @@ Both use the Jiminy Header v1 layout. Fork them as starting templates.
 
 Built by [MoonManQuark](https://x.com/moonmanquark) / [Bluefoot Labs](https://github.com/BluefootLabs).
 
-If jiminy saved you some debugging time, donations welcome at `SolanaDevDao.sol`.
+If jiminy saved you some debugging time, donations welcome at `solanadevdao.sol` (`F42ZovBoRJZU4av5MiESVwJWnEx8ZQVFkc1RM29zMxNT`).
 
 ---
 

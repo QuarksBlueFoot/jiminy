@@ -5,7 +5,7 @@
 //! ```
 
 // ── Check functions ──────────────────────────────────────────────────────────
-pub use crate::checks::{
+pub use crate::check::{
     check_account, check_accounts_unique_2, check_accounts_unique_3, check_accounts_unique_4,
     check_closed, check_discriminator, check_executable, check_has_one,
     check_instruction_data_len, check_instruction_data_min, check_keys_eq,
@@ -14,24 +14,24 @@ pub use crate::checks::{
 };
 
 // ── Assert functions ─────────────────────────────────────────────────────────
-pub use crate::asserts::{
+pub use crate::check::{
     assert_address, assert_not_initialized, assert_pda, assert_pda_external,
     assert_pda_with_bump, assert_program,
 };
 #[cfg(feature = "programs")]
-pub use crate::asserts::assert_token_program;
+pub use crate::check::assert_token_program;
 
 // ── Account header ───────────────────────────────────────────────────────────
-pub use crate::header::{
+pub use crate::account::{
     AccountHeader, body, body_mut, check_header, header_payload, header_payload_mut,
     read_data_len, read_header_flags, read_version, write_header, write_header_with_len,
     HEADER_LEN,
 };
 
 // ── Zero-copy IO ─────────────────────────────────────────────────────────────
-pub use crate::account_io::{AccountReader, AccountWriter};
-pub use crate::cursor::{write_discriminator, zero_init, DataWriter, SliceCursor};
-pub use crate::pod::{pod_from_bytes, pod_from_bytes_mut, pod_write, FixedLayout, Pod};
+pub use crate::account::{AccountReader, AccountWriter};
+pub use crate::account::{write_discriminator, zero_init, DataWriter, SliceCursor};
+pub use crate::account::{pod_from_bytes, pod_from_bytes_mut, pod_write, FixedLayout, Pod};
 
 // ── Math ─────────────────────────────────────────────────────────────────────
 pub use crate::math::{
@@ -41,26 +41,27 @@ pub use crate::math::{
 };
 
 // ── Bit helpers ──────────────────────────────────────────────────────────────
-pub use crate::bits::{
+pub use crate::account::{
     check_any_flag, check_flags, clear_bit, read_bit, read_flags_at, set_bit, toggle_bit,
     write_flags_at,
 };
 
 // ── Account lifecycle ────────────────────────────────────────────────────────
-pub use crate::lifecycle::{
+pub use crate::account::{
     safe_close, safe_close_with_sentinel, safe_realloc, safe_realloc_shrink,
     check_not_revived, check_alive, CLOSE_SENTINEL,
 };
 
 // ── PDA utilities ────────────────────────────────────────────────────────────
+pub use crate::check::pda::{derive_address, derive_address_const};
 #[cfg(feature = "programs")]
-pub use crate::pda::{
+pub use crate::check::pda::{
     check_ata, check_ata_with_program, derive_ata, derive_ata_with_bump,
     derive_ata_with_program,
 };
 
 // ── Account iteration ────────────────────────────────────────────────────────
-pub use crate::accounts::AccountList;
+pub use crate::account::AccountList;
 
 // ── Sysvar readers ───────────────────────────────────────────────────────────
 #[cfg(feature = "programs")]
@@ -93,12 +94,6 @@ pub use crate::time::{check_after, check_deadline};
 // ── State machine checks ─────────────────────────────────────────────────────
 pub use crate::state::{
     check_state, check_state_in, check_state_not, check_state_transition, write_state,
-};
-
-// ── Slippage & economic bounds ───────────────────────────────────────────────
-pub use crate::slippage::{
-    check_max_amount, check_max_input, check_min_amount, check_nonzero,
-    check_price_bounds, check_slippage, check_within_bps,
 };
 
 // ── Macros ───────────────────────────────────────────────────────────────────

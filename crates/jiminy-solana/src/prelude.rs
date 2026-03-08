@@ -15,13 +15,13 @@ pub use crate::token::{
 };
 
 // ── Mint account readers & checks ────────────────────────────────────────────
-pub use crate::mint::{
+pub use crate::token::{
     check_mint_authority, check_mint_owner, mint_authority, mint_decimals,
     mint_freeze_authority, mint_is_initialized, mint_supply, MINT_LEN,
 };
 
 // ── Token-2022 extension reader ──────────────────────────────────────────────
-pub use crate::token_2022::{
+pub use crate::token::{
     calculate_transfer_fee, check_no_cpi_guard as check_no_token_cpi_guard,
     check_no_default_account_state, check_no_permanent_delegate, check_no_transfer_fee,
     check_no_transfer_hook, check_not_non_transferable, check_safe_token_2022_mint,
@@ -31,12 +31,10 @@ pub use crate::token_2022::{
 
 // ── CPI guard (reentrancy protection) ────────────────────────────────────────
 #[cfg(feature = "programs")]
-pub use crate::cpi_guard::{
+pub use crate::cpi::{
     check_no_cpi_caller, check_cpi_caller, check_sysvar_instructions,
-    get_instruction_index, get_num_instructions,
 };
-#[cfg(not(feature = "programs"))]
-pub use crate::cpi_guard::{get_instruction_index, get_num_instructions};
+pub use crate::cpi::{get_instruction_index, get_num_instructions};
 
 // ── Transaction introspection ────────────────────────────────────────────────
 pub use crate::introspect::{
@@ -56,14 +54,12 @@ pub use crate::compose::{
     detect_flash_loan_bracket, count_program_invocations,
 };
 
-// ── Ed25519 precompile verification ──────────────────────────────────────────
-pub use crate::ed25519::{check_ed25519_signature, check_ed25519_signer, ED25519_PROGRAM};
+// ── Cryptographic verification ───────────────────────────────────────────────
+pub use crate::crypto::{check_ed25519_signature, check_ed25519_signer, ED25519_PROGRAM};
+pub use crate::crypto::{sha256_leaf, verify_merkle_proof};
 
 // ── Authority handoff (two-step rotation) ────────────────────────────────────
 pub use crate::authority::{accept_authority, check_pending_authority, write_pending_authority};
-
-// ── Merkle proof verification ────────────────────────────────────────────────
-pub use crate::merkle::{sha256_leaf, verify_merkle_proof};
 
 // ── Pyth oracle readers ─────────────────────────────────────────────────────
 pub use crate::oracle::{
@@ -88,7 +84,7 @@ pub use crate::cpi::{
 };
 
 // ── CPI return data ─────────────────────────────────────────────────────────
-pub use crate::cpi_return::{
+pub use crate::cpi::{
     read_return_data, read_return_data_from, read_return_u64, MAX_RETURN_DATA,
 };
 

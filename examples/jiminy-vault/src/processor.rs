@@ -66,8 +66,8 @@ fn process_init_vault(
     // Initialize the vault data.
     let mut raw = vault.try_borrow_mut()?;
     zero_init(&mut raw);
-    write_header(&mut raw, VAULT_DISC, VAULT_VERSION, 0)?;
-    let mut w = DataWriter::new(header_payload_mut(&mut raw));
+    write_header(&mut raw, VAULT_DISC, VAULT_VERSION)?;
+    let mut w = DataWriter::new(header_payload_mut(&mut raw)?);
     w.write_u64(0)?; // balance
     w.write_address(&authority)?;
 
@@ -105,7 +105,7 @@ fn process_deposit(
     // Update stored balance.
     let mut raw = vault.try_borrow_mut()?;
     check_header(&raw, VAULT_DISC, VAULT_VERSION)?;
-    let payload = header_payload_mut(&mut raw);
+    let payload = header_payload_mut(&mut raw)?;
     let mut cur = SliceCursor::new(payload);
     let old_balance = cur.read_u64()?;
     let new_balance = checked_add(old_balance, amount)?;
@@ -145,7 +145,7 @@ fn process_withdraw(
     {
         let data = vault.try_borrow()?;
         check_header(&data, VAULT_DISC, VAULT_VERSION)?;
-        let payload = header_payload(&data);
+        let payload = header_payload(&data)?;
         let mut cur = SliceCursor::new(payload);
         let balance = cur.read_u64()?;
         let stored_auth = cur.read_address()?;
@@ -163,7 +163,7 @@ fn process_withdraw(
 
     // Update stored balance.
     let mut raw = vault.try_borrow_mut()?;
-    let payload = header_payload_mut(&mut raw);
+    let payload = header_payload_mut(&mut raw)?;
     let mut cur = SliceCursor::new(payload);
     let old_balance = cur.read_u64()?;
     let new_balance = checked_sub(old_balance, amount)?;
@@ -195,7 +195,7 @@ fn process_close_vault(
     {
         let data = vault.try_borrow()?;
         check_header(&data, VAULT_DISC, VAULT_VERSION)?;
-        let payload = header_payload(&data);
+        let payload = header_payload(&data)?;
         let mut cur = SliceCursor::new(payload);
         let _balance = cur.read_u64()?;
         let stored_auth = cur.read_address()?;

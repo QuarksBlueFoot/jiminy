@@ -68,8 +68,8 @@ fn process_create_escrow(
     // Initialize escrow data.
     let mut raw = escrow.try_borrow_mut()?;
     zero_init(&mut raw);
-    write_header(&mut raw, ESCROW_DISC, ESCROW_VERSION, 0)?;
-    let mut w = DataWriter::new(header_payload_mut(&mut raw));
+    write_header(&mut raw, ESCROW_DISC, ESCROW_VERSION)?;
+    let mut w = DataWriter::new(header_payload_mut(&mut raw)?);
     w.write_u64(amount)?;
     w.write_address(creator.address())?;
     w.write_address(&recipient_addr)?;
@@ -99,12 +99,12 @@ fn process_accept_escrow(
     {
         let data = escrow.try_borrow()?;
         check_header(&data, ESCROW_DISC, ESCROW_VERSION)?;
-        let flags = read_header_flags(&data)?;
+        let flags = read_header_flags(&data)? as u8;
 
         // Must not already be accepted.
         require!(!read_bit(flags, FLAG_ACCEPTED), ProgramError::InvalidAccountData);
 
-        let payload = header_payload(&data);
+        let payload = header_payload(&data)?;
         let mut cur = SliceCursor::new(payload);
         amount = cur.read_u64()?;
         let _creator = cur.read_address()?;
@@ -123,7 +123,7 @@ fn process_accept_escrow(
     // Mark accepted flag.
     {
         let mut raw = escrow.try_borrow_mut()?;
-        let flags = read_header_flags(&raw)?;
+        let flags = read_header_flags(&raw)? as u8;
         let new_flags = set_bit(flags, FLAG_ACCEPTED);
         raw[2] = new_flags;
     }
@@ -157,12 +157,12 @@ fn process_cancel_escrow(
     {
         let data = escrow.try_borrow()?;
         check_header(&data, ESCROW_DISC, ESCROW_VERSION)?;
-        let flags = read_header_flags(&data)?;
+        let flags = read_header_flags(&data)? as u8;
 
         // Must not already be accepted.
         require!(!read_bit(flags, FLAG_ACCEPTED), ProgramError::InvalidAccountData);
 
-        let payload = header_payload(&data);
+        let payload = header_payload(&data)?;
         let mut cur = SliceCursor::new(payload);
         let _amount = cur.read_u64()?;
         let stored_creator = cur.read_address()?;

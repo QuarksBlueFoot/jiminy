@@ -5,6 +5,7 @@ edition = "2021"
 license = "Apache-2.0"
 authors = ["MoonManQuark"]
 description = "Staking reward accumulators for Jiminy: MasterChef-style reward-per-token, emission rates, reward debt tracking. Zero-copy, no_std, no_alloc, BPF-safe."
+readme = "README.md"
 repository = "https://github.com/QuarksBlueFoot/jiminy"
 keywords = ["solana", "pinocchio", "staking", "rewards", "zero-copy"]
 categories = ["no-std", "embedded"]
