@@ -179,3 +179,13 @@ pub fn body(data: &[u8]) -> Result<&[u8], ProgramError> {
 pub fn body_mut(data: &mut [u8]) -> Result<&mut [u8], ProgramError> {
     header_payload_mut(data)
 }
+
+// ── Pod / FixedLayout ────────────────────────────────────────────────────────
+
+// SAFETY: AccountHeader is #[repr(C)], Copy, 8 bytes, and all bit patterns
+// are valid for u8 / u16 / [u8; 4].
+unsafe impl crate::pod::Pod for AccountHeader {}
+
+impl crate::pod::FixedLayout for AccountHeader {
+    const SIZE: usize = HEADER_LEN;
+}

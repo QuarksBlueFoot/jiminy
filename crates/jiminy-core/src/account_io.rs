@@ -160,6 +160,69 @@ impl<'a> AccountReader<'a> {
             self.data[abs + 3],
         ]))
     }
+
+    /// Read a u16 from the body at a given byte offset.
+    #[inline(always)]
+    pub fn u16_at(&self, offset: usize) -> Result<u16, ProgramError> {
+        let abs = self.body_offset + offset;
+        if abs + 2 > self.data.len() {
+            return Err(ProgramError::AccountDataTooSmall);
+        }
+        Ok(u16::from_le_bytes([self.data[abs], self.data[abs + 1]]))
+    }
+
+    /// Read a u8 from the body at a given byte offset.
+    #[inline(always)]
+    pub fn u8_at(&self, offset: usize) -> Result<u8, ProgramError> {
+        let abs = self.body_offset + offset;
+        if abs >= self.data.len() {
+            return Err(ProgramError::AccountDataTooSmall);
+        }
+        Ok(self.data[abs])
+    }
+
+    /// Read an i64 from the body at a given byte offset.
+    #[inline(always)]
+    pub fn i64_at(&self, offset: usize) -> Result<i64, ProgramError> {
+        let abs = self.body_offset + offset;
+        if abs + 8 > self.data.len() {
+            return Err(ProgramError::AccountDataTooSmall);
+        }
+        Ok(i64::from_le_bytes([
+            self.data[abs],
+            self.data[abs + 1],
+            self.data[abs + 2],
+            self.data[abs + 3],
+            self.data[abs + 4],
+            self.data[abs + 5],
+            self.data[abs + 6],
+            self.data[abs + 7],
+        ]))
+    }
+
+    /// Read a bool from the body at a given byte offset.
+    #[inline(always)]
+    pub fn bool_at(&self, offset: usize) -> Result<bool, ProgramError> {
+        Ok(self.u8_at(offset)? != 0)
+    }
+
+    /// Read a fixed-size byte array from the body at a given byte offset.
+    #[inline(always)]
+    pub fn bytes_at<const N: usize>(&self, offset: usize) -> Result<[u8; N], ProgramError> {
+        let abs = self.body_offset + offset;
+        if abs + N > self.data.len() {
+            return Err(ProgramError::AccountDataTooSmall);
+        }
+        let mut out = [0u8; N];
+        out.copy_from_slice(&self.data[abs..abs + N]);
+        Ok(out)
+    }
+
+    /// Number of body bytes remaining after the header.
+    #[inline(always)]
+    pub fn body_len(&self) -> usize {
+        self.data.len().saturating_sub(self.body_offset)
+    }
 }
 
 /// Zero-copy account writer with header awareness.
@@ -317,5 +380,114 @@ impl<'a> AccountWriter<'a> {
     #[inline(always)]
     pub fn raw(&self) -> &[u8] {
         self.data
+    }
+
+    /// Write an i8 to the body at the current position.
+    #[inline(always)]
+    pub fn write_i8(&mut self, val: i8) -> Result<(), ProgramError> {
+        self.write_u8(val as u8)
+    }
+
+    /// Write an i16 (LE) to the body at the current position.
+    #[inline(always)]
+    pub fn write_i16(&mut self, val: i16) -> Result<(), ProgramError> {
+        let abs = self.body_offset + self.body_pos;
+        if abs + 2 > self.data.len() {
+            return Err(ProgramError::AccountDataTooSmall);
+        }
+        let bytes = val.to_le_bytes();
+        self.data[abs] = bytes[0];
+        self.data[abs + 1] = bytes[1];
+        self.body_pos += 2;
+        Ok(())
+    }
+
+    /// Write an i32 (LE) to the body at the current position.
+    #[inline(always)]
+    pub fn write_i32(&mut self, val: i32) -> Result<(), ProgramError> {
+        let abs = self.body_offset + self.body_pos;
+        if abs + 4 > self.data.len() {
+            return Err(ProgramError::AccountDataTooSmall);
+        }
+        let bytes = val.to_le_bytes();
+        self.data[abs] = bytes[0];
+        self.data[abs + 1] = bytes[1];
+        self.data[abs + 2] = bytes[2];
+        self.data[abs + 3] = bytes[3];
+        self.body_pos += 4;
+        Ok(())
+    }
+
+    /// Write an i64 (LE) to the body at the current position.
+    #[inline(always)]
+    pub fn write_i64(&mut self, val: i64) -> Result<(), ProgramError> {
+        let abs = self.body_offset + self.body_pos;
+        if abs + 8 > self.data.len() {
+            return Err(ProgramError::AccountDataTooSmall);
+        }
+        let bytes = val.to_le_bytes();
+        self.data[abs] = bytes[0];
+        self.data[abs + 1] = bytes[1];
+        self.data[abs + 2] = bytes[2];
+        self.data[abs + 3] = bytes[3];
+        self.data[abs + 4] = bytes[4];
+        self.data[abs + 5] = bytes[5];
+        self.data[abs + 6] = bytes[6];
+        self.data[abs + 7] = bytes[7];
+        self.body_pos += 8;
+        Ok(())
+    }
+
+    /// Write a u128 (LE) to the body at the current position.
+    #[inline(always)]
+    pub fn write_u128(&mut self, val: u128) -> Result<(), ProgramError> {
+        let abs = self.body_offset + self.body_pos;
+        if abs + 16 > self.data.len() {
+            return Err(ProgramError::AccountDataTooSmall);
+        }
+        self.data[abs..abs + 16].copy_from_slice(&val.to_le_bytes());
+        self.body_pos += 16;
+        Ok(())
+    }
+
+    /// Write an i128 (LE) to the body at the current position.
+    #[inline(always)]
+    pub fn write_i128(&mut self, val: i128) -> Result<(), ProgramError> {
+        let abs = self.body_offset + self.body_pos;
+        if abs + 16 > self.data.len() {
+            return Err(ProgramError::AccountDataTooSmall);
+        }
+        self.data[abs..abs + 16].copy_from_slice(&val.to_le_bytes());
+        self.body_pos += 16;
+        Ok(())
+    }
+
+    /// Write a variable-length byte slice to the body at the current position.
+    #[inline(always)]
+    pub fn write_bytes(&mut self, bytes: &[u8]) -> Result<(), ProgramError> {
+        let abs = self.body_offset + self.body_pos;
+        if abs + bytes.len() > self.data.len() {
+            return Err(ProgramError::AccountDataTooSmall);
+        }
+        self.data[abs..abs + bytes.len()].copy_from_slice(bytes);
+        self.body_pos += bytes.len();
+        Ok(())
+    }
+
+    /// Skip `n` bytes in the body without writing. Useful for padding.
+    #[inline(always)]
+    pub fn skip(&mut self, n: usize) -> Result<(), ProgramError> {
+        let abs = self.body_offset + self.body_pos;
+        if abs + n > self.data.len() {
+            return Err(ProgramError::AccountDataTooSmall);
+        }
+        self.body_pos += n;
+        Ok(())
+    }
+
+    /// Current body write position.
+    #[inline(always)]
+    pub fn position(&self) -> usize {
+        self.body_pos
     }
 }

@@ -1,34 +1,36 @@
 #![no_std]
-//! **jiminy-core** — The systems layer of the Jiminy zero-copy Solana standard library.
+//! **jiminy-core** — The zero-copy systems layer for low-level Solana programs.
 //!
-//! This crate holds the minimal primitives that feel like part of a standard
-//! library: account layout & header, zero-copy readers/writers, validation,
-//! PDA utilities, sysvar/instruction access, lifecycle helpers, basic math
-//! and time checks.
+//! Account layout, validation, lifecycle, and transaction introspection
+//! without framework bloat. `#![no_std]`, `no_alloc`, BPF-safe.
 //!
 //! One import gives you the core:
+//!
 //! ```rust,ignore
 //! use jiminy_core::prelude::*;
 //! ```
 //!
-//! # What belongs here
+//! # Ring 1: what lives here
 //!
-//! - Account header convention ([`AccountHeader`], [`HEADER_LEN`])
-//! - Zero-copy IO ([`AccountReader`], [`AccountWriter`], [`SliceCursor`], [`DataWriter`])
-//! - POD casting ([`Pod`], [`FixedLayout`], [`pod_from_bytes`])
-//! - Account validation ([`check_signer`], [`check_owner`], [`check_account`], …)
-//! - PDA utilities ([`find_pda!`], [`derive_pda!`], [`derive_ata`], …)
-//! - Instruction access ([`instruction::current_index`], [`instruction::program_id_at`], …)
-//! - Lifecycle ([`safe_close`], [`safe_realloc`], [`zero_init`], …)
-//! - Math ([`checked_add`], [`checked_mul_div`], [`bps_of`], …)
-//! - Time checks ([`check_not_expired`], [`check_within_window`], …)
-//! - State machines, bit helpers, events, sysvars, well-known program IDs
+//! | Layer | Types / Functions |
+//! |---|---|
+//! | **Account grammar** | [`AccountHeader`], [`HEADER_LEN`], [`body`], [`body_mut`], [`check_header`] |
+//! | **Zero-copy IO** | [`AccountReader`], [`AccountWriter`], [`SliceCursor`], [`DataWriter`] |
+//! | **POD casting** | [`Pod`], [`FixedLayout`], [`pod_from_bytes`], [`pod_from_bytes_mut`] |
+//! | **Validation** | [`check_signer`], [`check_owner`], [`check_account`], [`assert_pda`] … |
+//! | **PDA utilities** | [`find_pda!`], [`derive_pda!`], [`derive_ata`], [`check_ata`] … |
+//! | **Instruction access** | [`instruction::current_index`], [`instruction::program_id_at`] … |
+//! | **Lifecycle** | [`safe_close`], [`safe_realloc`], [`zero_init`], [`check_not_revived`] |
+//! | **Math** | [`checked_add`], [`checked_mul_div`], [`bps_of`], [`scale_amount`] … |
+//! | **Time & state** | [`check_not_expired`], [`check_state_transition`], [`write_state`] |
+//! | **Events** | [`emit!`], [`emit_slices`] |
+//! | **Well-known IDs** | [`programs::TOKEN`], [`programs::SYSTEM`], [`programs::BPF_LOADER`] … |
 //!
 //! # What does NOT belong here
 //!
-//! Token/mint readers, Token-2022, CPI guards, Ed25519, Merkle, oracles,
-//! AMM math, lending, staking, vesting — see `jiminy-solana`, `jiminy-finance`,
-//! and other optional crates.
+//! Token/mint readers, Token-2022 screening, CPI guards, Ed25519, Merkle,
+//! oracles, AMM math, lending, staking, vesting — see `jiminy-solana`,
+//! `jiminy-finance`, and other optional crates.
 
 // ── Modules ──────────────────────────────────────────────────────────────────
 
