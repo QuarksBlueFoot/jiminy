@@ -1,5 +1,5 @@
 #![no_std]
-//! **jiminy-staking** — Staking reward accumulators for the Jiminy ecosystem.
+//! **jiminy-staking** - MasterChef-style reward accumulators.
 //!
 //! MasterChef-style reward-per-token accumulator, emission rates, pending
 //! rewards, and reward debt tracking.

@@ -1,5 +1,5 @@
 #![no_std]
-//! **jiminy-lending** — Lending protocol primitives for the Jiminy ecosystem.
+//! **jiminy-lending** - Collateralization, liquidation, interest, utilization.
 //!
 //! Collateralization ratios, health checks, liquidation math, interest
 //! calculations, and utilization rates. All basis-point denominated.

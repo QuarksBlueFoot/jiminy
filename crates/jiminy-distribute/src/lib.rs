@@ -1,5 +1,5 @@
 #![no_std]
-//! **jiminy-distribute** — Dust-safe proportional distribution helpers for the Jiminy ecosystem.
+//! **jiminy-distribute** - Weighted splits and basis-point fee extraction.
 //!
 //! N-way splits and fee extraction where `sum == total`.
 

@@ -4,23 +4,23 @@
 [![docs.rs](https://docs.rs/jiminy/badge.svg)](https://docs.rs/jiminy)
 [![license](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
-**Pinocchio is the engine. Jiminy keeps it honest.**
+**The zero-copy standard library for Solana programs.**
 
-Writing Solana programs with [pinocchio](https://github.com/anza-xyz/pinocchio)?
-Good. Fastest runtime on the network. Zero alloc, raw bytes, full control.
+Every pinocchio needs a conscience.
 
-But you already know what happens next. Every instruction turns into the same
-wall of signer checks, owner checks, discriminator checks, overflow math, PDA
-derivations. You copy-paste, something slips, someone drains your vault at 3am.
+[pinocchio](https://github.com/anza-xyz/pinocchio) gives you raw bytes and full
+control. jiminy adds every check, guard, and piece of math that keeps your
+program honest. `no_std`, `no_alloc`, BPF-safe. One import gives you everything:
 
-Jiminy is the complete safety layer for pinocchio. One import, you get every
-check that matters: account validation, zero-copy token + mint readers,
-Token-2022 extension screening, CPI reentrancy guards, DeFi math with u128
-intermediates, slippage protection, zero-alloc event emission, merkle proof
-verification, transaction introspection, authority handoff patterns, and more.
-All `#[inline(always)]`, all `no_std`, all BPF-safe.
+Account layout and zero-copy IO. Signer, owner, and discriminator checks.
+PDA derivation. Token and Mint readers. Token-2022 extension screening.
+CPI reentrancy guards. DeFi math with u128 intermediates. AMM curves.
+Slippage protection. Lending health checks. Staking reward accumulators.
+Vesting schedules. M-of-N multisig. Dust-safe distribution. Merkle proofs.
+Ed25519 signature verification. Pyth oracle reads. Transaction introspection.
+Authority handoff. Event emission. Compute-budget guards.
 
-Still pinocchio under the hood. Just not writing the footgun parts by hand.
+All `#[inline(always)]`. All pinocchio under the hood. Minus the footguns.
 
 **No allocator. No borsh. No proc macros. Ship faster.**
 
@@ -31,9 +31,8 @@ binary than hand-rolled pinocchio. Not a typo.
 
 ## Architecture
 
-Jiminy is split into focused, dependency-minimal crates organized in three
-concentric rings. Use the umbrella crate for the full toolkit, or depend on
-individual rings for a leaner build.
+Nine crates, three layers. Use `jiminy` for everything or pull in just the
+layer you need.
 
 ```text
 ┌──────────────────────────────────────────────────────────────┐
@@ -58,7 +57,7 @@ individual rings for a leaner build.
 
 ### Ring 1 - Systems layer (`jiminy-core`)
 
-| Module | Purpose |
+| Module | |
 |---|---|
 | `account` | Header, reader, writer, cursor, lifecycle, pod, list, bits |
 | `check` | Validation checks, asserts, PDA derivation & verification |
@@ -72,7 +71,7 @@ individual rings for a leaner build.
 
 ### Ring 2 - Platform helpers (`jiminy-solana`)
 
-| Module | Purpose |
+| Module | |
 |---|---|
 | `token` | SPL Token account/mint readers, Token-2022 extension screening |
 | `cpi` | Safe CPI wrappers, reentrancy guards, return data readers |
@@ -88,7 +87,7 @@ individual rings for a leaner build.
 
 ### Ring 3+ - Protocol math & domain crates
 
-| Crate | Purpose |
+| Crate | |
 |---|---|
 | `jiminy-finance` | AMM math, constant-product swaps, slippage & economic bounds |
 | `jiminy-lending` | Lending protocol primitives (collateralization, liquidation, interest) |
@@ -923,8 +922,7 @@ jiminy-multisig = "0.11"    # M-of-N threshold
 jiminy-distribute = "0.11"  # Dust-safe splits
 ```
 
-The root `jiminy` crate is a pure re-export facade. Zero implementation code.
-Every function lives in exactly one subcrate. Module paths are unchanged:
+The root `jiminy` crate re-exports everything. Module paths are unchanged:
 
 ```rust
 // These all still work
@@ -993,9 +991,8 @@ internal: flat module files have been reorganized into domain directories
 
 *\* Anchor's upcoming 1.0 adds struct-level duplicate mutable account detection. Jiminy's checks are explicit per-operation runtime guards.*
 
-Anchor is great for what it does. But if you're at the pinocchio level,
-you shouldn't lose safety primitives just because you dropped the framework.
-Jiminy fills the gap with zero overhead.
+Anchor is great. But if you chose pinocchio, you shouldn't have to hand-roll
+every check.
 
 ---
 
@@ -1078,7 +1075,6 @@ them yourself.
 | [`examples/jiminy-escrow`](examples/jiminy-escrow) | Two-party escrow, flag-based state, `check_closed`, ordering guarantees |
 
 Both use the Jiminy Header v1 layout and the `jiminy::prelude` import.
-Fork them as starting templates.
 
 ---
 

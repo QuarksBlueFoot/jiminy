@@ -1,33 +1,19 @@
 # jiminy-staking
 
 MasterChef-style staking math. Global reward-per-token accumulator, per-user
-pending rewards, reward debt snapshots, emission rates. The standard pattern,
-done once, done right.
-
-`#![no_std]` · `no_alloc` · BPF-safe · Built on [pinocchio](https://github.com/anza-xyz/pinocchio)
-
-Part of the [jiminy](https://crates.io/crates/jiminy) toolkit.
-
-## Install
+pending rewards, reward debt snapshots, emission rates.
 
 ```toml
-[dependencies]
 jiminy-staking = "0.11"
 ```
 
-## What's inside
+- `update_reward_per_token` - advance the global accumulator
+- `pending_rewards` - unclaimed rewards for a user
+- `update_reward_debt` - snapshot after claim or stake change
+- `emission_rate` - per-second rate from total rewards and duration
+- `rewards_earned` - total emitted over elapsed period
 
-| Function | What it does |
-|---|---|
-| `update_reward_per_token` | Advance the global accumulator given elapsed time and total staked |
-| `pending_rewards` | Unclaimed rewards for a user position |
-| `update_reward_debt` | Snapshot reward debt after claim or stake change |
-| `emission_rate` | Per-second rate from total rewards and duration |
-| `rewards_earned` | Total rewards emitted over an elapsed period |
-
-Precision constant: `REWARD_PRECISION = 1_000_000_000_000` (10^12)
-
-## Quick start
+Precision: `REWARD_PRECISION = 1_000_000_000_000` (10^12)
 
 ```rust,ignore
 use jiminy_staking::*;
@@ -38,13 +24,6 @@ let new_rpt = update_reward_per_token(
 let pending = pending_rewards(user_staked, new_rpt, user_reward_debt)?;
 ```
 
-## About
+`#![no_std]` · `no_alloc` · BPF-safe · Apache-2.0
 
-Built by [MoonManQuark](https://x.com/moonmanquark) / [Bluefoot Labs](https://github.com/BluefootLabs).
-
-If jiminy saved you some CU, donations welcome at `solanadevdao.sol`
-(`F42ZovBoRJZU4av5MiESVwJWnEx8ZQVFkc1RM29zMxNT`).
-
-## License
-
-Apache-2.0
+[MoonManQuark](https://x.com/moonmanquark) / [Bluefoot Labs](https://github.com/BluefootLabs)

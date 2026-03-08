@@ -1,8 +1,7 @@
 #![no_std]
-//! **jiminy-core** — The zero-copy systems layer for low-level Solana programs.
-//!
-//! Account layout, validation, lifecycle, and transaction introspection
-//! without framework bloat. `#![no_std]`, `no_alloc`, BPF-safe.
+//! **jiminy-core** - Account layout, validation, math, PDA, and all the
+//! zero-copy primitives your pinocchio program needs before it touches a token.
+//! `#![no_std]`, `no_alloc`, BPF-safe.
 //!
 //! One import gives you the core:
 //!
@@ -10,9 +9,9 @@
 //! use jiminy_core::prelude::*;
 //! ```
 //!
-//! # Module organisation
+//! # Modules
 //!
-//! | Module | Purpose |
+//! | Module | |
 //! |---|---|
 //! | [`account`] | Header, reader, writer, cursor, lifecycle, pod, list, bits |
 //! | [`check`] | Validation checks, asserts, PDA derivation & verification |
@@ -27,7 +26,7 @@
 //! # What does NOT belong here
 //!
 //! Token/mint readers, Token-2022 screening, CPI guards, Ed25519, Merkle,
-//! oracles, AMM math, lending, staking, vesting — see `jiminy-solana`,
+//! oracles, AMM math, lending, staking, vesting - see `jiminy-solana`,
 //! `jiminy-finance`, and other optional crates.
 
 // ── Domain modules ───────────────────────────────────────────────────────────

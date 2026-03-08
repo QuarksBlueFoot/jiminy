@@ -1,18 +1,15 @@
 #![no_std]
-//! **jiminy-solana** — Optional Solana platform helpers for the Jiminy ecosystem.
-//!
-//! This crate groups utilities that depend on SPL Token, Token-2022, or other
-//! Solana platform features. Import it when your program needs token/mint readers,
-//! CPI wrappers, Ed25519 verification, Pyth oracles, or other platform-specific
-//! functionality.
+//! **jiminy-solana** - Token readers, CPI guards, Ed25519, Merkle proofs,
+//! Pyth oracles, authority rotation, and the rest of the Solana platform
+//! helpers that depend on SPL Token / Token-2022.
 //!
 //! ```rust,ignore
 //! use jiminy_solana::prelude::*;
 //! ```
 //!
-//! # Module organisation
+//! # Modules
 //!
-//! | Module | Purpose |
+//! | Module | |
 //! |---|---|
 //! | [`token`] | SPL Token account readers, mint readers, Token-2022 extension screening |
 //! | [`cpi`] | Safe CPI wrappers, reentrancy guards, return data readers |

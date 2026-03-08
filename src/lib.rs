@@ -1,19 +1,21 @@
 #![no_std]
-//! **Jiminy** — safety abstractions for [pinocchio](https://docs.rs/pinocchio) programs, minus the footguns.
+//! **Jiminy** - the zero-copy standard library for Solana programs.
 //!
-//! Pinocchio is the engine. Jiminy keeps it honest.
+//! Every pinocchio needs a conscience.
 //!
-//! Zero-copy, `no_std`, `no_alloc`, BPF-safe. One import gives you everything:
+//! [pinocchio](https://docs.rs/pinocchio) gives you raw bytes and full control.
+//! jiminy adds every check, guard, and piece of math that keeps your program
+//! honest. `no_std`, `no_alloc`, BPF-safe. One import gives you everything:
 //!
 //! ```rust,ignore
 //! use jiminy::prelude::*;
 //! ```
 //!
-//! # Module organisation
+//! # Modules
 //!
-//! ## Ring 1 — Systems layer ([`jiminy_core`])
+//! ## Ring 1 - `jiminy_core`
 //!
-//! | Module | Purpose |
+//! | Module | |
 //! |---|---|
 //! | [`account`] | Header, reader, writer, cursor, lifecycle, pod, list, bits |
 //! | [`check`] | Validation checks, asserts, PDA derivation & verification |
@@ -25,9 +27,9 @@
 //! | [`event`] | Zero-alloc event emission via `sol_log_data` |
 //! | [`programs`] | Well-known program IDs *(feature: `programs`)* |
 //!
-//! ## Ring 2 — Platform helpers ([`jiminy_solana`])
+//! ## Ring 2 - `jiminy_solana`
 //!
-//! | Module | Purpose |
+//! | Module | |
 //! |---|---|
 //! | [`token`] | SPL Token account readers, mint readers, Token-2022 extension screening |
 //! | [`cpi`] | Safe CPI wrappers, reentrancy guards, return data readers |
@@ -41,9 +43,9 @@
 //! | [`twap`] | TWAP accumulators |
 //! | [`upgrade`] | Program upgrade authority verification *(feature: `programs`)* |
 //!
-//! ## Ring 3+ — Protocol math & domain crates
+//! ## Ring 3+
 //!
-//! | Crate | Purpose |
+//! | Crate | |
 //! |---|---|
 //! | [`jiminy_finance`] | AMM math, slippage / economic bounds |
 //! | [`jiminy_lending`] | Lending protocol primitives |

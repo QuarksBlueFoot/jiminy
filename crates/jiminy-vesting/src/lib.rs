@@ -1,5 +1,5 @@
 #![no_std]
-//! **jiminy-vesting** — Vesting schedule helpers for the Jiminy ecosystem.
+//! **jiminy-vesting** - Linear+cliff, stepped, periodic unlock schedules.
 //!
 //! Linear + cliff, stepped, periodic unlock, claimable calculations.
 

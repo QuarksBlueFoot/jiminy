@@ -1,5 +1,5 @@
 #![no_std]
-//! **jiminy-finance** — DeFi math primitives for the Jiminy ecosystem.
+//! **jiminy-finance** - AMM math, slippage guards, price impact, economic bounds.
 //!
 //! AMM math (integer square root, constant-product swap formulas, k-invariant
 //! verification, LP token minting), slippage/economic bounds, and balance-delta
