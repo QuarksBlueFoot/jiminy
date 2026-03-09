@@ -1,8 +1,12 @@
 #![no_std]
-//! **jiminy-lending** - Collateralization, liquidation, interest, utilization.
+//! # jiminy-lending
 //!
-//! Collateralization ratios, health checks, liquidation math, interest
-//! calculations, and utilization rates. All basis-point denominated.
+//! Collateralization, liquidation, interest, utilization.
+//!
+//! Every lending protocol does the same math: collateral ratios, health
+//! checks, liquidation thresholds, interest rate curves, utilization rates.
+//! This crate gives you the building blocks so you write the logic once
+//! and get it right. All basis-point denominated, all overflow-checked.
 
 mod lending;
 pub use lending::*;

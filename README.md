@@ -6,26 +6,58 @@
 
 **The zero-copy standard library for Solana programs.**
 
-Every pinocchio needs a conscience.
+*Every pinocchio needs a conscience.*
 
-[pinocchio](https://github.com/anza-xyz/pinocchio) gives you raw bytes and full
-control. jiminy adds every check, guard, and piece of math that keeps your
-program honest. `no_std`, `no_alloc`, BPF-safe. One import gives you everything:
+You chose pinocchio because you wanted raw performance and full control over
+your on-chain program. No allocator, no borsh, no framework opinions. Just
+bytes.
 
-Account layout and zero-copy IO. Signer, owner, and discriminator checks.
-PDA derivation. Token and Mint readers. Token-2022 extension screening.
-CPI reentrancy guards. DeFi math with u128 intermediates. AMM curves.
-Slippage protection. Lending health checks. Staking reward accumulators.
-Vesting schedules. M-of-N multisig. Dust-safe distribution. Merkle proofs.
-Ed25519 signature verification. Pyth oracle reads. Transaction introspection.
-Authority handoff. Event emission. Compute-budget guards.
+But here's the thing: you're still writing the same signer check for the tenth
+time. You're still hand-rolling `amount * price / 10_000` and praying it doesn't
+overflow at 4.2 billion tokens. You're still manually walking the Token-2022 TLV
+to screen for permanent delegates. And every check you forget to write is one
+exploit away from draining your vault.
 
-All `#[inline(always)]`. All pinocchio under the hood. Minus the footguns.
+jiminy is the standard library that pinocchio doesn't ship.
+
+It's every guard, check, reader, and piece of math that DeFi programs need,
+packaged as plain functions and declarative macros. `no_std`, `no_alloc`,
+no proc macros, every function `#[inline(always)]`, pinocchio under the hood.
+The [benchmarks](#benchmarks) show 7-14 CU overhead per instruction and a
+binary that's actually *smaller* than hand-rolled pinocchio. Not a typo.
+
+One import and you get:
+
+- **Account validation** -- signer, owner, discriminator, PDA, rent, uniqueness
+- **Zero-copy IO** -- cursors, readers, writers, pod overlays, `zero_copy_layout!`
+- **Token reads** -- SPL Token account/mint fields without deserialization
+- **Token-2022 screening** -- reject transfer fees, hooks, permanent delegates in one call
+- **CPI wrappers** -- system, token, mint-to, burn, close, with built-in validation
+- **Reentrancy guards** -- detect CPI callers via sysvar introspection
+- **DeFi math** -- u128 intermediates, basis points, decimal scaling, overflow-safe
+- **AMM curves** -- constant-product swaps, LP math, K-invariant checks
+- **Slippage + bounds** -- the single most important DeFi check, as a one-liner
+- **Time + deadlines** -- expiry, cooldowns, staleness, slot-based checks
+- **State machines** -- transition tables, not nested `if` chains
+- **Oracles** -- Pyth V2 zero-copy reads, TWAP accumulators
+- **Lending** -- collateralization, liquidation, interest rate math
+- **Staking** -- reward-per-token accumulators with u128 precision
+- **Vesting** -- linear, cliff, stepped, periodic unlock schedules
+- **Multisig** -- M-of-N threshold with duplicate-signer prevention
+- **Distribution** -- dust-safe splits where `sum(parts) == total` is guaranteed
+- **Merkle proofs** -- on-chain verification via `sol_sha256` syscall
+- **Ed25519** -- precompile signature verification from sysvar data
+- **Events** -- zero-alloc `emit!` via `sol_log_data`, no borsh
+- **Tx introspection** -- flash-loan detection, composition guards, compute budget
+
+All the stuff you'd write yourself. Except audited, tested, and you don't
+have to maintain it.
+
+```rust
+use jiminy::prelude::*;
+```
 
 **No allocator. No borsh. No proc macros. Ship faster.**
-
-The [benchmarks](#benchmarks) show 7-14 CU overhead per instruction and a smaller
-binary than hand-rolled pinocchio. Not a typo.
 
 ---
 
@@ -198,11 +230,9 @@ TokenTransfer {
 use jiminy::prelude::*;
 ```
 
-One import. You get everything: account checks, token readers, mint readers,
-Token-2022 extension screening, CPI guards, DeFi math, slippage checks,
-time validation, state machines, event emission, merkle proofs, Ed25519
-verification, transaction introspection, authority handoff, cursors, macros,
-`AccountList`, and the pinocchio core types.
+One import. Everything listed above lands in scope. Account checks, token
+readers, CPI wrappers, DeFi math, macros, `AccountList`, cursors, and the
+pinocchio core types. You don't need a direct pinocchio dependency anymore.
 
 All public functions are available both via the prelude and through their
 module paths (`jiminy::token::*`, `jiminy::cpi::*`, `jiminy::math::*`, etc.).
@@ -268,6 +298,7 @@ fn process_swap(
 | `check_lamports_gte(account, min)` | `constraint` | Must hold at least `min` lamports |
 | `check_closed(account)` | `close` | Must have zero lamports and empty data |
 | `check_account(account, id, disc, len)` | composite | Owner + size + discriminator in one call |
+| `check_accounts_unique!(a, b, c, ...)` | -- | Variadic: all accounts have different addresses |
 | `check_accounts_unique_2(a, b)` | -- | Two accounts have different addresses |
 | `check_accounts_unique_3(a, b, c)` | -- | Three accounts all different (src != dest != fee) |
 | `check_accounts_unique_4(a, b, c, d)` | -- | Four accounts all different (two-hop swaps) |
@@ -502,6 +533,10 @@ Also: `check_state_not`, `check_state_in` (multiple valid states).
 | `require_keys_neq!(a, b, err)` | `require_keys_neq!` | Two `Address` values must differ |
 | `require_accounts_ne!(a, b, err)` | -- | Two accounts must have different addresses |
 | `require_flag!(byte, n, err)` | -- | Bit `n` must be set in `byte` |
+| `check_accounts_unique!(a, b, c)` | -- | Variadic uniqueness (any N accounts) |
+| `error_codes! { base = 6000; ... }` | `#[error_code]` | Define numbered `ProgramError::Custom` codes |
+| `instruction_dispatch! { ... }` | `#[program]` | Tag-byte dispatch to handler functions |
+| `impl_pod!(T1, T2, ...)` | -- | Batch `unsafe impl Pod` for `#[repr(C)]` types |
 
 ### Cursors
 
@@ -636,7 +671,9 @@ Define your transitions as a const table, validate in one call.
 
 ### Source != destination guard
 
-`check_accounts_unique_2`, `check_accounts_unique_3`, and `check_accounts_unique_4`.
+`check_accounts_unique!(a, b, c, ...)` (variadic macro) plus the original
+`check_accounts_unique_2`, `check_accounts_unique_3`, and `check_accounts_unique_4`
+functions.
 Anchor's released versions (through 0.32.x) don't have a built-in for this.
 The upcoming Anchor 1.0 adds duplicate mutable account validation at the
 accounts-struct level, which guards against the same account occupying two
@@ -961,8 +998,8 @@ but nothing was removed or renamed.
 | --- | --- | --- | --- |
 | Allocator required | No | Yes | **No** |
 | Borsh required | No | Yes | **No** |
-| Proc macros | No | Yes | **No** |
-| Account validation | Manual | `#[account(...)]` | Functions + macros |
+| Proc macros | No | Yes | **No** (declarative macros give you the same benefits) |
+| Account validation | Manual | `#[account(...)]` | Functions + macros (`error_codes!`, `instruction_dispatch!`) |
 | System CPI | Manual bytes | `system_program::create_account` | `CreateAccount { .. }.invoke()` |
 | Token CPI | Manual bytes | Anchor SPL | `TokenTransfer { .. }.invoke()` |
 | Token account reads | Manual offsets | Borsh deser | Zero-copy readers + check functions |
@@ -975,7 +1012,7 @@ but nothing was removed or renamed.
 | State machine checks | Manual | Not built-in | `check_state_transition` |
 | Time/deadline checks | Manual | Not built-in | `check_not_expired` / `check_cooldown` |
 | Oracle staleness | Manual | Not built-in | `check_slot_staleness` |
-| Source != dest guard | Manual | Not built-in* | `check_accounts_unique_2/3/4` |
+| Source != dest guard | Manual | Not built-in* | `check_accounts_unique!(a, b, c)` |
 | Direct lamport xfer | Manual | Not built-in | `transfer_lamports` |
 | Event emission | Manual | Borsh + proc macros | `emit!` / `emit_slices` (zero alloc) |
 | Tx introspection | Manual | Not built-in | `read_program_id_at` / `check_has_compute_budget` |
@@ -1001,8 +1038,8 @@ but nothing was removed or renamed.
 
 *\* Anchor's upcoming 1.0 adds struct-level duplicate mutable account detection. Jiminy's checks are explicit per-operation runtime guards.*
 
-Anchor is great. But if you chose pinocchio, you shouldn't have to hand-roll
-every check.
+Anchor is great for what it does. But if you went with pinocchio, you already
+made your choice. You shouldn't have to hand-roll every check that comes after it.
 
 ---
 

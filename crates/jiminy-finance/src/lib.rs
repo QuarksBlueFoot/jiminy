@@ -1,9 +1,12 @@
 #![no_std]
-//! **jiminy-finance** - AMM math, slippage guards, price impact, economic bounds.
+//! # jiminy-finance
 //!
-//! AMM math (integer square root, constant-product swap formulas, k-invariant
-//! verification, LP token minting), slippage/economic bounds, and balance-delta
-//! guards.
+//! AMM math, slippage guards, price impact, economic bounds.
+//!
+//! This is the DeFi math crate. Integer square root, constant-product swap
+//! formulas, K-invariant verification, LP token minting, and every slippage
+//! check you need so your users don't get sandwich-attacked into oblivion.
+//! All u128 intermediates, all overflow-checked, all `#[inline(always)]`.
 //!
 //! ```rust,ignore
 //! use jiminy_finance::prelude::*;

@@ -44,18 +44,22 @@ use pinocchio::error::ProgramError;
 /// - No interior references or pointers
 pub unsafe trait Pod: Copy + 'static {}
 
+/// Implement `Pod` for a list of types in one shot.
+///
+/// Saves you from writing N identical `unsafe impl Pod for T {}` blocks.
+///
+/// ```rust,ignore
+/// impl_pod!(u8, u16, u32, u64, MyReprCStruct);
+/// ```
+#[macro_export]
+macro_rules! impl_pod {
+    ($($t:ty),+ $(,)?) => {
+        $( unsafe impl $crate::account::Pod for $t {} )+
+    };
+}
+
 // Blanket impls for primitives.
-unsafe impl Pod for u8 {}
-unsafe impl Pod for u16 {}
-unsafe impl Pod for u32 {}
-unsafe impl Pod for u64 {}
-unsafe impl Pod for u128 {}
-unsafe impl Pod for i8 {}
-unsafe impl Pod for i16 {}
-unsafe impl Pod for i32 {}
-unsafe impl Pod for i64 {}
-unsafe impl Pod for i128 {}
-unsafe impl Pod for bool {}
+impl_pod!(u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, bool);
 
 /// Trait for types with a known compile-time size.
 pub trait FixedLayout {

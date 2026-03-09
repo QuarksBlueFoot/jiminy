@@ -1,7 +1,14 @@
 #![no_std]
-//! **jiminy-solana** - Token readers, CPI guards, Ed25519, Merkle proofs,
-//! Pyth oracles, authority rotation, and the rest of the Solana platform
-//! helpers that depend on SPL Token / Token-2022.
+//! # jiminy-solana
+//!
+//! Token readers, CPI guards, Ed25519, Merkle proofs, Pyth oracles,
+//! authority rotation, and the rest of the Solana platform helpers that
+//! depend on SPL Token / Token-2022.
+//!
+//! This is where you go once your program starts touching tokens. Everything
+//! reads fields directly from account data -- zero deserialization, zero
+//! allocation. Token-2022 extensions are screened with a single function
+//! call so you don't get rugged by a permanent delegate you forgot to check.
 //!
 //! ```rust,ignore
 //! use jiminy_solana::prelude::*;

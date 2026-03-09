@@ -103,7 +103,8 @@ pub use crate::state::{
 
 // ── Macros ───────────────────────────────────────────────────────────────────
 pub use crate::{
-    require, require_accounts_ne, require_eq, require_flag, require_gt, require_gte,
+    check_accounts_unique, error_codes, instruction_dispatch,
+    impl_pod, require, require_accounts_ne, require_eq, require_flag, require_gt, require_gte,
     require_keys_eq, require_keys_neq, require_lt, require_lte, require_neq,
     zero_copy_layout,
 };

@@ -49,94 +49,88 @@ pub const ACCOUNT_TYPE_UNINITIALIZED: u8 = 0;
 pub const ACCOUNT_TYPE_MINT: u8 = 1;
 pub const ACCOUNT_TYPE_ACCOUNT: u8 = 2;
 
-/// Known Token-2022 extension types.
-///
-/// Each extension is identified by a `u16` type tag in the TLV header.
-/// This list covers the extensions most relevant to DeFi safety.
-#[derive(Clone, Copy, PartialEq, Eq)]
-#[repr(u16)]
-pub enum ExtensionType {
-    /// Uninitialized extension slot.
-    Uninitialized = 0,
-    /// Transfer fee configuration on the mint.
-    TransferFeeConfig = 1,
-    /// Transfer fee amount on the token account.
-    TransferFeeAmount = 2,
-    /// Mint close authority (allows closing the mint).
-    MintCloseAuthority = 3,
-    /// Confidential transfer mint configuration.
-    ConfidentialTransferMint = 4,
-    /// Confidential transfer account state.
-    ConfidentialTransferAccount = 5,
-    /// Default account state (e.g., Frozen by default).
-    DefaultAccountState = 6,
-    /// Immutable owner (token account owner cannot change).
-    ImmutableOwner = 7,
-    /// Memo required on incoming transfers.
-    MemoTransfer = 8,
-    /// Non-transferable (soulbound) token.
-    NonTransferable = 9,
-    /// Interest-bearing mint configuration.
-    InterestBearingConfig = 10,
-    /// CPI guard on the token account.
-    CpiGuard = 11,
-    /// Permanent delegate (can transfer/burn any time).
-    PermanentDelegate = 12,
-    /// Non-transferable account marker.
-    NonTransferableAccount = 13,
-    /// Transfer hook configuration on the mint.
-    TransferHook = 14,
-    /// Transfer hook account marker.
-    TransferHookAccount = 15,
-    /// Confidential transfer fee configuration.
-    ConfidentialTransferFeeConfig = 16,
-    /// Confidential transfer fee amount.
-    ConfidentialTransferFeeAmount = 17,
-    /// Metadata pointer (points to metadata stored elsewhere).
-    MetadataPointer = 18,
-    /// Inline token metadata stored on the mint.
-    TokenMetadata = 19,
-    /// Group pointer.
-    GroupPointer = 20,
-    /// Group member pointer.
-    GroupMemberPointer = 21,
-    /// Token group.
-    TokenGroup = 22,
-    /// Token group member.
-    TokenGroupMember = 23,
+/// Declare an extension type enum with auto-generated `from_u16`.
+macro_rules! extension_types {
+    (
+        $(#[$emeta:meta])*
+        $vis:vis enum $name:ident {
+            $( $(#[$vmeta:meta])* $variant:ident = $disc:expr ),+ $(,)?
+        }
+    ) => {
+        $(#[$emeta])*
+        #[derive(Clone, Copy, PartialEq, Eq)]
+        #[repr(u16)]
+        $vis enum $name {
+            $( $(#[$vmeta])* $variant = $disc ),+
+        }
+
+        impl $name {
+            /// Convert a raw u16 to an ExtensionType, returning None for unknown types.
+            #[inline(always)]
+            pub fn from_u16(val: u16) -> Option<Self> {
+                match val {
+                    $( $disc => Some(Self::$variant), )+
+                    _ => None,
+                }
+            }
+        }
+    };
 }
 
-impl ExtensionType {
-    /// Convert a raw u16 to an ExtensionType, returning None for unknown types.
-    #[inline(always)]
-    pub fn from_u16(val: u16) -> Option<Self> {
-        match val {
-            0 => Some(Self::Uninitialized),
-            1 => Some(Self::TransferFeeConfig),
-            2 => Some(Self::TransferFeeAmount),
-            3 => Some(Self::MintCloseAuthority),
-            4 => Some(Self::ConfidentialTransferMint),
-            5 => Some(Self::ConfidentialTransferAccount),
-            6 => Some(Self::DefaultAccountState),
-            7 => Some(Self::ImmutableOwner),
-            8 => Some(Self::MemoTransfer),
-            9 => Some(Self::NonTransferable),
-            10 => Some(Self::InterestBearingConfig),
-            11 => Some(Self::CpiGuard),
-            12 => Some(Self::PermanentDelegate),
-            13 => Some(Self::NonTransferableAccount),
-            14 => Some(Self::TransferHook),
-            15 => Some(Self::TransferHookAccount),
-            16 => Some(Self::ConfidentialTransferFeeConfig),
-            17 => Some(Self::ConfidentialTransferFeeAmount),
-            18 => Some(Self::MetadataPointer),
-            19 => Some(Self::TokenMetadata),
-            20 => Some(Self::GroupPointer),
-            21 => Some(Self::GroupMemberPointer),
-            22 => Some(Self::TokenGroup),
-            23 => Some(Self::TokenGroupMember),
-            _ => None,
-        }
+extension_types! {
+    /// Known Token-2022 extension types.
+    ///
+    /// Each extension is identified by a `u16` type tag in the TLV header.
+    /// This list covers the extensions most relevant to DeFi safety.
+    pub enum ExtensionType {
+        /// Uninitialized extension slot.
+        Uninitialized = 0,
+        /// Transfer fee configuration on the mint.
+        TransferFeeConfig = 1,
+        /// Transfer fee amount on the token account.
+        TransferFeeAmount = 2,
+        /// Mint close authority (allows closing the mint).
+        MintCloseAuthority = 3,
+        /// Confidential transfer mint configuration.
+        ConfidentialTransferMint = 4,
+        /// Confidential transfer account state.
+        ConfidentialTransferAccount = 5,
+        /// Default account state (e.g., Frozen by default).
+        DefaultAccountState = 6,
+        /// Immutable owner (token account owner cannot change).
+        ImmutableOwner = 7,
+        /// Memo required on incoming transfers.
+        MemoTransfer = 8,
+        /// Non-transferable (soulbound) token.
+        NonTransferable = 9,
+        /// Interest-bearing mint configuration.
+        InterestBearingConfig = 10,
+        /// CPI guard on the token account.
+        CpiGuard = 11,
+        /// Permanent delegate (can transfer/burn any time).
+        PermanentDelegate = 12,
+        /// Non-transferable account marker.
+        NonTransferableAccount = 13,
+        /// Transfer hook configuration on the mint.
+        TransferHook = 14,
+        /// Transfer hook account marker.
+        TransferHookAccount = 15,
+        /// Confidential transfer fee configuration.
+        ConfidentialTransferFeeConfig = 16,
+        /// Confidential transfer fee amount.
+        ConfidentialTransferFeeAmount = 17,
+        /// Metadata pointer (points to metadata stored elsewhere).
+        MetadataPointer = 18,
+        /// Inline token metadata stored on the mint.
+        TokenMetadata = 19,
+        /// Group pointer.
+        GroupPointer = 20,
+        /// Group member pointer.
+        GroupMemberPointer = 21,
+        /// Token group.
+        TokenGroup = 22,
+        /// Token group member.
+        TokenGroupMember = 23,
     }
 }
 
@@ -225,93 +219,94 @@ pub fn check_no_extension(data: &[u8], ext_type: ExtensionType) -> ProgramResult
 // ── Convenience Checks ───────────────────────────────────────────────────────
 //
 // One-line safety guards for the most commonly dangerous extensions.
+// Generated by macro to avoid copy-paste for each extension type.
 
-/// Reject mints with transfer fee extensions.
-///
-/// If your AMM/vault doesn't account for transfer fees, accepting a
-/// fee-on-transfer mint means the pool receives fewer tokens than expected,
-/// draining LPs over time.
-///
-/// ```rust,ignore
-/// let data = mint_account.try_borrow()?;
-/// check_no_transfer_fee(&data)?;
-/// ```
-#[inline(always)]
-pub fn check_no_transfer_fee(data: &[u8]) -> ProgramResult {
-    check_no_extension(data, ExtensionType::TransferFeeConfig)
+/// Generate a `check_no_$name` function that rejects a specific extension.
+macro_rules! check_no_ext {
+    ($(
+        $(#[$meta:meta])*
+        $fn_name:ident => $ext:ident;
+    )*) => {
+        $(
+            $(#[$meta])*
+            #[inline(always)]
+            pub fn $fn_name(data: &[u8]) -> ProgramResult {
+                check_no_extension(data, ExtensionType::$ext)
+            }
+        )*
+    };
 }
 
-/// Reject mints with transfer hook extensions.
-///
-/// Transfer hooks invoke an arbitrary program on every transfer. If your
-/// program doesn't pass the extra accounts the hook requires, transfers
-/// will fail. If you don't audit the hook program, it could be malicious.
-///
-/// ```rust,ignore
-/// let data = mint_account.try_borrow()?;
-/// check_no_transfer_hook(&data)?;
-/// ```
-#[inline(always)]
-pub fn check_no_transfer_hook(data: &[u8]) -> ProgramResult {
-    check_no_extension(data, ExtensionType::TransferHook)
-}
+check_no_ext! {
+    /// Reject mints with transfer fee extensions.
+    ///
+    /// If your AMM/vault doesn't account for transfer fees, accepting a
+    /// fee-on-transfer mint means the pool receives fewer tokens than expected,
+    /// draining LPs over time.
+    ///
+    /// ```rust,ignore
+    /// let data = mint_account.try_borrow()?;
+    /// check_no_transfer_fee(&data)?;
+    /// ```
+    check_no_transfer_fee => TransferFeeConfig;
 
-/// Reject non-transferable (soulbound) tokens.
-///
-/// Non-transferable tokens cannot be moved between accounts. Attempting
-/// to transfer them will fail inside the token program.
-///
-/// ```rust,ignore
-/// let data = mint_account.try_borrow()?;
-/// check_not_non_transferable(&data)?;
-/// ```
-#[inline(always)]
-pub fn check_not_non_transferable(data: &[u8]) -> ProgramResult {
-    check_no_extension(data, ExtensionType::NonTransferable)
-}
+    /// Reject mints with transfer hook extensions.
+    ///
+    /// Transfer hooks invoke an arbitrary program on every transfer. If your
+    /// program doesn't pass the extra accounts the hook requires, transfers
+    /// will fail. If you don't audit the hook program, it could be malicious.
+    ///
+    /// ```rust,ignore
+    /// let data = mint_account.try_borrow()?;
+    /// check_no_transfer_hook(&data)?;
+    /// ```
+    check_no_transfer_hook => TransferHook;
 
-/// Reject mints with a permanent delegate.
-///
-/// A permanent delegate can transfer or burn tokens from ANY account for
-/// this mint at any time, without the owner's permission. This is
-/// extremely dangerous for DeFi pools and escrows.
-///
-/// ```rust,ignore
-/// let data = mint_account.try_borrow()?;
-/// check_no_permanent_delegate(&data)?;
-/// ```
-#[inline(always)]
-pub fn check_no_permanent_delegate(data: &[u8]) -> ProgramResult {
-    check_no_extension(data, ExtensionType::PermanentDelegate)
-}
+    /// Reject non-transferable (soulbound) tokens.
+    ///
+    /// Non-transferable tokens cannot be moved between accounts. Attempting
+    /// to transfer them will fail inside the token program.
+    ///
+    /// ```rust,ignore
+    /// let data = mint_account.try_borrow()?;
+    /// check_not_non_transferable(&data)?;
+    /// ```
+    check_not_non_transferable => NonTransferable;
 
-/// Reject token accounts with the CPI guard enabled.
-///
-/// The CPI guard prevents transfers initiated via CPI. If your program
-/// needs to transfer tokens from this account via CPI, the transfer will
-/// fail silently.
-///
-/// ```rust,ignore
-/// let data = token_account.try_borrow()?;
-/// check_no_cpi_guard(&data)?;
-/// ```
-#[inline(always)]
-pub fn check_no_cpi_guard(data: &[u8]) -> ProgramResult {
-    check_no_extension(data, ExtensionType::CpiGuard)
-}
+    /// Reject mints with a permanent delegate.
+    ///
+    /// A permanent delegate can transfer or burn tokens from ANY account for
+    /// this mint at any time, without the owner's permission. This is
+    /// extremely dangerous for DeFi pools and escrows.
+    ///
+    /// ```rust,ignore
+    /// let data = mint_account.try_borrow()?;
+    /// check_no_permanent_delegate(&data)?;
+    /// ```
+    check_no_permanent_delegate => PermanentDelegate;
 
-/// Reject mints with a default frozen account state.
-///
-/// Mints with `DefaultAccountState` set to `Frozen` will create all new
-/// token accounts in a frozen state, requiring explicit unfreezing.
-///
-/// ```rust,ignore
-/// let data = mint_account.try_borrow()?;
-/// check_no_default_account_state(&data)?;
-/// ```
-#[inline(always)]
-pub fn check_no_default_account_state(data: &[u8]) -> ProgramResult {
-    check_no_extension(data, ExtensionType::DefaultAccountState)
+    /// Reject token accounts with the CPI guard enabled.
+    ///
+    /// The CPI guard prevents transfers initiated via CPI. If your program
+    /// needs to transfer tokens from this account via CPI, the transfer will
+    /// fail silently.
+    ///
+    /// ```rust,ignore
+    /// let data = token_account.try_borrow()?;
+    /// check_no_cpi_guard(&data)?;
+    /// ```
+    check_no_cpi_guard => CpiGuard;
+
+    /// Reject mints with a default frozen account state.
+    ///
+    /// Mints with `DefaultAccountState` set to `Frozen` will create all new
+    /// token accounts in a frozen state, requiring explicit unfreezing.
+    ///
+    /// ```rust,ignore
+    /// let data = mint_account.try_borrow()?;
+    /// check_no_default_account_state(&data)?;
+    /// ```
+    check_no_default_account_state => DefaultAccountState;
 }
 
 // ── Transfer Fee Reader ──────────────────────────────────────────────────────
