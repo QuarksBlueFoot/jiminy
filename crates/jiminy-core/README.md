@@ -6,7 +6,7 @@ Account layout, zero-copy IO, validation, PDA, sysvar access, lifecycle, math, t
 
 ```toml
 [dependencies]
-jiminy-core = "0.12"
+jiminy-core = "0.13"
 ```
 
 ## What's in here
@@ -23,7 +23,7 @@ jiminy-core = "0.12"
 | `event` | Zero-alloc event emission via `sol_log_data` |
 | `programs` | Well-known program IDs *(feature-gated)* |
 
-## New in 0.12
+## New in 0.13
 
 - `zero_copy_layout!` macro: declare `#[repr(C)]` structs that overlay directly onto account bytes. No proc macros.
 - `ZeroCopySlice` / `ZeroCopySliceMut`: length-prefixed arrays in account data. Zero-copy iteration, indexing, mutation.

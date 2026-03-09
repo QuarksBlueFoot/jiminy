@@ -1,6 +1,6 @@
 [package]
 name = "jiminy-solana"
-version = "0.12.0"
+version = "0.13.0"
 edition = "2021"
 license = "Apache-2.0"
 authors = ["MoonManQuark"]
@@ -17,7 +17,7 @@ name = "jiminy_solana"
 pinocchio = { workspace = true }
 pinocchio-system = { workspace = true }
 pinocchio-token = { workspace = true }
-jiminy-core = { path = "../jiminy-core", version = "0.12.0", default-features = false }
+jiminy-core = { path = "../jiminy-core", version = "0.13.0", default-features = false }
 
 [features]
 default = ["programs"]

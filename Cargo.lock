@@ -956,7 +956,7 @@ checksum = "92ecc6618181def0457392ccd0ee51198e065e016d1d527a7ac1b6dc7c1f09d2"
 
 [[package]]
 name = "jiminy"
-version = "0.12.0"
+version = "0.13.0"
 dependencies = [
  "jiminy-core",
  "jiminy-distribute",
@@ -974,7 +974,7 @@ dependencies = [
 
 [[package]]
 name = "jiminy-core"
-version = "0.12.0"
+version = "0.13.0"
 dependencies = [
  "pinocchio",
  "sha2-const-stable",
@@ -982,7 +982,7 @@ dependencies = [
 
 [[package]]
 name = "jiminy-distribute"
-version = "0.12.0"
+version = "0.13.0"
 dependencies = [
  "pinocchio",
 ]
@@ -996,7 +996,7 @@ dependencies = [
 
 [[package]]
 name = "jiminy-finance"
-version = "0.12.0"
+version = "0.13.0"
 dependencies = [
  "jiminy-core",
  "pinocchio",
@@ -1004,21 +1004,21 @@ dependencies = [
 
 [[package]]
 name = "jiminy-lending"
-version = "0.12.0"
+version = "0.13.0"
 dependencies = [
  "pinocchio",
 ]
 
 [[package]]
 name = "jiminy-multisig"
-version = "0.12.0"
+version = "0.13.0"
 dependencies = [
  "pinocchio",
 ]
 
 [[package]]
 name = "jiminy-solana"
-version = "0.12.0"
+version = "0.13.0"
 dependencies = [
  "jiminy-core",
  "pinocchio",
@@ -1028,7 +1028,7 @@ dependencies = [
 
 [[package]]
 name = "jiminy-staking"
-version = "0.12.0"
+version = "0.13.0"
 dependencies = [
  "pinocchio",
 ]
@@ -1042,7 +1042,7 @@ dependencies = [
 
 [[package]]
 name = "jiminy-vesting"
-version = "0.12.0"
+version = "0.13.0"
 dependencies = [
  "pinocchio",
 ]

@@ -3,7 +3,7 @@
 AMM math, slippage guards, price impact, economic bounds. u128 intermediates so your constant-product swaps don't overflow.
 
 ```toml
-jiminy-finance = "0.12"
+jiminy-finance = "0.13"
 ```
 
 `amm` - `isqrt`, `constant_product_out`, `constant_product_in`, `check_k_invariant`, `price_impact_bps`, `initial_lp_amount`, `proportional_lp_amount`

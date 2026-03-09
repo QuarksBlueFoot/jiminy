@@ -6,7 +6,7 @@ Token/mint readers, Token-2022 screening, CPI guards, Ed25519, Merkle proofs, Py
 
 ```toml
 [dependencies]
-jiminy-solana = "0.12"
+jiminy-solana = "0.13"
 ```
 
 Pulls in `jiminy-core`, `pinocchio-token`, and `pinocchio-system` for you.

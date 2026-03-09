@@ -28,19 +28,19 @@ pinocchio = { version = "0.10", features = ["cpi"] }
 pinocchio-system = "0.5"
 pinocchio-token = "0.5"
 sha2-const-stable = "0.1"
-jiminy = { path = ".", version = "0.12.0" }
-jiminy-core = { path = "crates/jiminy-core", version = "0.12.0" }
-jiminy-solana = { path = "crates/jiminy-solana", version = "0.12.0" }
-jiminy-finance = { path = "crates/jiminy-finance", version = "0.12.0" }
-jiminy-lending = { path = "crates/jiminy-lending", version = "0.12.0" }
-jiminy-staking = { path = "crates/jiminy-staking", version = "0.12.0" }
-jiminy-vesting = { path = "crates/jiminy-vesting", version = "0.12.0" }
-jiminy-multisig = { path = "crates/jiminy-multisig", version = "0.12.0" }
-jiminy-distribute = { path = "crates/jiminy-distribute", version = "0.12.0" }
+jiminy = { path = ".", version = "0.13.0" }
+jiminy-core = { path = "crates/jiminy-core", version = "0.13.0" }
+jiminy-solana = { path = "crates/jiminy-solana", version = "0.13.0" }
+jiminy-finance = { path = "crates/jiminy-finance", version = "0.13.0" }
+jiminy-lending = { path = "crates/jiminy-lending", version = "0.13.0" }
+jiminy-staking = { path = "crates/jiminy-staking", version = "0.13.0" }
+jiminy-vesting = { path = "crates/jiminy-vesting", version = "0.13.0" }
+jiminy-multisig = { path = "crates/jiminy-multisig", version = "0.13.0" }
+jiminy-distribute = { path = "crates/jiminy-distribute", version = "0.13.0" }
 
 [package]
 name = "jiminy"
-version = "0.12.0"
+version = "0.13.0"
 edition = "2021"
 license = "Apache-2.0"
 authors = ["MoonManQuark"]

@@ -3,7 +3,7 @@
 M-of-N signer checks. Four functions, zero allocation.
 
 ```toml
-jiminy-multisig = "0.12"
+jiminy-multisig = "0.13"
 ```
 
 `count_signers` counts how many accounts in a slice signed.

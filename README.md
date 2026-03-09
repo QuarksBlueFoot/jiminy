@@ -61,13 +61,25 @@ use jiminy::prelude::*;
 
 ---
 
-## New in 0.12
+## New in 0.13
+
+- **`error_codes!`** macro: define numbered program error codes with `Into<ProgramError>`. Replaces Anchor's `#[error_code]` proc macro.
+- **`instruction_dispatch!`** macro: byte-tag instruction routing. Replaces Anchor's `#[program]` proc macro.
+- **`check_accounts_unique!`** macro: variadic pairwise uniqueness for any N accounts. Replaces `check_accounts_unique_2/3/4`.
+- **`impl_pod!`** macro: batch `unsafe impl Pod` for a list of types.
+- **`extension_types!`** / **`check_no_ext!`** internal macros: generate Token-2022 extension enum and screening functions.
+- **Docs overhaul**: every crate's `docs.rs` page now has a proper intro explaining what it does and why you need it.
+
+<details>
+<summary>New in 0.12</summary>
 
 - **`zero_copy_layout!`** macro: declare `#[repr(C)]` structs that overlay directly onto account bytes. No proc macros, no borsh, just typed fields at byte offsets.
 - **`ZeroCopySlice` / `ZeroCopySliceMut`**: length-prefixed `[u32][T; len]` arrays in account data. Zero-copy iteration, random access, mutation. `init()` for first write.
 - **`pod_read<T>()`**: alignment-safe owned copy via `read_unaligned`. Works on all targets, great for native tests.
 - **Syscall-based sysvar access**: `clock_timestamp()`, `clock_slot()`, `clock_epoch()`, `rent_lamports_per_byte_year()`. No account slot needed. Just call and get the value.
 - **Instruction deduplication**: `jiminy-solana`'s `compose` and `introspect` modules now delegate to `jiminy-core::instruction` instead of reimplementing the same parsing logic.
+
+</details>
 
 ---
 
@@ -145,12 +157,12 @@ layer you need.
 ```toml
 # Full toolkit (recommended)
 [dependencies]
-jiminy = "0.12"
+jiminy = "0.13"
 
 # Or pick individual crates for minimal deps
-jiminy-core = "0.12"      # Account layout, checks, math, PDA
-jiminy-solana = "0.12"    # Token, CPI, crypto, oracle
-jiminy-finance = "0.12"   # AMM math, slippage
+jiminy-core = "0.13"      # Account layout, checks, math, PDA
+jiminy-solana = "0.13"    # Token, CPI, crypto, oracle
+jiminy-finance = "0.13"   # AMM math, slippage
 ```
 
 ## Adding Jiminy to an existing Pinocchio project
@@ -162,7 +174,7 @@ Already using pinocchio directly? You have two options:
 ```toml
 [dependencies]
 pinocchio = "0.10"
-jiminy = "0.12"
+jiminy = "0.13"
 ```
 
 This works fine. Cargo deduplicates the pinocchio crate as long as versions are
@@ -173,7 +185,7 @@ imports alongside them.
 
 ```toml
 [dependencies]
-jiminy = "0.12"
+jiminy = "0.13"
 ```
 
 Jiminy re-exports the entire pinocchio crate, plus `pinocchio-system` and
@@ -606,7 +618,7 @@ Zero-alloc diagnostic logging behind the `log` feature flag. Uses the raw
 `sol_log` syscall, no extra deps.
 
 ```toml
-jiminy = { version = "0.12", features = ["log"] }
+jiminy = { version = "0.13", features = ["log"] }
 ```
 
 | Function | What it logs |
@@ -949,25 +961,25 @@ assert_eq!(net + fee, 1_000_000);
 
 ---
 
-## Modular crates (v0.12+)
+## Modular crates (v0.13+)
 
-Starting with v0.11, Jiminy is split into focused crates. v0.12 adds
-`zero_copy_layout!`, `ZeroCopySlice`, `pod_read`, and syscall-based
-sysvar access.
+Starting with v0.11, Jiminy is split into focused crates. v0.13 adds
+declarative macros for error codes, instruction dispatch, and account
+uniqueness checks -- plus a docs overhaul across every crate.
 
 ```toml
 # Full toolkit - zero local code, re-exports everything
-jiminy = "0.12"
+jiminy = "0.13"
 
 # Or pick what you need
-jiminy-core = "0.12"        # Account layout, checks, math, PDA, sysvar
-jiminy-solana = "0.12"      # Token, CPI, crypto, oracle, introspection
-jiminy-finance = "0.12"     # AMM math, slippage
-jiminy-lending = "0.12"     # Lending/liquidation primitives
-jiminy-staking = "0.12"     # Reward accumulators
-jiminy-vesting = "0.12"     # Vesting schedules
-jiminy-multisig = "0.12"    # M-of-N threshold
-jiminy-distribute = "0.12"  # Dust-safe splits
+jiminy-core = "0.13"        # Account layout, checks, math, PDA, sysvar
+jiminy-solana = "0.13"      # Token, CPI, crypto, oracle, introspection
+jiminy-finance = "0.13"     # AMM math, slippage
+jiminy-lending = "0.13"     # Lending/liquidation primitives
+jiminy-staking = "0.13"     # Reward accumulators
+jiminy-vesting = "0.13"     # Vesting schedules
+jiminy-multisig = "0.13"    # M-of-N threshold
+jiminy-distribute = "0.13"  # Dust-safe splits
 ```
 
 The root `jiminy` crate re-exports everything. Module paths are unchanged:
@@ -987,7 +999,7 @@ use jiminy_solana::crypto::verify_merkle_proof;
 ### Migration from 0.10
 
 The API is the same. If you depend on `jiminy = "0.10"`, upgrade
-to `"0.12"` and everything compiles. 0.12 adds new functions and macros
+to `"0.13"` and everything compiles. 0.13 adds new functions and macros
 but nothing was removed or renamed.
 
 ---
