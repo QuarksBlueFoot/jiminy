@@ -1,0 +1,7 @@
+target/
+
+# Internal working files
+*.txt
+docs/archive/
+# Working notes / guidance docs (not shipped)
+templates/staking/What pushes this to S-tier.md

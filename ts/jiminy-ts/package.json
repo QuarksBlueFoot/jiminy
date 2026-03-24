@@ -1,0 +1,50 @@
+{
+  "name": "@jiminy/ts",
+  "version": "0.15.0",
+  "description": "TypeScript runtime for Jiminy zero-copy Solana accounts — header decoding, layout_id verification, segment tables, and standard layout readers.",
+  "license": "Apache-2.0",
+  "author": "MoonManQuark",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/QuarksBlueFoot/jiminy",
+    "directory": "ts/jiminy-ts"
+  },
+  "keywords": [
+    "solana",
+    "zero-copy",
+    "account-layout",
+    "pinocchio",
+    "jiminy"
+  ],
+  "type": "module",
+  "main": "./dist/cjs/index.js",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/types/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/esm/index.js",
+      "require": "./dist/cjs/index.js",
+      "types": "./dist/types/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json && tsc -p tsconfig.cjs.json",
+    "test": "vitest run",
+    "lint": "tsc --noEmit",
+    "clean": "rimraf dist"
+  },
+  "peerDependencies": {
+    "@solana/web3.js": ">=1.70.0"
+  },
+  "devDependencies": {
+    "@solana/web3.js": "^1.98.0",
+    "rimraf": "^6.0.0",
+    "typescript": "^5.5.0",
+    "vite": "^5.4.21",
+    "vitest": "^2.1.0"
+  }
+}

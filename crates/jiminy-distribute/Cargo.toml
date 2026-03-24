@@ -1,0 +1,25 @@
+[package]
+name = "jiminy-distribute"
+version = "0.15.0"
+edition = "2021"
+license = "Apache-2.0"
+authors = ["MoonManQuark"]
+description = "Dust-safe proportional distribution helpers for Jiminy: N-way splits and fee extraction. Zero-copy, no_std, no_alloc, BPF-safe."
+readme = "README.md"
+repository = "https://github.com/QuarksBlueFoot/jiminy"
+homepage = "https://github.com/QuarksBlueFoot/jiminy"
+documentation = "https://docs.rs/jiminy-distribute"
+keywords = ["solana", "pinocchio", "distribution", "fee", "zero-copy"]
+categories = ["no-std", "embedded"]
+
+[lib]
+name = "jiminy_distribute"
+
+[dependencies]
+pinocchio = { workspace = true }
+
+[features]
+default = []
+
+[lints]
+workspace = true

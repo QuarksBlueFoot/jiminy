@@ -1,0 +1,33 @@
+[package]
+name = "jiminy-core"
+version = "0.15.0"
+edition = "2021"
+license = "Apache-2.0"
+authors = ["MoonManQuark"]
+description = "Core systems layer for Jiminy: account layout, zero-copy IO, validation, PDA, sysvar access, math, time checks. Declarative macros for error codes, instruction dispatch, and account uniqueness. no_std, no_alloc, no proc macros, BPF-safe."
+readme = "README.md"
+repository = "https://github.com/QuarksBlueFoot/jiminy"
+homepage = "https://github.com/QuarksBlueFoot/jiminy"
+documentation = "https://docs.rs/jiminy-core"
+keywords = ["solana", "pinocchio", "bpf", "zero-copy", "no-std"]
+categories = ["no-std", "embedded"]
+
+[lib]
+name = "jiminy_core"
+
+[dependencies]
+pinocchio = { workspace = true }
+sha2-const-stable = { workspace = true }
+solana-zero-copy = { version = "1", optional = true }
+
+[dev-dependencies]
+proptest = "1"
+
+[features]
+default = ["programs"]
+programs = []
+log = []
+solana-zero-copy = ["dep:solana-zero-copy"]
+
+[lints]
+workspace = true

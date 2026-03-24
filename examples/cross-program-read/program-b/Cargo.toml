@@ -1,0 +1,21 @@
+[package]
+name = "cross-program-b"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "lib"]
+
+[dependencies]
+# NOTE: Program B depends ONLY on jiminy - NOT on cross-program-a.
+# The cross-program read works through layout_id matching alone.
+jiminy = { workspace = true }
+
+[features]
+default = ["bpf-entrypoint"]
+bpf-entrypoint = []
+
+[lints]
+workspace = true

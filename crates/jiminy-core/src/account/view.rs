@@ -1,0 +1,183 @@
+//! Tiered loading helpers for account views.
+//!
+//! The [`zero_copy_layout!`](crate::zero_copy_layout!) macro generates per-struct tiered loading
+//! methods. This module provides the shared validation functions they
+//! call.
+//!
+//! ## Trust Tiers
+//!
+//! | Tier | Name | Method | Validates |
+//! |------|------|--------|-----------|
+//! | 1 | **Verified** | `load()` | owner + disc + version + size + layout_id |
+//! | 2 | **Foreign Verified** | `load_foreign()` | owner + layout_id |
+//! | 3 | **Compatibility** | `validate_version_compatible()` | owner + disc + version + size (no layout_id) |
+//! | 4 | **Unsafe** | `load_unchecked()` | **none** (`unsafe`) |
+//! | 5 | **Best Effort** | `load_best_effort()` | header + layout_id if present, fallback to overlay |
+//!
+//! Tiers 1–2 are the standard paths. Tier 3 is a migration helper that
+//! trades `layout_id` verification for version-range flexibility. Tier 4
+//! is `unsafe` by design - deliberate friction for unvalidated loads.
+//! Tier 5 is for tooling that cannot guarantee account provenance.
+//!
+//! See [`SAFETY_MODEL.md`](https://github.com/QuarksBlueFoot/jiminy/blob/main/docs/SAFETY_MODEL.md)
+//! for the full trust tier model and all safety invariants.
+
+use pinocchio::{AccountView, Address};
+use pinocchio::account::Ref;
+use pinocchio::error::ProgramError;
+
+use super::{HEADER_LEN, check_header, check_layout_id, pod_from_bytes, Pod, FixedLayout};
+
+/// Validate owner + disc + version + layout_id + size on an `AccountView`.
+///
+/// This is the standard loading path (Tier 1). Returns the borrowed
+/// account data on success, avoiding a second `try_borrow()` call.
+///
+/// # Errors
+///
+/// - `IllegalOwner`: account is not owned by `program_id`.
+/// - `AccountDataTooSmall`: account data shorter than `min_size`.
+/// - `InvalidAccountData`: discriminator, version, or layout_id mismatch.
+#[inline(always)]
+pub fn validate_account<'a>(
+    account: &'a AccountView,
+    program_id: &Address,
+    disc: u8,
+    version: u8,
+    layout_id: &[u8; 8],
+    min_size: usize,
+) -> Result<Ref<'a, [u8]>, ProgramError> {
+    if !account.owned_by(program_id) {
+        return Err(ProgramError::IllegalOwner);
+    }
+
+    let data = account.try_borrow()?;
+
+    if data.len() < min_size {
+        return Err(ProgramError::AccountDataTooSmall);
+    }
+
+    check_header(&data, disc, version, layout_id)?;
+    Ok(data)
+}
+
+/// Validate owner + layout_id only on an `AccountView`.
+///
+/// Cross-program read path (Tier 2). Skips disc and version checks
+/// because the foreign program may use different disc/version conventions.
+/// Returns the borrowed account data on success.
+///
+/// # Errors
+///
+/// - `IllegalOwner`: account is not owned by `expected_owner`.
+/// - `AccountDataTooSmall`: account data shorter than `min_size`.
+/// - `InvalidAccountData`: `layout_id` does not match.
+#[inline(always)]
+pub fn validate_foreign<'a>(
+    account: &'a AccountView,
+    expected_owner: &Address,
+    layout_id: &[u8; 8],
+    min_size: usize,
+) -> Result<Ref<'a, [u8]>, ProgramError> {
+    if !account.owned_by(expected_owner) {
+        return Err(ProgramError::IllegalOwner);
+    }
+
+    let data = account.try_borrow()?;
+
+    if data.len() < min_size {
+        return Err(ProgramError::AccountDataTooSmall);
+    }
+
+    check_layout_id(&data, layout_id)?;
+    Ok(data)
+}
+
+/// Validate owner + disc + minimum version + minimum size.
+///
+/// # ⚠ Migration utility - lower trust level
+///
+/// **Compatibility validation is a migration helper, not a proof of ABI
+/// identity.** It does not validate `layout_id` and must not be treated
+/// as equivalent to `load()` or `load_foreign()`. It checks only that
+/// the account is owned by the expected program, has the correct
+/// discriminator, meets a minimum version, and is large enough.
+///
+/// Because the layout fingerprint is not verified, the caller must
+/// ensure the overlaid struct is compatible with the actual on-chain
+/// bytes. A `validate_version_compatible` call passing does **not** prove the
+/// account's byte layout matches your Rust struct.
+///
+/// Use this only for backward-compatible loading during version
+/// transitions. For all other paths, prefer:
+///
+/// - `load()` / `load_checked()`: full ABI-verified standard path
+/// - `load_foreign()`: cross-program reads with layout_id proof
+///
+/// # Errors
+///
+/// - `IllegalOwner`: account is not owned by `program_id`.
+/// - `AccountDataTooSmall`: data shorter than `min_size` or shorter
+///   than 2 bytes (cannot read disc + version).
+/// - `InvalidAccountData`: discriminator does not match `disc`, or
+///   version byte is less than `min_version`.
+#[inline(always)]
+pub fn validate_version_compatible<'a>(
+    account: &'a AccountView,
+    program_id: &Address,
+    disc: u8,
+    min_version: u8,
+    min_size: usize,
+) -> Result<Ref<'a, [u8]>, ProgramError> {
+    if !account.owned_by(program_id) {
+        return Err(ProgramError::IllegalOwner);
+    }
+
+    let data = account.try_borrow()?;
+
+    if data.len() < min_size {
+        return Err(ProgramError::AccountDataTooSmall);
+    }
+    // Header bytes (disc + version) require at least 2 bytes.
+    if data.len() < 2 {
+        return Err(ProgramError::AccountDataTooSmall);
+    }
+
+    if data[0] != disc {
+        return Err(ProgramError::InvalidAccountData);
+    }
+    if data[1] < min_version {
+        return Err(ProgramError::InvalidAccountData);
+    }
+
+    Ok(data)
+}
+
+/// Try to validate header + layout_id. If the header check fails,
+/// fall back to a plain overlay.
+///
+/// Best-effort loading (Tier 5). Useful for indexers and tooling that
+/// need to read accounts without knowing whether they use Jiminy headers.
+/// Returns `(overlay, validated)` where `validated` is `true` when the
+/// header matched.
+///
+/// # Errors
+///
+/// - `AccountDataTooSmall`: data shorter than `T::SIZE`.
+#[inline(always)]
+pub fn load_best_effort<'a, T: Pod + FixedLayout>(
+    data: &'a [u8],
+    disc: u8,
+    version: u8,
+    layout_id: &[u8; 8],
+) -> Result<(&'a T, bool), ProgramError> {
+    if data.len() < T::SIZE {
+        return Err(ProgramError::AccountDataTooSmall);
+    }
+
+    let validated = data.len() >= HEADER_LEN
+        && check_header(data, disc, version, layout_id).is_ok();
+
+    let overlay = pod_from_bytes::<T>(data)?;
+    Ok((overlay, validated))
+}

@@ -1,0 +1,41 @@
+[package]
+name = "jiminy-core-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+jiminy-core = { path = ".." }
+
+# Prevent this from interfering with workspace builds.
+[workspace]
+members = ["."]
+
+[[bin]]
+name = "fuzz_header"
+path = "fuzz_targets/fuzz_header.rs"
+doc = false
+
+[[bin]]
+name = "fuzz_overlay"
+path = "fuzz_targets/fuzz_overlay.rs"
+doc = false
+
+[[bin]]
+name = "fuzz_segment_table"
+path = "fuzz_targets/fuzz_segment_table.rs"
+doc = false
+
+[[bin]]
+name = "fuzz_zero_copy_slice"
+path = "fuzz_targets/fuzz_zero_copy_slice.rs"
+doc = false
+
+[[bin]]
+name = "fuzz_best_effort"
+path = "fuzz_targets/fuzz_best_effort.rs"
+doc = false

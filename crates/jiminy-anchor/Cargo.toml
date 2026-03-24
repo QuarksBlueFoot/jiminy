@@ -1,0 +1,29 @@
+[package]
+name = "jiminy-anchor"
+version = "0.15.0"
+edition = "2021"
+license = "Apache-2.0"
+authors = ["MoonManQuark"]
+description = "Adapter for reading Anchor-framework accounts from Jiminy programs. Provides Anchor discriminator utilities and account header translation."
+readme = "README.md"
+repository = "https://github.com/QuarksBlueFoot/jiminy"
+homepage = "https://github.com/QuarksBlueFoot/jiminy"
+documentation = "https://docs.rs/jiminy-anchor"
+keywords = ["solana", "anchor", "zero-copy", "interop", "adapter"]
+categories = ["no-std", "embedded"]
+
+[lib]
+name = "jiminy_anchor"
+
+[dependencies]
+jiminy-core = { workspace = true }
+pinocchio = { workspace = true }
+sha2-const-stable = { workspace = true }
+
+[dev-dependencies]
+
+[features]
+default = []
+
+[lints]
+workspace = true

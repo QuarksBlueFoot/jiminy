@@ -1,0 +1,88 @@
+[workspace]
+members = [
+    ".",
+    "crates/jiminy-core",
+    "crates/jiminy-solana",
+    "crates/jiminy-finance",
+    "crates/jiminy-lending",
+    "crates/jiminy-staking",
+    "crates/jiminy-vesting",
+    "crates/jiminy-multisig",
+    "crates/jiminy-distribute",
+    "crates/jiminy-schema",
+    "crates/jiminy-layouts",
+    "crates/jiminy-anchor",
+    "examples/jiminy-vault",
+    "examples/jiminy-escrow",
+    "examples/cross-program-read/program-a",
+    "examples/cross-program-read/program-b",
+    "bench/pinocchio-vault",
+    "bench/jiminy-vault",
+    "bench/anchor-vault",
+]
+exclude = [
+    "bench/runner",
+]
+resolver = "2"
+
+[workspace.lints.rust]
+unexpected_cfgs = { level = "allow", check-cfg = ['cfg(target_os, values("solana"))','cfg(target_arch, values("bpf"))'] }
+
+[workspace.dependencies]
+pinocchio = { version = "0.10", features = ["cpi", "copy"] }
+pinocchio-system = "0.5"
+pinocchio-token = "0.5"
+sha2-const-stable = "0.1"
+jiminy = { path = ".", version = "0.15.0" }
+jiminy-core = { path = "crates/jiminy-core", version = "0.15.0" }
+jiminy-solana = { path = "crates/jiminy-solana", version = "0.15.0" }
+jiminy-finance = { path = "crates/jiminy-finance", version = "0.15.0" }
+jiminy-lending = { path = "crates/jiminy-lending", version = "0.15.0" }
+jiminy-staking = { path = "crates/jiminy-staking", version = "0.15.0" }
+jiminy-vesting = { path = "crates/jiminy-vesting", version = "0.15.0" }
+jiminy-multisig = { path = "crates/jiminy-multisig", version = "0.15.0" }
+jiminy-distribute = { path = "crates/jiminy-distribute", version = "0.15.0" }
+jiminy-schema = { path = "crates/jiminy-schema", version = "0.15.0" }
+jiminy-layouts = { path = "crates/jiminy-layouts", version = "0.15.0" }
+jiminy-anchor = { path = "crates/jiminy-anchor", version = "0.15.0" }
+
+[package]
+name = "jiminy"
+version = "0.15.0"
+edition = "2021"
+license = "Apache-2.0"
+authors = ["MoonManQuark"]
+description = "The zero-copy standard library for Solana programs built on pinocchio. Account layout, validation, PDA, Token/Mint readers, Token-2022 screening, CPI guards, DeFi math, AMM, slippage, lending, staking, vesting, multisig, distribution, Merkle, Ed25519, Pyth oracle. Declarative macros for error codes, instruction dispatch, and account checks. no_std, no_alloc, no proc macros, BPF-safe."
+repository = "https://github.com/QuarksBlueFoot/jiminy"
+homepage = "https://github.com/QuarksBlueFoot/jiminy"
+documentation = "https://docs.rs/jiminy"
+readme = "README.md"
+keywords = ["solana", "pinocchio", "bpf", "zero-copy", "no-std"]
+categories = ["no-std", "embedded"]
+exclude = [".github", "*.sh", "examples", "bench", "docs", "BENCHMARKS.md"]
+
+[lib]
+name = "jiminy"
+
+[dependencies]
+pinocchio = { workspace = true }
+pinocchio-system = { workspace = true }
+pinocchio-token = { workspace = true }
+sha2-const-stable = { workspace = true }
+jiminy-core = { workspace = true }
+jiminy-solana = { workspace = true }
+jiminy-finance = { workspace = true }
+jiminy-lending = { workspace = true }
+jiminy-staking = { workspace = true }
+jiminy-vesting = { workspace = true }
+jiminy-multisig = { workspace = true }
+jiminy-distribute = { workspace = true }
+
+[features]
+default = ["programs"]
+programs = ["jiminy-core/programs", "jiminy-solana/programs"]
+log = ["jiminy-core/log"]
+solana-zero-copy = ["jiminy-core/solana-zero-copy"]
+
+[lints]
+workspace = true
