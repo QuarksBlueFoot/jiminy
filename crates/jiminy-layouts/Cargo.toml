@@ -1,0 +1,28 @@
+[package]
+name = "jiminy-layouts"
+version = "0.16.0"
+edition = "2021"
+license = "Apache-2.0"
+authors = ["MoonManQuark"]
+description = "Standard zero-copy account layouts for well-known Solana programs: SPL Token Account, Mint, Multisig, Nonce Account, Stake State. Compatible with jiminy-core's Pod/FixedLayout traits."
+readme = "README.md"
+repository = "https://github.com/QuarksBlueFoot/jiminy"
+homepage = "https://github.com/QuarksBlueFoot/jiminy"
+documentation = "https://docs.rs/jiminy-layouts"
+keywords = ["solana", "zero-copy", "spl-token", "account-layout", "no-std"]
+categories = ["no-std", "embedded"]
+
+[lib]
+name = "jiminy_layouts"
+
+[dependencies]
+jiminy-core = { workspace = true }
+pinocchio = { workspace = true }
+
+[dev-dependencies]
+
+[features]
+default = []
+
+[lints]
+workspace = true

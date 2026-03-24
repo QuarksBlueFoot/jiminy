@@ -1,0 +1,25 @@
+[package]
+name = "jiminy-staking"
+version = "0.16.0"
+edition = "2021"
+license = "Apache-2.0"
+authors = ["MoonManQuark"]
+description = "Staking reward accumulators for Jiminy: MasterChef-style reward-per-token, emission rates, reward debt tracking. Zero-copy, no_std, no_alloc, BPF-safe."
+readme = "README.md"
+repository = "https://github.com/QuarksBlueFoot/jiminy"
+homepage = "https://github.com/QuarksBlueFoot/jiminy"
+documentation = "https://docs.rs/jiminy-staking"
+keywords = ["solana", "pinocchio", "staking", "rewards", "zero-copy"]
+categories = ["no-std", "embedded"]
+
+[lib]
+name = "jiminy_staking"
+
+[dependencies]
+pinocchio = { workspace = true }
+
+[features]
+default = []
+
+[lints]
+workspace = true

@@ -1,0 +1,16 @@
+{
+	"folders": [
+		{
+			"path": ".."
+		},
+		{
+			"path": "../../Hopper-Solana-Zero-copy-State-Framework"
+		}
+	],
+	"settings": {
+		"git.scanRepositories": [
+			"..",
+			"../../Hopper-Solana-Zero-copy-State-Framework"
+		]
+	}
+}

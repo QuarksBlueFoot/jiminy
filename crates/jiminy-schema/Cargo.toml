@@ -1,0 +1,28 @@
+[package]
+name = "jiminy-schema"
+version = "0.16.0"
+edition = "2021"
+license = "Apache-2.0"
+authors = ["MoonManQuark"]
+description = "Layout Manifest v1 for Jiminy: structured account schema descriptions with canonical type normalization. Enables TypeScript codegen, indexer integration, and cross-language tooling."
+readme = "README.md"
+repository = "https://github.com/QuarksBlueFoot/jiminy"
+homepage = "https://github.com/QuarksBlueFoot/jiminy"
+documentation = "https://docs.rs/jiminy-schema"
+keywords = ["solana", "schema", "zero-copy", "account-layout", "abi"]
+categories = ["no-std", "embedded"]
+
+[lib]
+name = "jiminy_schema"
+
+[dependencies]
+
+[dev-dependencies]
+
+[features]
+default = ["std"]
+std = []
+codegen = ["std"]
+
+[lints]
+workspace = true

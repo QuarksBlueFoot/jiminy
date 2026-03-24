@@ -1,0 +1,149 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  check:
+    name: Check & Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - name: Cache cargo registry + build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      # Check the core jiminy library (no BPF, host target).
+      - name: cargo check (jiminy)
+        run: cargo check -p jiminy
+
+      # Check the example programs (host target, no-entrypoint to skip BPF macros).
+      - name: cargo check (examples, no entrypoint)
+        run: |
+          cargo check -p jiminy-vault --no-default-features
+          cargo check -p jiminy-escrow --no-default-features
+          cargo check -p cross-program-a --no-default-features
+          cargo check -p cross-program-b --no-default-features
+
+      # Check the bench variants (host target, no entrypoint).
+      - name: cargo check (bench programs, no entrypoint)
+        run: |
+          cargo check -p bench-pinocchio-vault --no-default-features
+          cargo check -p bench-jiminy-vault --no-default-features
+
+      # Run tests for the jiminy library.
+      - name: cargo test (jiminy)
+        run: cargo test -p jiminy
+
+      # Run tests for jiminy-core (unit + integration + proptest).
+      - name: cargo test (jiminy-core)
+        run: cargo test -p jiminy-core
+
+      # Run tests for tooling / ecosystem crates.
+      - name: cargo test (jiminy-schema)
+        run: cargo test -p jiminy-schema
+
+      - name: cargo test (jiminy-layouts)
+        run: cargo test -p jiminy-layouts
+
+      - name: cargo test (jiminy-anchor)
+        run: cargo test -p jiminy-anchor
+
+      # Lint the workspace.
+      - name: cargo clippy
+        run: cargo clippy -p jiminy -p jiminy-core -p jiminy-solana -p jiminy-finance -p jiminy-lending -p jiminy-staking -p jiminy-vesting -p jiminy-multisig -p jiminy-distribute -p jiminy-schema -p jiminy-layouts -p jiminy-anchor -- -D warnings
+
+  docs:
+    name: Docs build gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry + build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-docs-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: cargo doc (workspace)
+        run: cargo doc --workspace --no-deps
+        env:
+          RUSTDOCFLAGS: "-D warnings"
+
+  miri:
+    name: Miri (undefined behavior check)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust nightly + Miri
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: miri
+
+      - name: Cache cargo registry + build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-miri-${{ hashFiles('**/Cargo.lock') }}
+
+      # Run Miri on the core crate's full test suite to detect UB in unsafe code.
+      - name: cargo miri test (jiminy-core)
+        run: cargo miri test -p jiminy-core
+
+  # BPF/SBF build job — validates on-chain program compilation.
+  build-sbf:
+    name: Build SBF Programs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Solana CLI
+        run: |
+          sh -c "$(curl -sSfL https://release.anza.xyz/stable/install)"
+          echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
+
+      - name: Cache cargo registry + build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-sbf-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Build SBF programs
+        run: |
+          cargo build-sbf -p bench-pinocchio-vault
+          cargo build-sbf -p bench-jiminy-vault
+          cargo build-sbf -p jiminy-vault
+          cargo build-sbf -p jiminy-escrow
