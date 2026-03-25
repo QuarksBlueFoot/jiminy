@@ -29,12 +29,12 @@ Missing any one of these opens an attack vector.
 
 ```rust
 // Good: all three checks
-let data = ForeignVault::load_foreign(account, &TRUSTED_PROGRAM)?;
-let vault = ForeignVault::overlay(&data)?;
+let verified = ForeignVault::load_foreign(account, &TRUSTED_PROGRAM)?;
+let vault = verified.get();
 check_has_one(&vault.authority(), signer)?;
 
 // Bad: layout_id alone (malicious program could match the shape)
-let data = ForeignVault::load_foreign(account, &ANY_OWNER)?; // don't do this
+let verified = ForeignVault::load_foreign(account, &ANY_OWNER)?; // don't do this
 ```
 
 ---

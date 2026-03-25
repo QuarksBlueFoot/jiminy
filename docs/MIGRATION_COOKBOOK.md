@@ -122,8 +122,8 @@ pub fn process_swap(
     let user = accs.next_signer()?;
     let pool = accs.next_writable()?;
 
-    let data = Pool::load(pool, program_id)?;
-    let pool_state = Pool::overlay(&data)?;
+    let verified = Pool::load(pool, program_id)?;
+    let pool_state = verified.get();
     // ... swap logic with jiminy math ...
 
     Ok(())

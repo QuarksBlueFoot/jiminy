@@ -18,8 +18,8 @@ zero_copy_layout! {
 }
 
 // Tier 1 load: validate owner + disc + version + layout_id + size.
-let data = Vault::load(account, program_id)?;
-let vault = Vault::overlay(&data)?;
+let verified = Vault::load(account, program_id)?;
+let vault = verified.get();
 ```
 
 **CU cost:** ~150 CU for full validation + overlay.
@@ -39,15 +39,15 @@ zero_copy_layout! {
     }
 }
 
-// Tier 2: validates owner + layout_id, returns borrowed bytes.
-let data = ForeignPool::load_foreign(pool_account, &POOL_PROGRAM_ID)?;
-let pool = ForeignPool::overlay(&data)?;
+// Tier 2: validates owner + layout_id, returns VerifiedAccount.
+let verified = ForeignPool::load_foreign(pool_account, &POOL_PROGRAM_ID)?;
+let pool = verified.get();
 let liquidity = pool.liquidity;
 ```
 
 **Key:** `load_foreign` validates `owner + layout_id` but skips `disc`/`version`
 since you may not know the other program's version scheme. It returns
-borrowed bytes, so you must call `overlay()` to get the typed reference.
+a `VerifiedAccount<T>`, so you call `get()` to obtain the typed reference.
 
 ## 3. Token Balance Reads (No Borsh)
 

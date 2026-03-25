@@ -51,8 +51,8 @@ let layout = ExpectedLayout::overlay(&data)?;
 Or use the macro-generated method:
 
 ```rust
-let data = ExpectedLayout::load_foreign(account, &OTHER_PROGRAM_ID)?;
-let layout = ExpectedLayout::overlay(&data)?;
+let verified = ExpectedLayout::load_foreign(account, &OTHER_PROGRAM_ID)?;
+let layout = verified.get();
 ```
 
 ## Why This Works

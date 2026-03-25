@@ -29,8 +29,8 @@
 //!
 //! // In your instruction handler:
 //! fn process(accounts: &[AccountView]) -> ProgramResult {
-//!     let data = Vault::load_foreign(&accounts[0])?;
-//!     let vault = Vault::overlay(&data)?;
+//!     let verified = Vault::load_foreign(&accounts[0])?;
+//!     let vault = verified.get();
 //!     // read vault.balance, vault.authority, etc.
 //!     Ok(())
 //! }
@@ -129,18 +129,21 @@ macro_rules! jiminy_interface {
                 $crate::account::pod_read::<Self>(data)
             }
 
-            /// **Tier 2 — Cross-program read.** Validate owner + layout_id,
-            /// then borrow.
+            /// **Tier 2 — Cross-program read.** Validate owner + layout_id
+            /// + exact size, then borrow.
             ///
             /// The owner is checked against the program address passed to
             /// `jiminy_interface!` via the `for` clause.
+            ///
+            /// Returns a `VerifiedAccount` whose `get()` is infallible.
             #[inline(always)]
             pub fn load_foreign<'a>(
                 account: &'a $crate::pinocchio::AccountView,
-            ) -> Result<$crate::pinocchio::account::Ref<'a, [u8]>, $crate::pinocchio::error::ProgramError> {
-                $crate::account::view::validate_foreign(
+            ) -> Result<$crate::account::VerifiedAccount<'a, Self>, $crate::pinocchio::error::ProgramError> {
+                let data = $crate::account::view::validate_foreign(
                     account, &$owner, &Self::LAYOUT_ID, Self::LEN,
-                )
+                )?;
+                $crate::account::VerifiedAccount::new(data)
             }
 
             // ── Const field offsets ──────────────────────────────────────

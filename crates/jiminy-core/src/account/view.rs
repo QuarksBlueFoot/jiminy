@@ -23,12 +23,12 @@
 //! for the full trust tier model and all safety invariants.
 
 use pinocchio::{AccountView, Address};
-use pinocchio::account::Ref;
+use pinocchio::account::{Ref, RefMut};
 use pinocchio::error::ProgramError;
 
 use super::{HEADER_LEN, check_header, check_layout_id, pod_from_bytes, Pod, FixedLayout};
 
-/// Validate owner + disc + version + layout_id + size on an `AccountView`.
+/// Validate owner + disc + version + layout_id + exact size on an `AccountView`.
 ///
 /// This is the standard loading path (Tier 1). Returns the borrowed
 /// account data on success, avoiding a second `try_borrow()` call.
@@ -36,7 +36,7 @@ use super::{HEADER_LEN, check_header, check_layout_id, pod_from_bytes, Pod, Fixe
 /// # Errors
 ///
 /// - `IllegalOwner`: account is not owned by `program_id`.
-/// - `AccountDataTooSmall`: account data shorter than `min_size`.
+/// - `AccountDataTooSmall`: account data does not match `expected_size`.
 /// - `InvalidAccountData`: discriminator, version, or layout_id mismatch.
 #[inline(always)]
 pub fn validate_account<'a>(
@@ -45,7 +45,7 @@ pub fn validate_account<'a>(
     disc: u8,
     version: u8,
     layout_id: &[u8; 8],
-    min_size: usize,
+    expected_size: usize,
 ) -> Result<Ref<'a, [u8]>, ProgramError> {
     if !account.owned_by(program_id) {
         return Err(ProgramError::IllegalOwner);
@@ -53,7 +53,7 @@ pub fn validate_account<'a>(
 
     let data = account.try_borrow()?;
 
-    if data.len() < min_size {
+    if data.len() != expected_size {
         return Err(ProgramError::AccountDataTooSmall);
     }
 
@@ -61,7 +61,7 @@ pub fn validate_account<'a>(
     Ok(data)
 }
 
-/// Validate owner + layout_id only on an `AccountView`.
+/// Validate owner + layout_id + exact size on an `AccountView`.
 ///
 /// Cross-program read path (Tier 2). Skips disc and version checks
 /// because the foreign program may use different disc/version conventions.
@@ -70,14 +70,14 @@ pub fn validate_account<'a>(
 /// # Errors
 ///
 /// - `IllegalOwner`: account is not owned by `expected_owner`.
-/// - `AccountDataTooSmall`: account data shorter than `min_size`.
+/// - `AccountDataTooSmall`: account data does not match `expected_size`.
 /// - `InvalidAccountData`: `layout_id` does not match.
 #[inline(always)]
 pub fn validate_foreign<'a>(
     account: &'a AccountView,
     expected_owner: &Address,
     layout_id: &[u8; 8],
-    min_size: usize,
+    expected_size: usize,
 ) -> Result<Ref<'a, [u8]>, ProgramError> {
     if !account.owned_by(expected_owner) {
         return Err(ProgramError::IllegalOwner);
@@ -85,11 +85,37 @@ pub fn validate_foreign<'a>(
 
     let data = account.try_borrow()?;
 
-    if data.len() < min_size {
+    if data.len() != expected_size {
         return Err(ProgramError::AccountDataTooSmall);
     }
 
     check_layout_id(&data, layout_id)?;
+    Ok(data)
+}
+
+/// Mutable variant of [`validate_account`] (Tier 1).
+///
+/// Same checks as `validate_account` but returns `RefMut` for write access.
+#[inline(always)]
+pub fn validate_account_mut<'a>(
+    account: &'a AccountView,
+    program_id: &Address,
+    disc: u8,
+    version: u8,
+    layout_id: &[u8; 8],
+    expected_size: usize,
+) -> Result<RefMut<'a, [u8]>, ProgramError> {
+    if !account.owned_by(program_id) {
+        return Err(ProgramError::IllegalOwner);
+    }
+
+    let data = account.try_borrow_mut()?;
+
+    if data.len() != expected_size {
+        return Err(ProgramError::AccountDataTooSmall);
+    }
+
+    check_header(&data, disc, version, layout_id)?;
     Ok(data)
 }
 

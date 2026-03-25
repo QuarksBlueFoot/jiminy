@@ -34,6 +34,7 @@ pub use crate::account::{AccountReader, AccountWriter};
 pub use crate::account::{write_discriminator, zero_init, DataWriter, SliceCursor};
 pub use crate::account::{pod_from_bytes, pod_from_bytes_mut, pod_read, pod_write, FixedLayout, Pod};
 pub use crate::account::{ZeroCopySlice, ZeroCopySliceMut};
+pub use crate::account::{VerifiedAccount, VerifiedAccountMut};
 
 // ── Segments ─────────────────────────────────────────────────────────────────
 pub use crate::account::{

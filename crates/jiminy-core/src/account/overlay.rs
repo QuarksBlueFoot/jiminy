@@ -53,10 +53,11 @@
 //! - `load_checked_mut(&mut [u8]) -> Result<&mut Self>`: header validation + mutable overlay
 //!
 //! **Tiered loading (see `view` module for details):**
-//! - `load(account, program_id)`: Tier 1: owner + disc + version + layout_id + size
-//! - `load_foreign(account, owner)`: Tier 2: owner + layout_id + size
-//! - `unsafe load_unchecked(data)`: Tier 3: no validation
-//! - `load_best_effort(data)`: Tier 4: header if present, fallback to overlay
+//! - `load(account, program_id)`: Tier 1: owner + disc + version + layout_id + exact size
+//! - `load_mut(account, program_id)`: Tier 1 (mutable): same checks, returns `VerifiedAccountMut`
+//! - `load_foreign(account, owner)`: Tier 2: owner + layout_id + exact size
+//! - `unsafe load_unchecked(data)`: Tier 4: no validation
+//! - `load_best_effort(data)`: Tier 5: header if present, fallback to overlay
 
 /// Generate `const OFFSET_<FIELD>` for each field in a layout.
 ///
@@ -277,33 +278,51 @@ macro_rules! zero_copy_layout {
             // ── Tiered loading API ───────────────────────────────────────
 
             /// **Tier 1: Standard path.** Validate owner + disc + version +
-            /// size + layout_id, then borrow and overlay.
+            /// exact size + layout_id, then borrow.
             ///
+            /// Returns a `VerifiedAccount` whose `get()` is infallible.
             /// This is the recommended way to load a Jiminy account.
             #[inline(always)]
             pub fn load<'a>(
                 account: &'a $crate::pinocchio::AccountView,
                 program_id: &$crate::pinocchio::Address,
-            ) -> Result<$crate::pinocchio::account::Ref<'a, [u8]>, $crate::pinocchio::error::ProgramError> {
-                $crate::account::view::validate_account(
+            ) -> Result<$crate::account::VerifiedAccount<'a, Self>, $crate::pinocchio::error::ProgramError> {
+                let data = $crate::account::view::validate_account(
                     account, program_id, Self::DISC, Self::VERSION, &Self::LAYOUT_ID, Self::LEN,
-                )
+                )?;
+                $crate::account::VerifiedAccount::new(data)
+            }
+
+            /// **Tier 1 (mutable): Standard mutable path.** Same checks as
+            /// `load()` but returns `VerifiedAccountMut` for write access.
+            #[inline(always)]
+            pub fn load_mut<'a>(
+                account: &'a $crate::pinocchio::AccountView,
+                program_id: &$crate::pinocchio::Address,
+            ) -> Result<$crate::account::VerifiedAccountMut<'a, Self>, $crate::pinocchio::error::ProgramError> {
+                let data = $crate::account::view::validate_account_mut(
+                    account, program_id, Self::DISC, Self::VERSION, &Self::LAYOUT_ID, Self::LEN,
+                )?;
+                $crate::account::VerifiedAccountMut::new(data)
             }
 
             /// **Tier 2: Cross-program read.** Validate owner + layout_id
-            /// only, then borrow. Use for reading foreign program accounts
-            /// whose discriminator conventions you don't control.
+            /// + exact size, then borrow. Use for reading foreign program
+            /// accounts whose discriminator conventions you don't control.
+            ///
+            /// Returns a `VerifiedAccount` whose `get()` is infallible.
             #[inline(always)]
             pub fn load_foreign<'a>(
                 account: &'a $crate::pinocchio::AccountView,
                 expected_owner: &$crate::pinocchio::Address,
-            ) -> Result<$crate::pinocchio::account::Ref<'a, [u8]>, $crate::pinocchio::error::ProgramError> {
-                $crate::account::view::validate_foreign(
+            ) -> Result<$crate::account::VerifiedAccount<'a, Self>, $crate::pinocchio::error::ProgramError> {
+                let data = $crate::account::view::validate_foreign(
                     account, expected_owner, &Self::LAYOUT_ID, Self::LEN,
-                )
+                )?;
+                $crate::account::VerifiedAccount::new(data)
             }
 
-            /// **Tier 3: Unsafe unchecked load.** No validation at all.
+            /// **Tier 4: Unsafe unchecked load.** No validation at all.
             ///
             /// # Safety
             ///
@@ -315,7 +334,7 @@ macro_rules! zero_copy_layout {
                 $crate::account::pod_from_bytes::<Self>(data)
             }
 
-            /// **Tier 4: Best-effort.** Try header + layout_id validation;
+            /// **Tier 5: Best-effort.** Try header + layout_id validation;
             /// if it fails, fall back to a plain overlay.
             ///
             /// Returns `(overlay, validated)` where `validated` is `true`

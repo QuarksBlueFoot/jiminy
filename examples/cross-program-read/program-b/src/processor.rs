@@ -29,8 +29,8 @@ pub fn process(
 /// This is the cross-program read pattern:
 /// 1. `VaultView::load_foreign` validates `owner == PROGRAM_A_ID` and
 ///    `layout_id` matches, proving ABI compatibility.
-/// 2. `VaultView::overlay` returns a typed `&VaultView` directly over
-///    the borrowed bytes. Zero deserialization.
+/// 2. The returned `VerifiedAccount` gives a typed `&VaultView` via
+///    `get()` directly over the borrowed bytes. Zero deserialization.
 /// 3. Program B never imported Program A's crate. The only contract
 ///    is the byte layout.
 fn read_vault_balance(accounts: &[AccountView]) -> ProgramResult {
@@ -38,9 +38,9 @@ fn read_vault_balance(accounts: &[AccountView]) -> ProgramResult {
     let vault_account = accs.next()?;
 
     // Tier 2: Cross-program read.
-    // Validates: owner == PROGRAM_A_ID, layout_id matches, size >= VaultView::LEN.
-    let data = VaultView::load_foreign(vault_account, &PROGRAM_A_ID)?;
-    let vault = VaultView::overlay(&data)?;
+    // Validates: owner == PROGRAM_A_ID, layout_id matches, exact size.
+    let verified = VaultView::load_foreign(vault_account, &PROGRAM_A_ID)?;
+    let vault = verified.get();
 
     // Use the foreign vault's data - zero copies, zero deserialization.
     // In a real program, you'd use vault.balance for further logic.

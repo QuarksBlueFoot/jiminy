@@ -137,14 +137,19 @@ combine validation and borrowing in a single call:
 
 ```rust
 // Tier 1: Verified (recommended).
-// Validates: owner + disc + version + layout_id + size.
-let data = Vault::load(account, program_id)?;
-let vault = Vault::overlay(&data)?;
+// Validates: owner + disc + version + layout_id + exact size.
+// Returns VerifiedAccount whose get() is infallible.
+let verified = Vault::load(account, program_id)?;
+let vault = verified.get();
+
+// Tier 1 (mutable): same checks, returns VerifiedAccountMut.
+let mut verified = Vault::load_mut(account, program_id)?;
+let vault = verified.get_mut();
 
 // Tier 2: Foreign Verified (cross-program read).
-// Validates: owner + layout_id + size (skips disc/version).
-let data = Vault::load_foreign(account, &other_program_id)?;
-let vault = Vault::overlay(&data)?;
+// Validates: owner + layout_id + exact size (skips disc/version).
+let verified = Vault::load_foreign(account, &other_program_id)?;
+let vault = verified.get();
 
 // Tier 3: Compatibility (version migration).
 // Validates: owner + disc + version + size (skips layout_id).

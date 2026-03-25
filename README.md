@@ -95,12 +95,12 @@ zero_copy_layout! {
 init_account!(payer, account, program_id, Vault)?;
 
 // Read: full ABI validation + zero-copy overlay
-let data = Vault::load(account, program_id)?;
-let vault = Vault::overlay(&data)?;
+let verified = Vault::load(account, program_id)?;
+let vault = verified.get();
 
 // Cross-program: layout_id proof, no crate dependency
-let data = Vault::load_foreign(account, &other_program)?;
-let vault = Vault::overlay(&data)?;
+let verified = Vault::load_foreign(account, &other_program)?;
+let vault = verified.get();
 ```
 
 ---
@@ -112,7 +112,7 @@ should use Tier 1 or 2. Anything else is an explicit opt-in.
 
 | Tier | Name | Method | Use when |
 |------|------|--------|----------|
-| 1 | **Verified** | `load()` | Your own program's accounts |
+| 1 | **Verified** | `load()` / `load_mut()` | Your own program's accounts |
 | 2 | **Foreign Verified** | `load_foreign()` | Another program's accounts |
 | 3 | **Compatibility** | `validate_version_compatible()` | Version migration (weaker, skips `layout_id`) |
 | 4 | **Unsafe** | `load_unchecked()` | Hot path. Caller assumes all risk. |

@@ -46,10 +46,10 @@ pub fn read_vault_balance(
     program_a_id: &Address,
 ) -> Result<u64, ProgramError> {
     // Tier 2: cross-program read.
-    // Validates: owner == program_a_id, layout_id matches, size >= 56.
+    // Validates: owner == program_a_id, layout_id matches, exact size.
     // Does NOT check discriminator or version (foreign program's convention).
-    let data = VaultView::load_foreign(vault_account, program_a_id)?;
-    let vault = VaultView::overlay(&data)?;
+    let verified = VaultView::load_foreign(vault_account, program_a_id)?;
+    let vault = verified.get();
 
     Ok(vault.balance)
 }

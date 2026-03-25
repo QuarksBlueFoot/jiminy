@@ -79,8 +79,8 @@ any crate dependency:
 
 ```rust
 // Program B reads Program A's Vault. No dependency on Program A's crate.
-let data = Vault::load_foreign(account, &PROGRAM_A_ID)?;
-let vault = Vault::overlay(&data)?;
+let verified = Vault::load_foreign(account, &PROGRAM_A_ID)?;
+let vault = verified.get();
 let balance = vault.balance;
 ```
 

@@ -69,8 +69,9 @@ The tiered loading API in `zero_copy_layout!` generates:
 
 | Tier | Name | Method | Safety | Validation |
 |------|------|--------|--------|------------|
-| 1 | Verified | `Layout::load(account, program_id)` | safe | owner + disc + version + layout_id + size |
-| 2 | Foreign Verified | `Layout::load_foreign(account, owner)` | safe | owner + layout_id + size |
+| 1 | Verified | `Layout::load(account, program_id)` | safe | owner + disc + version + layout_id + exact size |
+| 1m | Verified Mut | `Layout::load_mut(account, program_id)` | safe | owner + disc + version + layout_id + exact size |
+| 2 | Foreign Verified | `Layout::load_foreign(account, owner)` | safe | owner + layout_id + exact size |
 | 3 | Compatibility | `validate_version_compatible(...)` | safe | owner + disc + version + size (no layout_id) |
 | 4 | Unsafe | `Layout::load_unchecked(data)` | **unsafe** | none |
 | 5 | Best Effort | `Layout::load_best_effort(data)` | safe | header if present, fallback to overlay |
