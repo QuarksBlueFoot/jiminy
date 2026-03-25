@@ -6,7 +6,7 @@ Account layout, zero-copy IO, validation, PDA, sysvar access, lifecycle, math, t
 
 ```toml
 [dependencies]
-jiminy-core = "0.15"
+jiminy-core = "0.16"
 ```
 
 ## What's in here
@@ -24,6 +24,17 @@ jiminy-core = "0.15"
 | `interface` | Cross-program ABI interfaces (`jiminy_interface!`) |
 | `event` | Zero-alloc event emission via `sol_log_data` |
 | `programs` | Well-known program IDs *(feature-gated)* |
+
+## New in 0.16
+
+- `VerifiedAccount<T>` / `VerifiedAccountMut<T>`: type-safe wrappers returned by `load()` / `load_mut()` / `load_foreign()`. Infallible `get()` / `get_mut()` access after construction.
+- `strict` feature: production hardening mode. Disables `validate_version_compatible()` at compile time.
+- `jiminy_interface!` version parameter: `version = N` to match foreign layouts at any version.
+- Compile-time alignment assertion in `jiminy_interface!`: prevents over-aligned types.
+- `init_segments_with_capacity()`: capacity-aware segment init for push/remove workflows.
+- Push overlap protection: `segment_push` checks next segment offset to prevent overwrites.
+- Exact size enforcement: Tiers 1 and 2 require `data.len() == expected_size`.
+- `load_mut()` backed by `RefMut`: eliminates mutable aliasing UB.
 
 ## New in 0.15
 

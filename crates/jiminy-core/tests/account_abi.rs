@@ -1160,6 +1160,7 @@ mod interface_tests {
         use jiminy_core::jiminy_interface;
         use pinocchio::Address;
 
+        #[allow(dead_code)]
         const FOREIGN_PROGRAM: Address = Address::new_from_array([0xAA; 32]);
 
         jiminy_interface! {

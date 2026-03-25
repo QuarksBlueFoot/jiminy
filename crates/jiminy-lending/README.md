@@ -3,7 +3,7 @@
 Collateralization ratios, health checks, liquidation sizing, interest accrual, utilization rates. All basis-point denominated, all overflow-safe.
 
 ```toml
-jiminy-lending = "0.15"
+jiminy-lending = "0.16"
 ```
 
 Functions: `collateralization_ratio_bps`, `check_healthy`, `check_liquidatable`,

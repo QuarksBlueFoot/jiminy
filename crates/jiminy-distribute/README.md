@@ -3,7 +3,7 @@
 Split a token amount across N recipients by weight. Remainder goes to the last recipient so the sum always equals the input. Also does basis-point fee extraction.
 
 ```toml
-jiminy-distribute = "0.15"
+jiminy-distribute = "0.16"
 ```
 
 Two functions:

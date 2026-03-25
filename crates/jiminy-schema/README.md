@@ -6,7 +6,7 @@ Layout Manifest v1 for Jiminy account schemas. Structured descriptions of accoun
 
 ```toml
 [dependencies]
-jiminy-schema = "0.15"
+jiminy-schema = "0.16"
 ```
 
 ## Why This Matters
@@ -64,6 +64,11 @@ let manifest = LayoutManifest {
 assert_eq!(manifest.total_size(), 56);
 assert_eq!(manifest.field_offset("balance"), Some(16));
 ```
+
+## New in 0.16
+
+- `verify_account()` now enforces exact size matching.
+- Documentation updates for cross-language tooling.
 
 ## New in 0.15
 

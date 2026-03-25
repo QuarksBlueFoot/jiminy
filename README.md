@@ -215,7 +215,24 @@ and there's nothing to forget.
 
 ---
 
-## New in 0.15
+## New in 0.16
+
+### Verified account wrappers
+
+- **`VerifiedAccount<T>` / `VerifiedAccountMut<T>`**: type-safe wrappers returned by `load()` / `load_mut()` / `load_foreign()`. Infallible `get()` / `get_mut()` access after construction. No raw bytes exposed.
+- **`strict` feature**: production hardening mode. When enabled, `validate_version_compatible()` is compile-time disabled, forcing all loads through layout_id-verified tiers.
+
+### Safety hardening
+
+- **Compile-time alignment assertion** in `jiminy_interface!`: prevents over-aligned types (raw `u128`, etc.) from slipping through interface definitions.
+- **`jiminy_interface!` version parameter**: interfaces can now specify `version = N` to match foreign layouts at any version. Default remains `version = 1` for backward compatibility.
+- **Push overlap protection**: `segment_push` now checks the next segment's offset to prevent writes from overflowing into adjacent segments.
+- **`init_segments_with_capacity()`**: new initializer for segmented layouts that spaces segment offsets by max capacity with counts starting at zero. Enables safe push/remove workflows.
+- **Exact size enforcement**: Tiers 1 and 2 now require `data.len() == expected_size` (was `<`). Prevents hidden trailing data attacks.
+- **`load_mut()` backed by `RefMut`**: eliminates UB from mutable aliasing.
+
+<details>
+<summary>New in 0.15</summary>
 
 ### Alignment-safe ABI field types
 
@@ -248,10 +265,11 @@ and there's nothing to forget.
 - **Le* ↔ solana-zero-copy bridge**: bidirectional `From` conversions between Jiminy's `Le*` types and `solana-zero-copy` v1.0.0 unaligned types (`U16`, `U32`, `U64`, `I16`, `I64`, `Bool`, `U128`). Use either ABI surface; switch freely.
 
 ### Docs
+</details>
 
 - **`SEGMENTED_ABI.md`**: Design for variable-length accounts with segment descriptors (implemented in v0.15.0).
 - **`UNSAFE_INVENTORY.md`**: every `unsafe` site catalogued with file, purpose, and soundness justification.
-- **240 Rust tests + 39 TypeScript tests** across the workspace: 107 unit + 13 proptest + 45 segment (jiminy-core), 25 (jiminy-schema), 18 (jiminy-layouts), 25 (jiminy-anchor), plus doc tests and TypeScript tests for `jiminy-ts` covering header, checks, segments, and SPL layouts.
+- **265+ Rust tests** across the workspace: 109 unit + 13 proptest + 59 segment (jiminy-core), 33 (jiminy-schema), 18 (jiminy-layouts), 25 (jiminy-anchor), plus doc tests.
 
 <details>
 <summary>New in 0.14</summary>
@@ -400,17 +418,17 @@ They are not part of the core, and Jiminy does not depend on them.
 ```toml
 # Full toolkit (recommended)
 [dependencies]
-jiminy = "0.15"
+jiminy = "0.16"
 
 # Or pick individual crates for minimal deps
-jiminy-core = "0.15"      # Account layout, checks, math, PDA
-jiminy-solana = "0.15"    # Token, CPI, crypto, oracle
-jiminy-finance = "0.15"   # AMM math, slippage
+jiminy-core = "0.16"      # Account layout, checks, math, PDA
+jiminy-solana = "0.16"    # Token, CPI, crypto, oracle
+jiminy-finance = "0.16"   # AMM math, slippage
 
 # Tooling & ecosystem
-jiminy-schema = "0.15"    # Layout manifests, TS codegen, indexer kit
-jiminy-layouts = "0.15"   # SPL Token/Mint/Multisig/Nonce/Stake overlays
-jiminy-anchor = "0.15"    # Anchor disc + zero-copy overlay interop
+jiminy-schema = "0.16"    # Layout manifests, TS codegen, indexer kit
+jiminy-layouts = "0.16"   # SPL Token/Mint/Multisig/Nonce/Stake overlays
+jiminy-anchor = "0.16"    # Anchor disc + zero-copy overlay interop
 ```
 
 ## Adding Jiminy to an existing Pinocchio project
@@ -422,7 +440,7 @@ Already using pinocchio directly? You have two options:
 ```toml
 [dependencies]
 pinocchio = "0.10"
-jiminy = "0.15"
+jiminy = "0.16"
 ```
 
 This works fine. Cargo deduplicates the pinocchio crate as long as versions are
@@ -433,7 +451,7 @@ imports alongside them.
 
 ```toml
 [dependencies]
-jiminy = "0.15"
+jiminy = "0.16"
 ```
 
 Jiminy re-exports the entire pinocchio crate, plus `pinocchio-system` and
@@ -909,7 +927,7 @@ Zero-alloc diagnostic logging behind the `log` feature flag. Uses the raw
 `sol_log` syscall, no extra deps.
 
 ```toml
-jiminy = { version = "0.15", features = ["log"] }
+jiminy = { version = "0.16", features = ["log"] }
 ```
 
 | Function | What it logs |
@@ -1247,29 +1265,30 @@ assert_eq!(net + fee, 1_000_000);
 
 ---
 
-## Modular crates (v0.15+)
+## Modular crates (v0.16+)
 
 Starting with v0.11, Jiminy is split into focused crates. v0.13 added
 declarative macros for error codes, instruction dispatch, and account
 uniqueness checks. v0.15 adds the Account ABI system, schema tooling,
-SPL layout overlays, and Anchor interop.
+SPL layout overlays, and Anchor interop. v0.16 adds verified account
+wrappers, push overlap protection, and production hardening.
 
 ```toml
 # Full toolkit - zero local code, re-exports everything
-jiminy = "0.15"
+jiminy = "0.16"
 
 # Or pick what you need
-jiminy-core = "0.15"        # Account layout, checks, math, PDA, sysvar
-jiminy-solana = "0.15"      # Token, CPI, crypto, oracle, introspection
-jiminy-finance = "0.15"     # AMM math, slippage
-jiminy-lending = "0.15"     # Lending/liquidation primitives
-jiminy-staking = "0.15"     # Reward accumulators
-jiminy-vesting = "0.15"     # Vesting schedules
-jiminy-multisig = "0.15"    # M-of-N threshold
-jiminy-distribute = "0.15"  # Dust-safe splits
-jiminy-schema = "0.15"      # Layout manifests, TS codegen, indexer kit
-jiminy-layouts = "0.15"     # SPL Token/Mint/Multisig/Nonce/Stake overlays
-jiminy-anchor = "0.15"      # Anchor disc + zero-copy overlay interop
+jiminy-core = "0.16"        # Account layout, checks, math, PDA, sysvar
+jiminy-solana = "0.16"      # Token, CPI, crypto, oracle, introspection
+jiminy-finance = "0.16"     # AMM math, slippage
+jiminy-lending = "0.16"     # Lending/liquidation primitives
+jiminy-staking = "0.16"     # Reward accumulators
+jiminy-vesting = "0.16"     # Vesting schedules
+jiminy-multisig = "0.16"    # M-of-N threshold
+jiminy-distribute = "0.16"  # Dust-safe splits
+jiminy-schema = "0.16"      # Layout manifests, TS codegen, indexer kit
+jiminy-layouts = "0.16"     # SPL Token/Mint/Multisig/Nonce/Stake overlays
+jiminy-anchor = "0.16"      # Anchor disc + zero-copy overlay interop
 ```
 
 The root `jiminy` crate re-exports everything. Module paths are unchanged:
@@ -1286,11 +1305,12 @@ use jiminy_core::check::check_signer;
 use jiminy_solana::crypto::verify_merkle_proof;
 ```
 
-### Migration from 0.13
+### Migration from 0.15
 
-The API is the same. If you depend on `jiminy = "0.13"`, upgrade
-to `"0.15"` and everything compiles. 0.15 adds new crates and macros
-but nothing was removed or renamed.
+The API is the same. If you depend on `jiminy = "0.15"`, upgrade
+to `"0.16"` and everything compiles. 0.16 adds verified account wrappers,
+push overlap protection, and production hardening but nothing was removed
+or renamed.
 
 ---
 
@@ -1361,7 +1381,7 @@ framework option.
 |----------|-------------|
 | [LAYOUT_CONVENTION.md](docs/LAYOUT_CONVENTION.md) | Header format, `zero_copy_layout!`, tiered loading, layout lint |
 | [ABI_VERSIONING.md](docs/ABI_VERSIONING.md) | Append-only versioning, `extends`, migration |
-| [SAFETY_MODEL.md](docs/SAFETY_MODEL.md) | 9 safety invariants, threat model |
+| [SAFETY_MODEL.md](docs/SAFETY_MODEL.md) | 10 safety invariants, threat model |
 | [ACCOUNT_ABI_CONTRACT.md](docs/ACCOUNT_ABI_CONTRACT.md) | Cross-program read contract |
 | [ANCHOR_COMPARISON.md](docs/ANCHOR_COMPARISON.md) | Feature comparison with Anchor |
 | [HOT_PATH_COOKBOOK.md](docs/HOT_PATH_COOKBOOK.md) | Performance recipes for hot-path code |
@@ -1433,7 +1453,7 @@ them yourself.
 | [`examples/jiminy-escrow`](examples/jiminy-escrow) | Two-party escrow, flag-based state, `check_closed`, ordering guarantees, layout_id validation |
 | [`examples/cross-program-read`](examples/cross-program-read) | Cross-program ABI read: Program B reads Program A's account via `load_foreign`. No deserialization, no crate dependency |
 
-All three use the 16-byte header v2 layout, `zero_copy_layout!` for ABI fingerprinting,
+All three use the 16-byte header layout, `zero_copy_layout!` for ABI fingerprinting,
 and `jiminy::prelude` for all imports.
 
 ---

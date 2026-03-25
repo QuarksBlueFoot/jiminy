@@ -3,7 +3,7 @@
 MasterChef-style staking math. Global reward-per-token accumulator, per-user pending rewards, reward debt snapshots, emission rates.
 
 ```toml
-jiminy-staking = "0.15"
+jiminy-staking = "0.16"
 ```
 
 - `update_reward_per_token` - advance the global accumulator

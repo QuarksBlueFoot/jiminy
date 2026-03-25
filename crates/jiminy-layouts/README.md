@@ -6,7 +6,7 @@ Standard zero-copy account layouts for well-known Solana programs. `#[repr(C)]` 
 
 ```toml
 [dependencies]
-jiminy-layouts = "0.15"
+jiminy-layouts = "0.16"
 ```
 
 ## Layouts
