@@ -43,21 +43,36 @@
 //!
 //! The macro emits for each struct:
 //!
-//! **Constants:** `LEN`, `DISC`, `VERSION`, `LAYOUT_ID`
+//! ### Constants
 //!
-//! **Overlay methods:**
-//! - `overlay(&[u8]) -> Result<&Self>`: immutable view
-//! - `overlay_mut(&mut [u8]) -> Result<&mut Self>`: mutable view
-//! - `read(&[u8]) -> Result<Self>`: alignment-safe copy
-//! - `load_checked(&[u8]) -> Result<&Self>`: header validation + overlay
-//! - `load_checked_mut(&mut [u8]) -> Result<&mut Self>`: header validation + mutable overlay
+//! `LEN`, `DISC`, `VERSION`, `LAYOUT_ID`
 //!
-//! **Tiered loading (see `view` module for details):**
-//! - `load(account, program_id)`: Tier 1: owner + disc + version + layout_id + exact size
-//! - `load_mut(account, program_id)`: Tier 1 (mutable): same checks, returns `VerifiedAccountMut`
-//! - `load_foreign(account, owner)`: Tier 2: owner + layout_id + exact size
-//! - `unsafe load_unchecked(data)`: Tier 4: no validation
-//! - `load_unverified_overlay(data)`: Tier 5: header if present, fallback to overlay
+//! ### Raw-byte methods (operate on `&[u8]` / `&mut [u8]`)
+//!
+//! | Method | Returns | What it checks |
+//! |--------|---------|----------------|
+//! | `overlay(data)` | `&Self` | size only |
+//! | `overlay_mut(data)` | `&mut Self` | size only |
+//! | `read(data)` | `Self` (copy) | size only (alignment-safe) |
+//! | `load_checked(data)` | `&Self` | disc + version + layout_id + size |
+//! | `load_checked_mut(data)` | `&mut Self` | disc + version + layout_id + size |
+//!
+//! ### Tiered loading (operate on `AccountView`, see `view` module)
+//!
+//! | Tier | Method | Returns | Validates |
+//! |------|--------|---------|-----------|
+//! | 1 | `load(account, program_id)` | `VerifiedAccount` | owner + disc + version + layout_id + exact size |
+//! | 1m | `load_mut(account, program_id)` | `VerifiedAccountMut` | same as Tier 1 |
+//! | 2 | `load_foreign(account, owner)` | `VerifiedAccount` | owner + layout_id + exact size |
+//! | 4 | `unsafe load_unchecked(data)` | `&Self` | none |
+//! | 5 | `load_unverified_overlay(data)` | `(&Self, bool)` | header if present, fallback |
+//!
+//! ### Borrow-splitting
+//!
+//! | Method | Returns |
+//! |--------|---------|
+//! | `split_fields(data)` | `(FieldRef, FieldRef, ...)` |
+//! | `split_fields_mut(data)` | `(FieldMut, FieldMut, ...)` |
 
 /// Generate `const OFFSET_<FIELD>` for each field in a layout.
 ///
@@ -625,8 +640,11 @@ macro_rules! segmented_layout {
 
             /// Initialize segment descriptors in a freshly allocated account.
             ///
-            /// `specs` is a slice of `(element_size, initial_count)` pairs,
-            /// one per declared segment. Offsets are computed automatically.
+            /// `counts` gives the initial element count per segment. Offsets
+            /// are computed by laying out segments contiguously based on
+            /// these counts. If you plan to `push` elements later, use
+            /// [`init_segments_with_capacity`](Self::init_segments_with_capacity)
+            /// instead to pre-allocate space.
             #[inline]
             pub fn init_segments(
                 data: &mut [u8],
@@ -650,6 +668,49 @@ macro_rules! segmented_layout {
                     Self::DATA_START_OFFSET as u32,
                     &specs,
                 )?;
+                Ok(())
+            }
+
+            /// Initialize segment descriptors with pre-allocated capacity.
+            ///
+            /// `capacities` gives the maximum number of elements each
+            /// segment can hold. Offsets are spaced by capacity so that
+            /// `push` cannot overwrite an adjacent segment. All counts
+            /// start at zero.
+            ///
+            /// Use [`compute_account_size`](Self::compute_account_size)
+            /// with the same `capacities` to determine the account size.
+            ///
+            /// ```rust,ignore
+            /// let size = OrderBook::compute_account_size(&[100, 100])?;
+            /// // ... create account with `size` bytes ...
+            /// OrderBook::init_segments_with_capacity(&mut data, &[100, 100])?;
+            /// // Now you can safely push up to 100 bids and 100 asks.
+            /// ```
+            #[inline]
+            pub fn init_segments_with_capacity(
+                data: &mut [u8],
+                capacities: &[u16],
+            ) -> Result<(), $crate::pinocchio::error::ProgramError> {
+                if capacities.len() != Self::SEGMENT_COUNT {
+                    return Err($crate::pinocchio::error::ProgramError::InvalidArgument);
+                }
+                let sizes = Self::segment_sizes();
+                // Space offsets by capacity, but set counts to 0.
+                let mut offset = Self::DATA_START_OFFSET as u32;
+                let mut table_data = &mut data[Self::TABLE_OFFSET..];
+                for i in 0..Self::SEGMENT_COUNT {
+                    let start = i * $crate::account::segment::SEGMENT_DESC_SIZE;
+                    table_data[start..start + 4].copy_from_slice(&offset.to_le_bytes());
+                    table_data[start + 4..start + 6].copy_from_slice(&0u16.to_le_bytes());
+                    table_data[start + 6..start + 8].copy_from_slice(&sizes[i].to_le_bytes());
+                    let seg_space = (capacities[i] as u32)
+                        .checked_mul(sizes[i] as u32)
+                        .ok_or($crate::pinocchio::error::ProgramError::ArithmeticOverflow)?;
+                    offset = offset
+                        .checked_add(seg_space)
+                        .ok_or($crate::pinocchio::error::ProgramError::ArithmeticOverflow)?;
+                }
                 Ok(())
             }
 

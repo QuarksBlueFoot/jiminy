@@ -76,7 +76,8 @@ The account header is what separates jiminy from a bag of utility functions. Eve
 |---|---|
 | **16-byte header** | Discriminator, version, flags, `layout_id`, reserved. On every account. |
 | **Deterministic `layout_id`** | 8-byte SHA-256 fingerprint of struct name, version, field names, types, and sizes. Changes iff the schema changes. |
-| **`zero_copy_layout!`** | Declare `#[repr(C)]` structs that overlay directly onto account bytes. Generates `Pod`, `FixedLayout`, tiered loaders, and compile-time size assertions. |
+| **`zero_copy_layout!`** | Declare `#[repr(C)]` structs that overlay directly onto account bytes. Generates `Pod`, `FixedLayout`, tiered loaders, and compile-time size + alignment assertions. |
+| **Alignment safety** | `zero_copy_layout!` enforces `align_of::<T>() <= 8` at compile time. Raw `u128` or any over-aligned type is a compile error. Use `LeU128` / `Le*` wrappers for 16-byte scalars. |
 | **Cross-program reads** | `load_foreign()` validates `layout_id` without depending on the source program's crate. No deserialization. |
 | **Tiered loading** | `load` > `load_foreign` > `validate_version_compatible` > `load_unchecked` > `load_unverified_overlay`. Pick the trust level you need. |
 | **Version migration** | `validate_version_compatible()` for version transitions. Skips `layout_id`, so it's explicitly weaker. |
@@ -225,7 +226,7 @@ and there's nothing to forget.
 
 ### Cross-program ABI interfaces
 
-- **`jiminy_interface!`** macro: declare a read-only view of a foreign program's account. Generates the same `LAYOUT_ID` as the foreign `zero_copy_layout!`, so `load_foreign` proves ABI compatibility without a crate dependency.
+- **`jiminy_interface!`** macro: declare a read-only view of a foreign program's account. Generates the same `LAYOUT_ID` as the foreign `zero_copy_layout!`, so `load_foreign` proves ABI compatibility without a crate dependency. Supports `version = N` to match foreign layouts at any version.
 - **`cross-program-read` example**: two-program demo (Program A creates, Program B reads) showing the full pattern.
 
 ### Segmented ABI for variable-length accounts

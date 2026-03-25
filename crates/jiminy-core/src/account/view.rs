@@ -167,11 +167,9 @@ pub fn validate_version_compatible<'a>(
 
     let data = account.try_borrow()?;
 
-    if data.len() < min_size {
-        return Err(ProgramError::AccountDataTooSmall);
-    }
-    // Header bytes (disc + version) require at least 2 bytes.
-    if data.len() < 2 {
+    // Need at least 2 bytes for disc + version, and at least min_size
+    // for the caller's layout.
+    if data.len() < min_size || data.len() < 2 {
         return Err(ProgramError::AccountDataTooSmall);
     }
 

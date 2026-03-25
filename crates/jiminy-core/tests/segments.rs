@@ -843,7 +843,9 @@ fn swap_remove_out_of_bounds() {
 fn push_then_swap_remove_all() {
     let size = OrderBook::compute_account_size(&[4, 0]).unwrap();
     let mut data = vec![0u8; size];
-    OrderBook::init_segments(&mut data, &[0, 0]).unwrap();
+    // Use init_segments_with_capacity to space offsets by max capacity,
+    // enabling safe push without overlapping segment 1.
+    OrderBook::init_segments_with_capacity(&mut data, &[4, 0]).unwrap();
 
     // Push 4 orders into bids.
     for i in 0..4u8 {
@@ -885,3 +887,65 @@ fn validate_rejects_segment_overlapping_prefix() {
     // With min_offset = 8, segment at offset 4 is rejected.
     assert!(table.validate(64, &[4], 8).is_err());
 }
+
+// ══════════════════════════════════════════════════════════════════════════════
+// 12. Push overlap protection
+// ══════════════════════════════════════════════════════════════════════════════
+
+#[test]
+fn push_rejects_overlap_into_next_segment() {
+    // Allocate space for 2 bids and 2 asks, but init with capacity [1, 2].
+    // Segment 0 has capacity for 1 element, segment 1 starts right after.
+    let size = OrderBook::compute_account_size(&[2, 2]).unwrap();
+    let mut data = vec![0u8; size];
+    OrderBook::init_segments_with_capacity(&mut data, &[1, 2]).unwrap();
+
+    // First push succeeds (within segment 0's capacity).
+    OrderBook::push::<Order>(
+        &mut data, OrderBook::bids,
+        &Order { price: [1; 8], qty: [2; 8] },
+    ).unwrap();
+
+    // Second push would overflow into segment 1: must fail.
+    let result = OrderBook::push::<Order>(
+        &mut data, OrderBook::bids,
+        &Order { price: [3; 8], qty: [4; 8] },
+    );
+    assert!(result.is_err());
+}
+
+#[test]
+fn init_segments_with_capacity_enables_push() {
+    let size = OrderBook::compute_account_size(&[3, 2]).unwrap();
+    let mut data = vec![0u8; size];
+    OrderBook::init_segments_with_capacity(&mut data, &[3, 2]).unwrap();
+
+    // Push 3 bids and 2 asks - all within capacity.
+    for i in 0..3u8 {
+        OrderBook::push::<Order>(
+            &mut data, OrderBook::bids,
+            &Order { price: [i; 8], qty: [10; 8] },
+        ).unwrap();
+    }
+    for i in 0..2u8 {
+        OrderBook::push::<Order>(
+            &mut data, OrderBook::asks,
+            &Order { price: [i + 100; 8], qty: [20; 8] },
+        ).unwrap();
+    }
+
+    let bids = OrderBook::segment::<Order>(&data, OrderBook::bids).unwrap();
+    assert_eq!(bids.len(), 3);
+    let asks = OrderBook::segment::<Order>(&data, OrderBook::asks).unwrap();
+    assert_eq!(asks.len(), 2);
+
+    // Verify data integrity: bids[0] should not be corrupted by asks writes.
+    let bid0 = bids.read(0).unwrap();
+    assert_eq!(bid0.price, [0; 8]);
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// 13. jiminy_interface! version parameter
+// ══════════════════════════════════════════════════════════════════════════════
+
+// (See account_abi.rs for interface version tests)

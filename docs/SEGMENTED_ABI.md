@@ -165,7 +165,14 @@ for bid in bids.iter() {
 }
 
 // ── Write access ─────────────────────────────────────────────────
+// Initialize with capacity for dynamic push/remove workflows.
+// Offsets are spaced by capacity; counts start at 0.
+let size = OrderBook::compute_account_size(&[100, 100])?;
+// ... create account with `size` bytes ...
+OrderBook::init_segments_with_capacity(&mut data, &[100, 100])?;
+
 // Push an element (appends, increments descriptor count).
+// Push checks the next segment's offset to prevent overlap.
 OrderBook::push::<Order>(&mut data, OrderBook::bids, &new_order)?;
 
 // Swap-remove an element (O(1), does not preserve order).
@@ -177,10 +184,23 @@ let removed: Order = OrderBook::swap_remove::<Order>(
 let mut asks = OrderBook::segment_mut::<Order>(&mut data, OrderBook::asks)?;
 asks.set(0, &updated_ask)?;
 
+// ── Pre-populated init ───────────────────────────────────────────
+// Or init with known counts when all elements are written upfront.
+OrderBook::init_segments(&mut data, &[3, 2])?;
+
 // ── Validation ───────────────────────────────────────────────────
 // Full segment table validation (bounds, sizes, no overlaps).
 OrderBook::validate_segments(&data)?;
 ```
+
+### `init_segments` vs `init_segments_with_capacity`
+
+| | `init_segments(counts)` | `init_segments_with_capacity(capacities)` |
+|---|---|---|
+| **Use when** | All elements are written upfront | Elements are pushed/removed dynamically |
+| **Counts** | Set to `counts[i]` | Set to `0` |
+| **Offsets** | Spaced by `counts[i] * elem_size` | Spaced by `capacities[i] * elem_size` |
+| **Push safe?** | Only if `counts` equals max capacity | Yes, up to `capacities[i]` elements |
 
 ## Bounds Checking & Overflow
 
@@ -191,6 +211,9 @@ Every segment access validates:
 3. No segment overlaps with another segment's range.
 4. Element size from the segment table matches the expected
    `FixedLayout::SIZE` of the element type.
+5. `push` checks the next segment's offset (or `data.len()` for the
+   last segment) to prevent writes from overflowing into adjacent
+   segments.
 
 All offset arithmetic uses checked operations to prevent overflow on
 32-bit targets.

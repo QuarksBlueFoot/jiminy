@@ -18,9 +18,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`strict` feature**: production hardening mode. When enabled,
   `validate_version_compatible()` is compile-time disabled, forcing
   all loads through layout_id-verified tiers.
-- **Compile-time alignment assertion**: `zero_copy_layout!` now asserts
-  `align_of::<T>() <= 8` at compile time, preventing unsound layouts
-  on Solana (which aligns program input to 8 bytes).
+- **Compile-time alignment assertion**: `zero_copy_layout!` and
+  `jiminy_interface!` now assert `align_of::<T>() <= 8` at compile time,
+  preventing unsound layouts on Solana (which aligns program input to
+  8 bytes). Raw `u128` fields are a compile error; use `LeU128`.
+- **`jiminy_interface!` version parameter**: interfaces can now specify
+  `version = N` to match foreign layouts at any version. Default remains
+  `version = 1` for backward compatibility.
+- **`init_segments_with_capacity()`**: new initializer for segmented
+  layouts that spaces segment offsets by max capacity with counts
+  starting at zero. Enables safe push/remove workflows.
+- **Push overlap protection**: `segment_push` now checks the next
+  segment's offset to prevent writes from overflowing into adjacent
+  segments.
 
 ### Changed
 

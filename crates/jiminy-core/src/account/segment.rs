@@ -660,10 +660,19 @@ pub fn segment_push<T: Pod + FixedLayout>(
     seg_index: usize,
     value: &T,
 ) -> Result<(), ProgramError> {
-    // Read descriptor (scoped to release the shared borrow).
-    let desc = {
+    // Read descriptor and upper bound (scoped to release the shared borrow).
+    let (desc, upper_bound) = {
         let table = SegmentTable::from_bytes(&data[table_offset..], segment_count)?;
-        table.descriptor(seg_index)?
+        let d = table.descriptor(seg_index)?;
+        // Upper bound: for the last segment, data.len(). For earlier
+        // segments, the next segment's offset. This prevents push from
+        // writing into an adjacent segment's region.
+        let ub = if seg_index + 1 < segment_count {
+            table.descriptor(seg_index + 1)?.offset() as usize
+        } else {
+            data.len()
+        };
+        (d, ub)
     };
 
     if desc.element_size() as usize != T::SIZE {
@@ -672,8 +681,9 @@ pub fn segment_push<T: Pod + FixedLayout>(
 
     let current_count = desc.count();
     let write_offset = desc.offset() as usize + (current_count as usize) * T::SIZE;
+    let write_end = write_offset + T::SIZE;
 
-    if write_offset + T::SIZE > data.len() {
+    if write_end > upper_bound {
         return Err(ProgramError::AccountDataTooSmall);
     }
 

@@ -1142,4 +1142,54 @@ mod interface_tests {
     fn interface_owner_constant() {
         assert_eq!(foreign::Vault::OWNER, &FOREIGN_PROGRAM);
     }
+
+    // ── Versioned interface tests ────────────────────────────────
+
+    // Original v2 layout as defined by Program A.
+    zero_copy_layout! {
+        pub struct PoolV2, discriminator = 3, version = 2 {
+            header:    AccountHeader = 16,
+            authority: Address       = 32,
+            reserve:   LeU64         = 8,
+        }
+    }
+
+    mod foreign_v2 {
+        use jiminy_core::account::AccountHeader;
+        use jiminy_core::abi::LeU64;
+        use jiminy_core::jiminy_interface;
+        use pinocchio::Address;
+
+        const FOREIGN_PROGRAM: Address = Address::new_from_array([0xAA; 32]);
+
+        jiminy_interface! {
+            /// Read-only view with explicit version matching the foreign v2.
+            pub struct PoolV2 for FOREIGN_PROGRAM, version = 2 {
+                header:    AccountHeader = 16,
+                authority: Address       = 32,
+                reserve:   LeU64         = 8,
+            }
+        }
+
+        // Interface WITHOUT version (defaults to 1) should NOT match.
+        jiminy_interface! {
+            pub struct PoolV2Mismatch for FOREIGN_PROGRAM {
+                header:    AccountHeader = 16,
+                authority: Address       = 32,
+                reserve:   LeU64         = 8,
+            }
+        }
+    }
+
+    #[test]
+    fn versioned_interface_layout_id_matches() {
+        // Explicit version = 2 in interface matches the original v2 layout.
+        assert_eq!(PoolV2::LAYOUT_ID, foreign_v2::PoolV2::LAYOUT_ID);
+    }
+
+    #[test]
+    fn default_version_does_not_match_v2() {
+        // Default version = 1 produces a different LAYOUT_ID than the v2 original.
+        assert_ne!(PoolV2::LAYOUT_ID, foreign_v2::PoolV2Mismatch::LAYOUT_ID);
+    }
 }
