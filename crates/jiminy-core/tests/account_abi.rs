@@ -328,31 +328,31 @@ fn load_checked_mut_modifies() {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// 7. load_best_effort (Tier 4)
+// 7. load_unverified_overlay (Tier 5)
 // ══════════════════════════════════════════════════════════════════════════════
 
 #[test]
-fn load_best_effort_valid_header() {
+fn load_unverified_overlay_valid_header() {
     let mut buf = AlignedBuf::<56>::new();
     stamp_header(buf.as_mut_slice(), TestVault::DISC, TestVault::VERSION, &TestVault::LAYOUT_ID);
-    let (vault, validated) = TestVault::load_best_effort(buf.as_slice()).unwrap();
+    let (vault, validated) = TestVault::load_unverified_overlay(buf.as_slice()).unwrap();
     assert!(validated);
     assert_eq!(vault.header.discriminator, TestVault::DISC);
 }
 
 #[test]
-fn load_best_effort_invalid_header_still_overlays() {
+fn load_unverified_overlay_invalid_header_still_overlays() {
     let mut buf = AlignedBuf::<56>::new();
     // Write wrong disc — header check fails, but overlay still works.
     stamp_header(buf.as_mut_slice(), 99, 1, &[0; 8]);
-    let (_, validated) = TestVault::load_best_effort(buf.as_slice()).unwrap();
+    let (_, validated) = TestVault::load_unverified_overlay(buf.as_slice()).unwrap();
     assert!(!validated);
 }
 
 #[test]
-fn load_best_effort_too_small_fails() {
+fn load_unverified_overlay_too_small_fails() {
     let buf = [0u8; 10];
-    assert!(TestVault::load_best_effort(&buf).is_err());
+    assert!(TestVault::load_unverified_overlay(&buf).is_err());
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -556,19 +556,19 @@ fn overlay_extra_trailing_bytes_succeeds() {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// 15. Best-effort with corrupted / partial data
+// 15. Unverified overlay with corrupted / partial data
 // ══════════════════════════════════════════════════════════════════════════════
 
 #[test]
-fn best_effort_all_zeroes_not_validated() {
+fn unverified_overlay_all_zeroes_not_validated() {
     let buf = AlignedBuf::<56>::new();
-    let (_, validated) = TestVault::load_best_effort(buf.as_slice()).unwrap();
+    let (_, validated) = TestVault::load_unverified_overlay(buf.as_slice()).unwrap();
     // disc=0 != TestVault::DISC=1, so validation fails.
     assert!(!validated);
 }
 
 #[test]
-fn best_effort_correct_disc_wrong_layout_id_not_validated() {
+fn unverified_overlay_correct_disc_wrong_layout_id_not_validated() {
     let mut buf = AlignedBuf::<56>::new();
     stamp_header(
         buf.as_mut_slice(),
@@ -576,12 +576,12 @@ fn best_effort_correct_disc_wrong_layout_id_not_validated() {
         TestVault::VERSION,
         &[0xFF; 8], // wrong layout_id
     );
-    let (_, validated) = TestVault::load_best_effort(buf.as_slice()).unwrap();
+    let (_, validated) = TestVault::load_unverified_overlay(buf.as_slice()).unwrap();
     assert!(!validated);
 }
 
 #[test]
-fn best_effort_partially_overwritten_header() {
+fn unverified_overlay_partially_overwritten_header() {
     let mut buf = AlignedBuf::<56>::new();
     stamp_header(
         buf.as_mut_slice(),
@@ -591,13 +591,13 @@ fn best_effort_partially_overwritten_header() {
     );
     // Corrupt one byte of the layout_id.
     buf.0[4] ^= 0xFF;
-    let (_, validated) = TestVault::load_best_effort(buf.as_slice()).unwrap();
+    let (_, validated) = TestVault::load_unverified_overlay(buf.as_slice()).unwrap();
     assert!(!validated);
 }
 
 #[test]
-fn best_effort_v2_header_on_v1_struct() {
-    // A V2 header on a V1-sized buffer — best_effort should overlay but not validate.
+fn unverified_overlay_v2_header_on_v1_struct() {
+    // A V2 header on a V1-sized buffer — overlay should work but not validate.
     let mut buf = AlignedBuf::<56>::new();
     stamp_header(
         buf.as_mut_slice(),
@@ -605,8 +605,8 @@ fn best_effort_v2_header_on_v1_struct() {
         TestVaultV2::VERSION,
         &TestVaultV2::LAYOUT_ID,
     );
-    // Attempt best_effort as V1 (wrong layout_id).
-    let (_, validated) = TestVault::load_best_effort(buf.as_slice()).unwrap();
+    // Attempt as V1 (wrong layout_id).
+    let (_, validated) = TestVault::load_unverified_overlay(buf.as_slice()).unwrap();
     assert!(!validated);
 }
 

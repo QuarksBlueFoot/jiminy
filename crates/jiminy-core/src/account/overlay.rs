@@ -57,7 +57,7 @@
 //! - `load_mut(account, program_id)`: Tier 1 (mutable): same checks, returns `VerifiedAccountMut`
 //! - `load_foreign(account, owner)`: Tier 2: owner + layout_id + exact size
 //! - `unsafe load_unchecked(data)`: Tier 4: no validation
-//! - `load_best_effort(data)`: Tier 5: header if present, fallback to overlay
+//! - `load_unverified_overlay(data)`: Tier 5: header if present, fallback to overlay
 
 /// Generate `const OFFSET_<FIELD>` for each field in a layout.
 ///
@@ -208,6 +208,15 @@ macro_rules! zero_copy_layout {
             "size_of does not match declared LEN - check field sizes"
         );
 
+        // Compile-time assertion: alignment must not exceed 8 bytes.
+        // Solana's loader aligns program input to 8-byte boundaries.
+        // Types requiring >8 alignment (e.g. u128) would cause UB on-chain.
+        // Use Le128 / Le* wrappers for 16-byte scalars.
+        const _: () = assert!(
+            core::mem::align_of::<$name>() <= 8,
+            "layout alignment exceeds 8 bytes - use Le* wrappers for u128 fields"
+        );
+
         impl $name {
             /// Total byte size of this account layout.
             pub const LEN: usize = 0 $( + $fsize )+;
@@ -334,14 +343,15 @@ macro_rules! zero_copy_layout {
                 $crate::account::pod_from_bytes::<Self>(data)
             }
 
-            /// **Tier 5: Best-effort.** Try header + layout_id validation;
-            /// if it fails, fall back to a plain overlay.
+            /// **Tier 5: Unverified overlay.** Try header + layout_id
+            /// validation; if it fails, fall back to a plain overlay.
             ///
-            /// Returns `(overlay, validated)` where `validated` is `true`
-            /// when the header matched. Useful for indexers/tooling.
+            /// No ABI guarantees. Returns `(overlay, validated)` where
+            /// `validated` is `true` when the header matched. Useful for
+            /// indexers/tooling. Never use in on-chain program logic.
             #[inline(always)]
-            pub fn load_best_effort(data: &[u8]) -> Result<(&Self, bool), $crate::pinocchio::error::ProgramError> {
-                $crate::account::view::load_best_effort::<Self>(
+            pub fn load_unverified_overlay(data: &[u8]) -> Result<(&Self, bool), $crate::pinocchio::error::ProgramError> {
+                $crate::account::view::load_unverified_overlay::<Self>(
                     data, Self::DISC, Self::VERSION, &Self::LAYOUT_ID,
                 )
             }

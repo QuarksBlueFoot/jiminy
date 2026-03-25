@@ -28,6 +28,12 @@ default = ["programs"]
 programs = []
 log = []
 solana-zero-copy = ["dep:solana-zero-copy"]
+## Production hardening mode.
+##
+## When enabled:
+## - `validate_version_compatible` is compile-time disabled (no layout_id skip paths).
+## - Forces all loading through layout_id-verified tiers.
+strict = []
 
 [lints]
 workspace = true

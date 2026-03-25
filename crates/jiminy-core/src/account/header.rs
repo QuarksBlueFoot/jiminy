@@ -18,6 +18,13 @@ use pinocchio::error::ProgramError;
 /// Canonical account header size in bytes.
 pub const HEADER_LEN: usize = 16;
 
+/// Header format version. Tracks the header byte layout itself.
+///
+/// If the header format ever changes (field reordering, new mandatory
+/// fields, etc.), bump this constant. All current Jiminy headers use
+/// format version 1.
+pub const HEADER_FORMAT: u8 = 1;
+
 /// The canonical Jiminy account header.
 ///
 /// All fields are little-endian on wire. The struct is `#[repr(C)]` so

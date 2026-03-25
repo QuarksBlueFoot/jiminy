@@ -45,10 +45,11 @@ The external audit should cover the following crates in priority order:
 
 ### 5. Tiered Loading Trust Levels (jiminy-core/src/account/view.rs)
 
-- `load_checked` (Tier 1): verifies owner + disc + version + layout_id + size
-- `load_foreign` (Tier 2): verifies owner + layout_id (NOT disc/version)
-- `load_unchecked` (Tier 3): is `unsafe` - requires caller to justify safety
-- `load_best_effort` (Tier 4): never panics, gracefully degrades
+- `load_checked` (Tier 1): verifies owner + disc + version + layout_id + exact size
+- `load_foreign` (Tier 2): verifies owner + layout_id + exact size (NOT disc/version)
+- `validate_version_compatible` (Tier 3): migration helper, no layout_id
+- `load_unchecked` (Tier 4): is `unsafe`, requires caller to justify safety
+- `load_unverified_overlay` (Tier 5): never panics, no ABI guarantees
 - No tier provides more access than documented
 
 ### 6. CPI Safety (jiminy-solana/src/cpi/)
@@ -87,7 +88,7 @@ The external audit should cover the following crates in priority order:
    - `fuzz_overlay`: `pod_from_bytes` / `pod_from_bytes_mut` with random slices
    - `fuzz_segment_table`: segment table parsing, descriptor reads, validation
    - `fuzz_zero_copy_slice`: `ZeroCopySlice` length-prefix parsing, element access, iteration
-   - `fuzz_best_effort`: `load_best_effort` permissive loading with arbitrary data
+   - `fuzz_unverified_overlay`: `load_unverified_overlay` permissive loading with arbitrary data
 
    Run with: `cd crates/jiminy-core && cargo +nightly fuzz run fuzz_header`
 

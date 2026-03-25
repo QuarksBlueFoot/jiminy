@@ -23,8 +23,8 @@ pub mod writer;
 // ── Re-exports ───────────────────────────────────────────────────────────────
 
 pub use header::{
-    AccountHeader, HEADER_LEN, body, body_mut, check_header, check_layout_id, header_payload,
-    header_payload_mut, read_header_flags, read_layout_id, read_version,
+    AccountHeader, HEADER_FORMAT, HEADER_LEN, body, body_mut, check_header, check_layout_id,
+    header_payload, header_payload_mut, read_header_flags, read_layout_id, read_version,
     write_header,
 };
 pub use reader::AccountReader;
@@ -41,7 +41,9 @@ pub use bits::{
     check_any_flag, check_flags, clear_bit, read_bit, read_flags_at, set_bit,
     toggle_bit, write_flags_at,
 };
-pub use view::{validate_account, validate_account_mut, validate_foreign, validate_version_compatible, load_best_effort};
+pub use view::{validate_account, validate_account_mut, validate_foreign, load_unverified_overlay};
+#[cfg(not(feature = "strict"))]
+pub use view::validate_version_compatible;
 pub use verified::{VerifiedAccount, VerifiedAccountMut};
 pub use segment::{
     SegmentDescriptor, SegmentTable, SegmentTableMut,

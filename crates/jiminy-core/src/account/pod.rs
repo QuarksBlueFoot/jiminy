@@ -5,14 +5,15 @@
 //!
 //! ## Alignment
 //!
-//! On SBF (Solana runtime) all memory is 1-byte aligned, so pointer casts
-//! are always valid. In native tests the data pointer may not satisfy
-//! `align_of::<T>()`. The functions below handle both cases:
+//! Solana's loader aligns program input to 8-byte boundaries. The
+//! functions below always check alignment on all targets and return
+//! `Err(InvalidAccountData)` if the pointer is misaligned. This prevents
+//! UB for types with alignment > 8 (e.g. `u128`). Use `Le128` / `Le*`
+//! wrappers for 16-byte scalars.
 //!
 //! - **`pod_from_bytes` / `pod_from_bytes_mut`**: return a direct
-//!   reference into the byte slice (zero-copy). On native targets they
-//!   return `Err(InvalidAccountData)` if the pointer is misaligned,
-//!   because a Rust reference *must* be properly aligned.
+//!   reference into the byte slice (zero-copy). Return
+//!   `Err(InvalidAccountData)` if the pointer is misaligned.
 //! - **`pod_read`**: copies via `read_unaligned`, so it works
 //!   regardless of pointer alignment. Returns an owned `T`, not a
 //!   reference. Ideal for native tests with uncontrolled alignment.

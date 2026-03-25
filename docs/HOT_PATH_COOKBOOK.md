@@ -109,7 +109,7 @@ When processing multiple accounts (e.g., liquidation scanner):
 ```rust,ignore
 use jiminy_core::prelude::*;
 
-// Use load_best_effort for maximum tolerance
+// Use load_unverified_overlay for maximum tolerance
 fn scan_accounts(accounts: &[AccountView]) -> Vec<u64> {
     let mut balances = Vec::new();
     for acc in accounts {

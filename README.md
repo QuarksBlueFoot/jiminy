@@ -78,7 +78,7 @@ The account header is what separates jiminy from a bag of utility functions. Eve
 | **Deterministic `layout_id`** | 8-byte SHA-256 fingerprint of struct name, version, field names, types, and sizes. Changes iff the schema changes. |
 | **`zero_copy_layout!`** | Declare `#[repr(C)]` structs that overlay directly onto account bytes. Generates `Pod`, `FixedLayout`, tiered loaders, and compile-time size assertions. |
 | **Cross-program reads** | `load_foreign()` validates `layout_id` without depending on the source program's crate. No deserialization. |
-| **Tiered loading** | `load` > `load_foreign` > `validate_version_compatible` > `load_unchecked` > `load_best_effort`. Pick the trust level you need. |
+| **Tiered loading** | `load` > `load_foreign` > `validate_version_compatible` > `load_unchecked` > `load_unverified_overlay`. Pick the trust level you need. |
 | **Version migration** | `validate_version_compatible()` for version transitions. Skips `layout_id`, so it's explicitly weaker. |
 | **Tooling** | `jiminy-schema` exports `LayoutManifest` for TypeScript decoders, indexers, and explorers. |
 
@@ -116,7 +116,7 @@ should use Tier 1 or 2. Anything else is an explicit opt-in.
 | 2 | **Foreign Verified** | `load_foreign()` | Another program's accounts |
 | 3 | **Compatibility** | `validate_version_compatible()` | Version migration (weaker, skips `layout_id`) |
 | 4 | **Unsafe** | `load_unchecked()` | Hot path. Caller assumes all risk. |
-| 5 | **Best Effort** | `load_best_effort()` | Indexers, explorers, tooling |
+| 5 | **Unverified Overlay** | `load_unverified_overlay()` | Indexers, explorers, tooling |
 
 Tier 4 is `unsafe` on purpose. If you reach for it, you know what you're
 skipping. See [SAFETY_MODEL.md](docs/SAFETY_MODEL.md) for the full trust
@@ -259,7 +259,7 @@ and there's nothing to forget.
 
 - **16-byte account header**: discriminator (1 B) + version (1 B) + flags (2 B) + `layout_id` (8 B) + reserved (4 B). Every account gets a tamper-evident fingerprint.
 - **`zero_copy_layout!`** macro (v2): generates `#[repr(C)]` structs with `Pod` + `FixedLayout`, overlay methods, and a deterministic `LAYOUT_ID` (SHA-256 of field names, types, and sizes). Includes `extends` keyword for append-only schema evolution.
-- **Tiered loading**: `load_checked` (full validation), `load_foreign` (cross-program reads), `load_unchecked` (unsafe fast path), `load_best_effort` (graceful degradation).
+- **Tiered loading**: `load_checked` (full validation), `load_foreign` (cross-program reads), `load_unchecked` (unsafe fast path), `load_unverified_overlay` (no ABI guarantees).
 - **`init_account!`**: CPI CreateAccount → zero-init → write header in one call.
 - **`check_account!`**: disc + version + layout_id validation macro.
 - **`close_account!`**: safe close with lamport drain and sentinel byte.

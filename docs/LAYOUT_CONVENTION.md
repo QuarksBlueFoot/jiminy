@@ -159,10 +159,11 @@ let data = validate_version_compatible(account, program_id, Vault::DISC, 1, Vaul
 let data = account.try_borrow()?;
 let vault = unsafe { Vault::load_unchecked(&data)? };
 
-// Tier 5: Best-effort (indexers/tooling).
-// Returns (overlay, validated) where validated is true if header matched.
+// Tier 5: Unverified overlay (indexers/tooling).
+// No ABI guarantees. Returns (overlay, validated) where validated is
+// true if header matched.
 let data = account.try_borrow()?;
-let (vault, validated) = Vault::load_best_effort(&data)?;
+let (vault, validated) = Vault::load_unverified_overlay(&data)?;
 ```
 
 See [SAFETY_MODEL.md](SAFETY_MODEL.md) for the full trust tier model.

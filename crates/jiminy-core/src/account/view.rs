@@ -8,11 +8,11 @@
 //!
 //! | Tier | Name | Method | Validates |
 //! |------|------|--------|-----------|
-//! | 1 | **Verified** | `load()` | owner + disc + version + size + layout_id |
-//! | 2 | **Foreign Verified** | `load_foreign()` | owner + layout_id |
-//! | 3 | **Compatibility** | `validate_version_compatible()` | owner + disc + version + size (no layout_id) |
+//! | 1 | **Verified** | `load()` | owner + disc + version + exact size + layout_id |
+//! | 2 | **Foreign Verified** | `load_foreign()` | owner + exact size + layout_id |
+//! | 3 | **Compatibility** | `validate_version_compatible()` | owner + disc + version + min size (no layout_id) |
 //! | 4 | **Unsafe** | `load_unchecked()` | **none** (`unsafe`) |
-//! | 5 | **Best Effort** | `load_best_effort()` | header + layout_id if present, fallback to overlay |
+//! | 5 | **Unverified Overlay** | `load_unverified_overlay()` | header + layout_id if present, fallback to overlay |
 //!
 //! Tiers 1–2 are the standard paths. Tier 3 is a migration helper that
 //! trades `layout_id` verification for version-range flexibility. Tier 4
@@ -140,6 +140,11 @@ pub fn validate_account_mut<'a>(
 /// - `load()` / `load_checked()`: full ABI-verified standard path
 /// - `load_foreign()`: cross-program reads with layout_id proof
 ///
+/// # Disabled in `strict` mode
+///
+/// When the `strict` feature is enabled this function is unavailable,
+/// forcing all loads through layout_id-verified tiers.
+///
 /// # Errors
 ///
 /// - `IllegalOwner`: account is not owned by `program_id`.
@@ -147,6 +152,7 @@ pub fn validate_account_mut<'a>(
 ///   than 2 bytes (cannot read disc + version).
 /// - `InvalidAccountData`: discriminator does not match `disc`, or
 ///   version byte is less than `min_version`.
+#[cfg(not(feature = "strict"))]
 #[inline(always)]
 pub fn validate_version_compatible<'a>(
     account: &'a AccountView,
@@ -182,16 +188,20 @@ pub fn validate_version_compatible<'a>(
 /// Try to validate header + layout_id. If the header check fails,
 /// fall back to a plain overlay.
 ///
-/// Best-effort loading (Tier 5). Useful for indexers and tooling that
-/// need to read accounts without knowing whether they use Jiminy headers.
-/// Returns `(overlay, validated)` where `validated` is `true` when the
-/// header matched.
+/// Unverified overlay loading (Tier 5). Useful for indexers and tooling
+/// that need to read accounts without knowing whether they use Jiminy
+/// headers. Returns `(overlay, validated)` where `validated` is `true`
+/// when the header matched.
+///
+/// No ABI guarantees. The overlay is applied regardless of whether the
+/// header validation succeeds. Use this only for diagnostic/tooling
+/// purposes, never in on-chain program logic.
 ///
 /// # Errors
 ///
 /// - `AccountDataTooSmall`: data shorter than `T::SIZE`.
 #[inline(always)]
-pub fn load_best_effort<'a, T: Pod + FixedLayout>(
+pub fn load_unverified_overlay<'a, T: Pod + FixedLayout>(
     data: &'a [u8],
     disc: u8,
     version: u8,

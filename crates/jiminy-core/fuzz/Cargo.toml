@@ -36,6 +36,6 @@ path = "fuzz_targets/fuzz_zero_copy_slice.rs"
 doc = false
 
 [[bin]]
-name = "fuzz_best_effort"
+name = "fuzz_unverified_overlay"
 path = "fuzz_targets/fuzz_best_effort.rs"
 doc = false

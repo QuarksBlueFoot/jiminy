@@ -149,27 +149,27 @@ proptest! {
         }
     }
 
-    /// load_best_effort never panics on random data of valid size.
+    /// load_unverified_overlay never panics on random data of valid size.
     #[test]
-    fn best_effort_never_panics(data in prop::collection::vec(0u8.., 56..512)) {
+    fn unverified_overlay_never_panics(data in prop::collection::vec(0u8.., 56..512)) {
         // Copy into an aligned buffer.
         let mut buf = Aligned56::zeroed();
         let copy_len = data.len().min(56);
         buf.0[..copy_len].copy_from_slice(&data[..copy_len]);
         // Should never panic — either returns Ok with validated true/false.
-        let _ = PropVault::load_best_effort(&buf.0);
+        let _ = PropVault::load_unverified_overlay(&buf.0);
     }
 
-    /// load_best_effort validated flag is true iff header matches exactly.
+    /// load_unverified_overlay validated flag is true iff header matches exactly.
     #[test]
-    fn best_effort_validated_iff_header_matches(
+    fn unverified_overlay_validated_iff_header_matches(
         disc in 0u8..=255,
         ver in 0u8..=255,
         id in prop::array::uniform8(0u8..),
     ) {
         let mut buf = Aligned56::zeroed();
         write_header(&mut buf.0, disc, ver, &id).unwrap();
-        let (_, validated) = PropVault::load_best_effort(&buf.0).unwrap();
+        let (_, validated) = PropVault::load_unverified_overlay(&buf.0).unwrap();
         let expected = disc == PropVault::DISC
             && ver >= PropVault::VERSION
             && id == PropVault::LAYOUT_ID;

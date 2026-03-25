@@ -5,6 +5,39 @@ All notable changes to the Jiminy workspace are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.16.0] - 2025-01-XX
+
+### Added
+
+- **`VerifiedAccount<T>` / `VerifiedAccountMut<T>`**: type-safe wrappers
+  returned by `load()` / `load_mut()` / `load_foreign()`. Infallible
+  `get()` / `get_mut()` access after construction, no raw bytes exposed.
+- **`validate_account_mut()`**: mutable variant of Tier 1 validation,
+  returns `RefMut` for write access.
+- **`HEADER_FORMAT` constant**: tracks the header byte layout version.
+- **`strict` feature**: production hardening mode. When enabled,
+  `validate_version_compatible()` is compile-time disabled, forcing
+  all loads through layout_id-verified tiers.
+- **Compile-time alignment assertion**: `zero_copy_layout!` now asserts
+  `align_of::<T>() <= 8` at compile time, preventing unsound layouts
+  on Solana (which aligns program input to 8 bytes).
+
+### Changed
+
+- **Renamed** `load_best_effort()` to `load_unverified_overlay()` to
+  communicate that no ABI guarantees are provided.
+- **Exact size enforcement**: Tiers 1 and 2 now require
+  `data.len() == expected_size` (was `<`). Prevents hidden trailing
+  data attacks.
+- **Alignment checks on all targets**: `pod_from_bytes` /
+  `pod_from_bytes_mut` always check alignment, not just on native.
+- **`load_mut()` no longer aliases**: backed by `RefMut` instead of
+  casting from `Ref`. Eliminates UB from mutable aliasing.
+- **Tier numbering**: `load_unchecked` is Tier 4, `load_unverified_overlay`
+  is Tier 5 (was inconsistently Tier 3/4 in some docs).
+- **Doc consistency**: all tier tables, doc comments, and safety model
+  updated to reflect exact size checks and new API names.
+
 ## [0.15.0] - 2025-01-XX
 
 ### Added
@@ -31,12 +64,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   compatibility tooling.
 - **Cross-program foreign read**: `load_foreign()` (Tier 2) validates
   owner + layout_id for safe cross-program account reads.
-- **Best-effort loading**: `load_best_effort()` (Tier 4) for indexers
+- **Unverified overlay loading**: `load_unverified_overlay()` (Tier 5) for indexers
   and tooling that read accounts without guaranteed headers.
 - **Token-2022 screening**: `check_safe_token_2022_mint()` and
   extension safety checks in `jiminy-solana`.
 - **Fuzz targets**: `fuzz_header`, `fuzz_overlay`, `fuzz_segment_table`,
-  `fuzz_zero_copy_slice`, `fuzz_best_effort` in `jiminy-core/fuzz/`.
+  `fuzz_zero_copy_slice`, `fuzz_unverified_overlay` in `jiminy-core/fuzz/`.
 
 ### Documentation
 

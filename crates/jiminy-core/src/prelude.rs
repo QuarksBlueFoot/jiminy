@@ -44,7 +44,9 @@ pub use crate::account::{
 };
 
 // ── Tiered loading ───────────────────────────────────────────────────────────
-pub use crate::account::view::{validate_account, validate_foreign, validate_version_compatible, load_best_effort};
+pub use crate::account::view::{validate_account, validate_foreign, load_unverified_overlay};
+#[cfg(not(feature = "strict"))]
+pub use crate::account::view::validate_version_compatible;
 
 // ── Math ─────────────────────────────────────────────────────────────────────
 pub use crate::math::{
