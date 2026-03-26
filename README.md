@@ -249,7 +249,7 @@ and there's nothing to forget.
 ### Segmented ABI for variable-length accounts
 
 - **`segmented_layout!`** macro: extends `zero_copy_layout!` with dynamic segments. Declare a fixed prefix plus any number of variable-length arrays. The macro generates `SEGMENT_COUNT`, `TABLE_OFFSET`, `DATA_START_OFFSET`, `init_segments()`, `validate_segments()`, `compute_account_size()`, and a dedicated `SEGMENTED_LAYOUT_ID`.
-- **`SegmentDescriptor`** (8 bytes): `offset: u32 LE`, `count: u16 LE`, `element_size: u16 LE`. Describes one dynamic array.
+- **`SegmentDescriptor`** (12 bytes): `offset: u32 LE`, `count: u16 LE`, `capacity: u16 LE`, `element_size: u16 LE`, `flags: u16 LE`. Describes one dynamic array with explicit capacity.
 - **`SegmentTable` / `SegmentTableMut`**: immutable/mutable views over the descriptor region. Validation (bounds, overlap, element-size match) built in.
 - **`SegmentSlice<T>` / `SegmentSliceMut<T>`**: typed zero-copy views over segment data. Same pattern as `ZeroCopySlice`, driven by descriptors.
 - **`SegmentIter<T>`**: `ExactSizeIterator` over segment elements by copy.

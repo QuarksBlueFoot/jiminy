@@ -9,25 +9,49 @@
 //! ```text
 //! ┌──────────────┬──────────────────┬──────────────────────────┐
 //! │ Fixed Prefix │  Segment Table   │     Segment Data         │
-//! │  (N bytes)   │  (S × 8 bytes)   │  (variable per segment)  │
+//! │  (N bytes)   │  (S × 12 bytes)  │  (variable per segment)  │
 //! └──────────────┴──────────────────┴──────────────────────────┘
 //! ```
 //!
 //! The fixed prefix is a standard `zero_copy_layout!` struct (including
 //! the 16-byte `AccountHeader`). Immediately after it comes the segment
-//! table: `S` entries of 8 bytes each, describing the offset, count, and
-//! element size of each dynamic array. Segment data follows the table.
+//! table: `S` entries of 12 bytes each, describing the offset, live
+//! count, reserved capacity, element size, and flags of each dynamic
+//! array. Segment data follows the table.
 //!
-//! ## Segment Descriptor (8 bytes)
+//! ## Segment Descriptor (12 bytes)
 //!
 //! ```text
 //! Byte   Field          Type      Description
 //! ──────────────────────────────────────────────────────────
 //! 0-3    offset         u32 LE    Byte offset from account start
-//! 4-5    count          u16 LE    Number of elements
-//! 6-7    element_size   u16 LE    Size of each element in bytes
+//! 4-5    count          u16 LE    Number of live elements
+//! 6-7    capacity       u16 LE    Maximum element capacity
+//! 8-9    element_size   u16 LE    Size of each element in bytes
+//! 10-11  flags          u16 LE    Reserved for future use (zero)
 //! ──────────────────────────────────────────────────────────
 //! ```
+//!
+//! A segment descriptor defines a reserved region of the account
+//! containing up to `capacity` elements of fixed `element_size`, of
+//! which the first `count` are live.
+//!
+//! ## Frozen Invariants (pre-1.0)
+//!
+//! - `count <= capacity`
+//! - `element_size > 0`
+//! - `offset + capacity * element_size <= account_len`
+//! - Segments must be non-overlapping (reserved regions)
+//! - Segment table order is ABI order
+//! - Each segment's capacity region is stable unless explicitly
+//!   migrated/reallocated
+//!
+//! ## Operation Semantics
+//!
+//! - `push` appends only if `count < capacity`, otherwise returns
+//!   a capacity-full error. No implicit realloc.
+//! - `swap_remove` decreases `count` but does not reduce `capacity`.
+//! - Resizing capacity requires explicit migration/realloc path.
 //!
 //! ## Usage
 //!
@@ -50,29 +74,36 @@ use pinocchio::error::ProgramError;
 use super::pod::{FixedLayout, Pod};
 
 /// Size of a single segment descriptor in bytes.
-pub const SEGMENT_DESC_SIZE: usize = 8;
+pub const SEGMENT_DESC_SIZE: usize = 12;
 
 /// Maximum number of segments per account.
 ///
 /// Practical upper bound to prevent excessive rent costs and simplify
-/// validation. 8 segments × 8 bytes = 64-byte table overhead.
+/// validation. 8 segments × 12 bytes = 96-byte table overhead.
 pub const MAX_SEGMENTS: usize = 8;
 
-/// On-wire segment descriptor.
+/// On-wire segment descriptor (v2, capacity-aware).
 ///
-/// Each 8-byte entry describes one variable-length array within a
+/// Each 12-byte entry describes one variable-length array within a
 /// segmented account. The descriptor lives in the segment table region,
 /// between the fixed prefix and the segment data.
+///
+/// The descriptor defines a reserved region of up to `capacity` elements
+/// of fixed `element_size`, of which the first `count` are live.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct SegmentDescriptor {
     /// Byte offset from the start of the account data to the first
     /// element of this segment.
     pub offset: [u8; 4],
-    /// Number of elements currently stored in this segment.
+    /// Number of live elements currently stored in this segment.
     pub count: [u8; 2],
+    /// Maximum number of elements this segment can hold.
+    pub capacity: [u8; 2],
     /// Size of each element in bytes.
     pub element_size: [u8; 2],
+    /// Reserved flags for future use. Must be zero.
+    pub flags: [u8; 2],
 }
 
 // SAFETY: repr(C), Copy, all fields are byte arrays. All bit patterns valid.
@@ -86,13 +117,16 @@ const _: () = assert!(core::mem::size_of::<SegmentDescriptor>() == SEGMENT_DESC_
 const _: () = assert!(core::mem::align_of::<SegmentDescriptor>() == 1);
 
 impl SegmentDescriptor {
-    /// Create a new descriptor.
+    /// Create a new descriptor with count, capacity, and element_size.
+    /// Flags default to zero.
     #[inline(always)]
-    pub const fn new(offset: u32, count: u16, element_size: u16) -> Self {
+    pub const fn new(offset: u32, count: u16, capacity: u16, element_size: u16) -> Self {
         Self {
             offset: offset.to_le_bytes(),
             count: count.to_le_bytes(),
+            capacity: capacity.to_le_bytes(),
             element_size: element_size.to_le_bytes(),
+            flags: [0, 0],
         }
     }
 
@@ -102,10 +136,16 @@ impl SegmentDescriptor {
         u32::from_le_bytes(self.offset)
     }
 
-    /// Read the element count.
+    /// Read the live element count.
     #[inline(always)]
     pub const fn count(&self) -> u16 {
         u16::from_le_bytes(self.count)
+    }
+
+    /// Read the maximum element capacity.
+    #[inline(always)]
+    pub const fn capacity(&self) -> u16 {
+        u16::from_le_bytes(self.capacity)
     }
 
     /// Read the element size.
@@ -114,17 +154,56 @@ impl SegmentDescriptor {
         u16::from_le_bytes(self.element_size)
     }
 
-    /// Total byte footprint of this segment's data (count × element_size).
+    /// Read the flags field.
     #[inline(always)]
-    pub const fn data_len(&self) -> usize {
+    pub const fn flags(&self) -> u16 {
+        u16::from_le_bytes(self.flags)
+    }
+
+    /// Byte footprint of live data (`count × element_size`).
+    #[inline(always)]
+    pub const fn live_data_len(&self) -> usize {
         self.count() as usize * self.element_size() as usize
     }
 
-    /// Byte range `[offset .. offset + data_len)`. Returns `None` on overflow.
+    /// Total byte footprint of this segment's data (count × element_size).
+    ///
+    /// Alias for [`live_data_len`](Self::live_data_len).
+    #[inline(always)]
+    pub const fn data_len(&self) -> usize {
+        self.live_data_len()
+    }
+
+    /// Byte footprint of the full reserved region (`capacity × element_size`).
+    #[inline(always)]
+    pub const fn max_data_len(&self) -> usize {
+        self.capacity() as usize * self.element_size() as usize
+    }
+
+    /// Whether the segment is at capacity (`count == capacity`).
+    #[inline(always)]
+    pub const fn is_full(&self) -> bool {
+        self.count() >= self.capacity()
+    }
+
+    /// Byte range of **live** data: `[offset .. offset + live_data_len)`.
+    /// Returns `None` on overflow.
     #[inline(always)]
     pub const fn byte_range(&self) -> Option<(usize, usize)> {
         let start = self.offset() as usize;
-        let len = self.data_len();
+        let len = self.live_data_len();
+        match start.checked_add(len) {
+            Some(end) => Some((start, end)),
+            None => None,
+        }
+    }
+
+    /// Byte range of the full **reserved** region:
+    /// `[offset .. offset + max_data_len)`. Returns `None` on overflow.
+    #[inline(always)]
+    pub const fn reserved_byte_range(&self) -> Option<(usize, usize)> {
+        let start = self.offset() as usize;
+        let len = self.max_data_len();
         match start.checked_add(len) {
             Some(end) => Some((start, end)),
             None => None,
@@ -137,7 +216,7 @@ impl SegmentDescriptor {
 /// Immutable view over the segment table region of an account.
 ///
 /// The table starts at a known offset (typically right after the fixed
-/// prefix) and contains `segment_count` descriptors of 8 bytes each.
+/// prefix) and contains `segment_count` descriptors of 12 bytes each.
 pub struct SegmentTable<'a> {
     /// Slice covering just the segment table bytes.
     data: &'a [u8],
@@ -192,7 +271,9 @@ impl<'a> SegmentTable<'a> {
                 self.data[start + 3],
             ],
             count: [self.data[start + 4], self.data[start + 5]],
-            element_size: [self.data[start + 6], self.data[start + 7]],
+            capacity: [self.data[start + 6], self.data[start + 7]],
+            element_size: [self.data[start + 8], self.data[start + 9]],
+            flags: [self.data[start + 10], self.data[start + 11]],
         })
     }
 
@@ -205,9 +286,10 @@ impl<'a> SegmentTable<'a> {
     ///
     /// Checks:
     /// - Element size matches `expected_sizes[i]` (if provided).
-    /// - Segment data fits within the account.
-    /// - No segment data starts before `min_offset`.
-    /// - No two segments overlap.
+    /// - `count <= capacity` for each segment.
+    /// - Reserved region (`capacity × element_size`) fits within account.
+    /// - No segment's reserved region starts before `min_offset`.
+    /// - No two segments' reserved regions overlap.
     /// - All segments are ordered by offset.
     #[inline]
     pub fn validate(
@@ -231,17 +313,22 @@ impl<'a> SegmentTable<'a> {
                 return Err(ProgramError::InvalidAccountData);
             }
 
-            // Compute byte range with overflow check.
+            // count must not exceed capacity.
+            if desc.count() > desc.capacity() {
+                return Err(ProgramError::InvalidAccountData);
+            }
+
+            // Compute reserved byte range (capacity-based) with overflow check.
             let (start, end) = desc
-                .byte_range()
+                .reserved_byte_range()
                 .ok_or(ProgramError::InvalidAccountData)?;
 
-            // Must fit within account data.
+            // Reserved region must fit within account data.
             if end > account_len {
                 return Err(ProgramError::AccountDataTooSmall);
             }
 
-            // Must be ordered and non-overlapping.
+            // Must be ordered and non-overlapping (by reserved region).
             if start < prev_end {
                 return Err(ProgramError::InvalidAccountData);
             }
@@ -252,7 +339,7 @@ impl<'a> SegmentTable<'a> {
         Ok(())
     }
 
-    /// Total byte size of the table itself (segment_count × 8).
+    /// Total byte size of the table itself (segment_count × 12).
     #[inline(always)]
     pub fn byte_len(&self) -> usize {
         self.segment_count * SEGMENT_DESC_SIZE
@@ -299,7 +386,9 @@ impl<'a> SegmentTableMut<'a> {
                 self.data[start + 3],
             ],
             count: [self.data[start + 4], self.data[start + 5]],
-            element_size: [self.data[start + 6], self.data[start + 7]],
+            capacity: [self.data[start + 6], self.data[start + 7]],
+            element_size: [self.data[start + 8], self.data[start + 9]],
+            flags: [self.data[start + 10], self.data[start + 11]],
         })
     }
 
@@ -316,7 +405,9 @@ impl<'a> SegmentTableMut<'a> {
         let start = index * SEGMENT_DESC_SIZE;
         self.data[start..start + 4].copy_from_slice(&desc.offset);
         self.data[start + 4..start + 6].copy_from_slice(&desc.count);
-        self.data[start + 6..start + 8].copy_from_slice(&desc.element_size);
+        self.data[start + 6..start + 8].copy_from_slice(&desc.capacity);
+        self.data[start + 8..start + 10].copy_from_slice(&desc.element_size);
+        self.data[start + 10..start + 12].copy_from_slice(&desc.flags);
         Ok(())
     }
 
@@ -333,16 +424,17 @@ impl<'a> SegmentTableMut<'a> {
     }
 
     /// Initialize the segment table with descriptors computed from
-    /// element sizes and initial counts.
+    /// element sizes, initial counts, and capacities.
     ///
-    /// `specs` is a slice of `(element_size, initial_count)` pairs.
+    /// `specs` is a slice of `(element_size, initial_count, capacity)` triples.
     /// Offsets are computed automatically, starting at `data_start`
-    /// (typically `fixed_prefix_len + table_size`).
+    /// (typically `fixed_prefix_len + table_size`). Each segment's
+    /// reserved region is sized by `capacity`, not `count`.
     #[inline]
     pub fn init(
         data: &'a mut [u8],
         data_start: u32,
-        specs: &[(u16, u16)],
+        specs: &[(u16, u16, u16)],
     ) -> Result<Self, ProgramError> {
         let segment_count = specs.len();
         if segment_count > MAX_SEGMENTS {
@@ -354,13 +446,18 @@ impl<'a> SegmentTableMut<'a> {
         }
 
         let mut offset = data_start;
-        for (i, &(elem_size, count)) in specs.iter().enumerate() {
+        for (i, &(elem_size, count, capacity)) in specs.iter().enumerate() {
+            if count > capacity {
+                return Err(ProgramError::InvalidArgument);
+            }
             let start = i * SEGMENT_DESC_SIZE;
             data[start..start + 4].copy_from_slice(&offset.to_le_bytes());
             data[start + 4..start + 6].copy_from_slice(&count.to_le_bytes());
-            data[start + 6..start + 8].copy_from_slice(&elem_size.to_le_bytes());
-            // Advance offset with overflow check.
-            let seg_len = (count as u32)
+            data[start + 6..start + 8].copy_from_slice(&capacity.to_le_bytes());
+            data[start + 8..start + 10].copy_from_slice(&elem_size.to_le_bytes());
+            data[start + 10..start + 12].copy_from_slice(&[0, 0]); // flags = 0
+            // Advance offset by reserved capacity, not live count.
+            let seg_len = (capacity as u32)
                 .checked_mul(elem_size as u32)
                 .ok_or(ProgramError::ArithmeticOverflow)?;
             offset = offset
@@ -384,6 +481,7 @@ impl<'a> SegmentTableMut<'a> {
 pub struct SegmentSlice<'a, T: Pod + FixedLayout> {
     data: &'a [u8],
     count: u16,
+    capacity: u16,
     _marker: core::marker::PhantomData<T>,
 }
 
@@ -392,13 +490,17 @@ impl<'a, T: Pod + FixedLayout> SegmentSlice<'a, T> {
     ///
     /// Validates that:
     /// - `descriptor.element_size()` matches `T::SIZE`
-    /// - the segment's byte range fits within `account_data`
+    /// - `count <= capacity`
+    /// - the segment's reserved region fits within `account_data`
     #[inline(always)]
     pub fn from_descriptor(
         account_data: &'a [u8],
         descriptor: &SegmentDescriptor,
     ) -> Result<Self, ProgramError> {
         if descriptor.element_size() as usize != T::SIZE {
+            return Err(ProgramError::InvalidAccountData);
+        }
+        if descriptor.count() > descriptor.capacity() {
             return Err(ProgramError::InvalidAccountData);
         }
         let (start, end) = descriptor
@@ -410,20 +512,33 @@ impl<'a, T: Pod + FixedLayout> SegmentSlice<'a, T> {
         Ok(Self {
             data: &account_data[start..end],
             count: descriptor.count(),
+            capacity: descriptor.capacity(),
             _marker: core::marker::PhantomData,
         })
     }
 
-    /// Number of elements.
+    /// Number of live elements.
     #[inline(always)]
     pub fn len(&self) -> u16 {
         self.count
     }
 
-    /// Whether the segment is empty.
+    /// Maximum element capacity.
+    #[inline(always)]
+    pub fn capacity(&self) -> u16 {
+        self.capacity
+    }
+
+    /// Whether the segment has no live elements.
     #[inline(always)]
     pub fn is_empty(&self) -> bool {
         self.count == 0
+    }
+
+    /// Whether the segment is at capacity (`count == capacity`).
+    #[inline(always)]
+    pub fn is_full(&self) -> bool {
+        self.count >= self.capacity
     }
 
     /// Get a reference to element at `index`.
@@ -486,6 +601,7 @@ impl<'a, T: Pod + FixedLayout> SegmentSlice<'a, T> {
 pub struct SegmentSliceMut<'a, T: Pod + FixedLayout> {
     data: &'a mut [u8],
     count: u16,
+    capacity: u16,
     _marker: core::marker::PhantomData<T>,
 }
 
@@ -499,6 +615,9 @@ impl<'a, T: Pod + FixedLayout> SegmentSliceMut<'a, T> {
         if descriptor.element_size() as usize != T::SIZE {
             return Err(ProgramError::InvalidAccountData);
         }
+        if descriptor.count() > descriptor.capacity() {
+            return Err(ProgramError::InvalidAccountData);
+        }
         let (start, end) = descriptor
             .byte_range()
             .ok_or(ProgramError::InvalidAccountData)?;
@@ -508,20 +627,33 @@ impl<'a, T: Pod + FixedLayout> SegmentSliceMut<'a, T> {
         Ok(Self {
             data: &mut account_data[start..end],
             count: descriptor.count(),
+            capacity: descriptor.capacity(),
             _marker: core::marker::PhantomData,
         })
     }
 
-    /// Number of elements.
+    /// Number of live elements.
     #[inline(always)]
     pub fn len(&self) -> u16 {
         self.count
     }
 
-    /// Whether the segment is empty.
+    /// Maximum element capacity.
+    #[inline(always)]
+    pub fn capacity(&self) -> u16 {
+        self.capacity
+    }
+
+    /// Whether the segment has no live elements.
     #[inline(always)]
     pub fn is_empty(&self) -> bool {
         self.count == 0
+    }
+
+    /// Whether the segment is at capacity (`count == capacity`).
+    #[inline(always)]
+    pub fn is_full(&self) -> bool {
+        self.count >= self.capacity
     }
 
     /// Get a mutable reference to element at `index`.
@@ -647,10 +779,13 @@ impl<'a, T: Pod + FixedLayout> ExactSizeIterator for SegmentIter<'a, T> {}
 /// Reads the current descriptor at `seg_index`, writes `value` after
 /// the last entry, then increments the descriptor count.
 ///
+/// Push appends only if `count < capacity`. No implicit realloc.
+///
 /// # Errors
 ///
-/// - `AccountDataTooSmall` if the account data is too short for the new element.
 /// - `InvalidAccountData` if `T::SIZE` doesn't match the descriptor's element size.
+/// - `InvalidAccountData` if the segment is at capacity (`count >= capacity`).
+/// - `AccountDataTooSmall` if the account data is too short for the new element.
 /// - `ArithmeticOverflow` if the count would exceed `u16::MAX`.
 #[inline]
 pub fn segment_push<T: Pod + FixedLayout>(
@@ -660,19 +795,10 @@ pub fn segment_push<T: Pod + FixedLayout>(
     seg_index: usize,
     value: &T,
 ) -> Result<(), ProgramError> {
-    // Read descriptor and upper bound (scoped to release the shared borrow).
-    let (desc, upper_bound) = {
+    // Read descriptor (scoped to release the shared borrow).
+    let desc = {
         let table = SegmentTable::from_bytes(&data[table_offset..], segment_count)?;
-        let d = table.descriptor(seg_index)?;
-        // Upper bound: for the last segment, data.len(). For earlier
-        // segments, the next segment's offset. This prevents push from
-        // writing into an adjacent segment's region.
-        let ub = if seg_index + 1 < segment_count {
-            table.descriptor(seg_index + 1)?.offset() as usize
-        } else {
-            data.len()
-        };
-        (d, ub)
+        table.descriptor(seg_index)?
     };
 
     if desc.element_size() as usize != T::SIZE {
@@ -680,10 +806,17 @@ pub fn segment_push<T: Pod + FixedLayout>(
     }
 
     let current_count = desc.count();
+
+    // Primary capacity check: count must be strictly less than capacity.
+    if current_count >= desc.capacity() {
+        return Err(ProgramError::InvalidAccountData);
+    }
+
     let write_offset = desc.offset() as usize + (current_count as usize) * T::SIZE;
     let write_end = write_offset + T::SIZE;
 
-    if write_end > upper_bound {
+    // Defense in depth: also check against account bounds.
+    if write_end > data.len() {
         return Err(ProgramError::AccountDataTooSmall);
     }
 
@@ -694,11 +827,13 @@ pub fn segment_push<T: Pod + FixedLayout>(
         core::ptr::copy_nonoverlapping(src, data.as_mut_ptr().add(write_offset), T::SIZE);
     }
 
-    // Increment the descriptor count.
+    // Increment the descriptor count (capacity stays the same).
     let new_count = current_count
         .checked_add(1)
         .ok_or(ProgramError::ArithmeticOverflow)?;
-    let updated = SegmentDescriptor::new(desc.offset(), new_count, desc.element_size());
+    let updated = SegmentDescriptor::new(
+        desc.offset(), new_count, desc.capacity(), desc.element_size(),
+    );
     let mut table_mut = SegmentTableMut::from_bytes(&mut data[table_offset..], segment_count)?;
     table_mut.set_descriptor(seg_index, &updated)?;
 
@@ -756,8 +891,10 @@ pub fn segment_swap_remove<T: Pod + FixedLayout>(
     let last_offset = base + (last_index as usize) * T::SIZE;
     data[last_offset..last_offset + T::SIZE].fill(0);
 
-    // Decrement the descriptor count.
-    let updated = SegmentDescriptor::new(desc.offset(), last_index, desc.element_size());
+    // Decrement the descriptor count. Capacity stays the same.
+    let updated = SegmentDescriptor::new(
+        desc.offset(), last_index, desc.capacity(), desc.element_size(),
+    );
     let mut table_mut = SegmentTableMut::from_bytes(&mut data[table_offset..], segment_count)?;
     table_mut.set_descriptor(seg_index, &updated)?;
 

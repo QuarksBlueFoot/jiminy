@@ -19,9 +19,9 @@ Offset  Bytes  Field
 16      32     authority
 48       8     total_staked
 ────── Fixed prefix (56 bytes) ───────
-56       8     stakes descriptor  [offset(4) | count(2) | elem_size(2)]
-────── Segment table (8 bytes) ──────
-64       N     StakeEntry[] data  (48 bytes each)
+56      12     stakes descriptor  [offset(4) | count(2) | capacity(2) | elem_size(2) | flags(2)]
+────── Segment table (12 bytes) ──────
+68       N     StakeEntry[] data  (48 bytes each)
 ```
 
 ### StakeEntry (48 bytes, `#[repr(C)]`)

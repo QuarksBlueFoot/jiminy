@@ -1,7 +1,8 @@
 # Segmented ABI Design
 
-> **Status:** Implemented in v0.15.0. See `jiminy-core::account::segment`
-> and the `segmented_layout!` macro.
+> **Status:** Implemented in v0.15.0 (8-byte descriptors), upgraded to
+> capacity-aware 12-byte descriptors in v0.17.0.
+> See `jiminy-core::account::segment` and the `segmented_layout!` macro.
 
 ## Problem
 
@@ -39,7 +40,7 @@ A segmented account has three regions:
 ```
 ┌──────────────┬──────────────────┬──────────────────────────┐
 │ Fixed Header │  Segment Table   │     Segment Data         │
-│  (16 bytes)  │  (N × 8 bytes)  │  (variable per segment)  │
+│  (≥16 bytes) │  (N × 12 bytes)  │  (variable per segment)  │
 └──────────────┴──────────────────┴──────────────────────────┘
 ```
 
@@ -51,16 +52,23 @@ layout").
 
 ### Segment Table
 
-Immediately after the header. Each entry is 8 bytes:
+Immediately after the fixed prefix. Each entry is 12 bytes:
 
 ```
 Byte   Field          Type      Description
 ──────────────────────────────────────────────────────────
 0-3    offset         u32 LE    Byte offset from account start
-4-5    count          u16 LE    Number of elements in this segment
-6-7    element_size   u16 LE    Size of each element in bytes
+4-5    count          u16 LE    Number of live elements
+6-7    capacity       u16 LE    Maximum element capacity
+8-9    element_size   u16 LE    Size of each element in bytes
+10-11  flags          u16 LE    Reserved (must be zero)
 ──────────────────────────────────────────────────────────
 ```
+
+The `capacity` field defines the reserved region for this segment
+(`capacity × element_size` bytes). The first `count` elements are live;
+slots `count..capacity` are zeroed spare capacity. Invariant:
+`count ≤ capacity`.
 
 The segment table is fixed once the account is created. You declare
 the number of segments at account creation time. Individual segments
@@ -112,12 +120,12 @@ Offset  Size  Content
 16      32    market (Address)
 48      32    base_mint (Address)
 80      32    quote_mint (Address)
-112      8    Segment descriptor: bids  { offset: 128, count: 3, elem: 48 }
-120      8    Segment descriptor: asks  { offset: 272, count: 2, elem: 48 }
-128    144    bids[0..3] (3 × 48)
-272     96    asks[0..2] (2 × 48)
+112     12    Segment descriptor: bids  { offset: 136, count: 3, capacity: 3, elem_size: 48, flags: 0 }
+124     12    Segment descriptor: asks  { offset: 280, count: 2, capacity: 2, elem_size: 48, flags: 0 }
+136    144    bids[0..3] (3 × 48)
+280     96    asks[0..2] (2 × 48)
 ─────────────────────────────────────
-Total: 368 bytes
+Total: 376 bytes
 ```
 
 ## Layout ID for Segmented Accounts
@@ -139,8 +147,8 @@ This ensures that adding, removing, or reordering segments changes the
 OrderBook::SEGMENT_COUNT;      // 2
 OrderBook::FIXED_LEN;          // 112 (header + market + base_mint + quote_mint)
 OrderBook::TABLE_OFFSET;       // 112 (same as FIXED_LEN)
-OrderBook::DATA_START_OFFSET;  // 128 (FIXED_LEN + 2 × 8-byte descriptors)
-OrderBook::MIN_ACCOUNT_SIZE;   // 128 (fixed + table, zero elements)
+OrderBook::DATA_START_OFFSET;  // 136 (FIXED_LEN + 2 × 12-byte descriptors)
+OrderBook::MIN_ACCOUNT_SIZE;   // 136 (fixed + table, zero elements)
 OrderBook::SEGMENTED_LAYOUT_ID;// [u8; 8] including segment hashes
 
 // Named segment indices (generated from segment names).
@@ -199,21 +207,26 @@ OrderBook::validate_segments(&data)?;
 |---|---|---|
 | **Use when** | All elements are written upfront | Elements are pushed/removed dynamically |
 | **Counts** | Set to `counts[i]` | Set to `0` |
+| **Capacity** | Set to `counts[i]` (tight fit) | Set to `capacities[i]` |
 | **Offsets** | Spaced by `counts[i] * elem_size` | Spaced by `capacities[i] * elem_size` |
-| **Push safe?** | Only if `counts` equals max capacity | Yes, up to `capacities[i]` elements |
+| **Push safe?** | No — segment is already full (`count == capacity`) | Yes, up to `capacities[i]` elements |
 
 ## Bounds Checking & Overflow
 
 Every segment access validates:
 
 1. Segment index < segment count (from header flags).
-2. `offset + count * element_size` does not exceed account data length.
-3. No segment overlaps with another segment's range.
-4. Element size from the segment table matches the expected
+2. `count ≤ capacity` for the descriptor.
+3. `offset + capacity * element_size` (reserved region) does not exceed
+   account data length.
+4. No segment's reserved region overlaps with another segment's reserved
+   region.
+5. Element size from the segment table matches the expected
    `FixedLayout::SIZE` of the element type.
-5. `push` checks the next segment's offset (or `data.len()` for the
-   last segment) to prevent writes from overflowing into adjacent
-   segments.
+6. `push` checks `count < capacity` before writing. When `count ==
+   capacity`, `push` returns `ProgramError::AccountDataTooSmall`.
+   The caller must `realloc` the account and update the descriptor's
+   capacity before pushing.
 
 All offset arithmetic uses checked operations to prevent overflow on
 32-bit targets.
@@ -245,31 +258,40 @@ v1 as long as the fixed fields are a byte-compatible prefix.
   to check the segment table. Corrupted descriptors produce `ProgramError`,
   never UB. This is an explicit call, not implicit in `load()`.
 
-## Design Decisions (Frozen - v0.15.0)
+## Design Decisions (Frozen - v0.17.0)
 
 The following decisions are locked. They define the segmented ABI
 contract and will not change without a major version bump.
 
-1. **Max segments: 8.** The segment count is capped at
+1. **12-byte descriptors with explicit capacity.** Each descriptor is
+   12 bytes: `[offset:u32][count:u16][capacity:u16][element_size:u16]
+   [flags:u16]`. The `capacity` field defines the reserved region;
+   `count` tracks live elements. Invariant: `count ≤ capacity`.
+2. **Max segments: 8.** The segment count is capped at
    `MAX_SEGMENTS = 8` (defined in `segment.rs`). This bounds the
-   segment table to 64 bytes, keeps validation O(1), and prevents
+   segment table to 96 bytes, keeps validation O(1), and prevents
    excessive rent overhead. Programs needing more than 8 dynamic
    regions should split across multiple accounts.
-2. **No nested segments.** The model is intentionally flat. Nest by
+3. **No nested segments.** The model is intentionally flat. Nest by
    having segment elements reference other accounts instead.
-3. **No sparse segments.** Use `swap_remove` for O(1) deletion.
+4. **No sparse segments.** Use `swap_remove` for O(1) deletion.
    `swap_remove` zeroes the vacated slot (last element's former
    position) and decrements the descriptor's `count` field.
    Order is not preserved. This is a documented trade-off for O(1)
    removal without fragmentation.
-4. **No auto-realloc.** `push` does **not** auto-realloc. When the
-   data region cannot fit another element, `push` returns
-   `ProgramError::AccountDataTooSmall`. The caller must `realloc` the
-   account explicitly before pushing. This keeps the API predictable
-   and avoids hidden CPI costs.
-5. **Segment count is immutable after init.** The number of segments
+5. **No auto-realloc.** `push` does **not** auto-realloc. When
+   `count == capacity`, `push` returns an error. The caller must
+   `realloc` the account and update the descriptor's `capacity`
+   before pushing. This keeps the API predictable and avoids
+   hidden CPI costs.
+6. **Segment count is immutable after init.** The number of segments
    is fixed at account creation via `init_segments`. Adding or removing
    segment slots requires migration to a new layout version.
+7. **Capacity is encoded in the account, not inferred.** Unlike other
+   Solana crates that derive capacity from buffer length, Jiminy
+   stores capacity explicitly in each descriptor. This enables
+   multi-segment accounts where buffer length alone cannot determine
+   per-segment capacity.
 
 ## Relationship to Other Innovations
 

@@ -2,27 +2,33 @@
  * Segment table reading for Jiminy segmented accounts.
  *
  * Segmented accounts store a fixed core region followed by a segment
- * descriptor table. Each 8-byte descriptor encodes:
+ * descriptor table. Each 12-byte descriptor encodes:
  *
  * ```
  * Byte   Field         Type
  * 0-3    offset        u32 (LE) — byte offset from account start
- * 4-5    count         u16 (LE) — number of elements
- * 6-7    element_size  u16 (LE) — size of each element in bytes
+ * 4-5    count         u16 (LE) — number of live elements
+ * 6-7    capacity      u16 (LE) — maximum element capacity
+ * 8-9    element_size  u16 (LE) — size of each element in bytes
+ * 10-11  flags         u16 (LE) — reserved for future use (zero)
  * ```
  */
 
 /** Size of a single segment descriptor in bytes. */
-export const SEGMENT_DESCRIPTOR_SIZE = 8;
+export const SEGMENT_DESCRIPTOR_SIZE = 12;
 
 /** A decoded segment descriptor. */
 export interface SegmentDescriptor {
   /** Byte offset from start of account data to the first element. */
   offset: number;
-  /** Number of elements in this segment. */
+  /** Number of live elements in this segment. */
   count: number;
+  /** Maximum element capacity. */
+  capacity: number;
   /** Size of each element in bytes. */
   elementSize: number;
+  /** Reserved flags (zero). */
+  flags: number;
 }
 
 /**
@@ -46,7 +52,9 @@ export function readSegmentDescriptor(
   return {
     offset: view.getUint32(0, true),
     count: view.getUint16(4, true),
-    elementSize: view.getUint16(6, true),
+    capacity: view.getUint16(6, true),
+    elementSize: view.getUint16(8, true),
+    flags: view.getUint16(10, true),
   };
 }
 

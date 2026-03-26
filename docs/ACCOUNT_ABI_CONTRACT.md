@@ -134,5 +134,5 @@ If the layout_id matches at runtime, the overlay is safe.
   variable-length data (collections, extension zones), Jiminy provides
   the segmented ABI (`segmented_layout!`, `SegmentTable`,
   `SegmentSlice`). Each segment is described by a `SegmentDescriptor`
-  (offset + count) in a region table immediately after the fixed prefix.
+  (offset + count + capacity + element_size) in a region table immediately after the fixed prefix.
   See `SEGMENTED_ABI.md` for details.

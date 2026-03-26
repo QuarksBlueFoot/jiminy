@@ -69,8 +69,8 @@ fn init_pool(
     p.authority = authority;
     p.total_staked = 0;
 
-    // Initialize the segment table with 0 entries (capacity-ready).
-    StakePool::init_segments(&mut raw, &[0])?;
+    // Initialize the segment table with 0 entries, capacity-ready.
+    StakePool::init_segments_with_capacity(&mut raw, &[max_stakers])?;
 
     Ok(())
 }
@@ -131,6 +131,7 @@ fn stake(
     let updated = SegmentDescriptor::new(
         desc.offset(),
         current_count + 1,
+        desc.capacity(),
         desc.element_size(),
     );
     let mut table_mut = StakePool::segment_table_mut(&mut raw)?;
@@ -198,10 +199,11 @@ fn unstake(
         *b = 0;
     }
 
-    // Decrement the element count in the descriptor.
+    // Decrement the element count in the descriptor. Capacity stays the same.
     let updated = SegmentDescriptor::new(
         desc.offset(),
         (count - 1) as u16,
+        desc.capacity(),
         desc.element_size(),
     );
     let mut table_mut = StakePool::segment_table_mut(&mut raw)?;

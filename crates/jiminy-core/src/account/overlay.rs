@@ -640,9 +640,12 @@ macro_rules! segmented_layout {
 
             /// Initialize segment descriptors in a freshly allocated account.
             ///
-            /// `counts` gives the initial element count per segment. Offsets
-            /// are computed by laying out segments contiguously based on
-            /// these counts. If you plan to `push` elements later, use
+            /// `counts` gives the initial element count per segment.
+            /// Each segment's capacity is set equal to its count (tight
+            /// fit, no room for push). Offsets are computed by laying out
+            /// segments contiguously based on these counts.
+            ///
+            /// If you plan to `push` elements later, use
             /// [`init_segments_with_capacity`](Self::init_segments_with_capacity)
             /// instead to pre-allocate space.
             #[inline]
@@ -654,11 +657,12 @@ macro_rules! segmented_layout {
                     return Err($crate::pinocchio::error::ProgramError::InvalidArgument);
                 }
                 let sizes = Self::segment_sizes();
+                // count == capacity for pre-populated init (tight fit).
                 let specs: [_; Self::SEGMENT_COUNT] = {
-                    let mut arr = [(0u16, 0u16); Self::SEGMENT_COUNT];
+                    let mut arr = [(0u16, 0u16, 0u16); Self::SEGMENT_COUNT];
                     let mut i = 0;
                     while i < Self::SEGMENT_COUNT {
-                        arr[i] = (sizes[i], counts[i]);
+                        arr[i] = (sizes[i], counts[i], counts[i]);
                         i += 1;
                     }
                     arr
@@ -696,37 +700,40 @@ macro_rules! segmented_layout {
                     return Err($crate::pinocchio::error::ProgramError::InvalidArgument);
                 }
                 let sizes = Self::segment_sizes();
-                // Space offsets by capacity, but set counts to 0.
-                let mut offset = Self::DATA_START_OFFSET as u32;
-                let mut table_data = &mut data[Self::TABLE_OFFSET..];
-                for i in 0..Self::SEGMENT_COUNT {
-                    let start = i * $crate::account::segment::SEGMENT_DESC_SIZE;
-                    table_data[start..start + 4].copy_from_slice(&offset.to_le_bytes());
-                    table_data[start + 4..start + 6].copy_from_slice(&0u16.to_le_bytes());
-                    table_data[start + 6..start + 8].copy_from_slice(&sizes[i].to_le_bytes());
-                    let seg_space = (capacities[i] as u32)
-                        .checked_mul(sizes[i] as u32)
-                        .ok_or($crate::pinocchio::error::ProgramError::ArithmeticOverflow)?;
-                    offset = offset
-                        .checked_add(seg_space)
-                        .ok_or($crate::pinocchio::error::ProgramError::ArithmeticOverflow)?;
-                }
+                // count = 0, capacity = capacities[i] (push workflow).
+                let specs: [_; Self::SEGMENT_COUNT] = {
+                    let mut arr = [(0u16, 0u16, 0u16); Self::SEGMENT_COUNT];
+                    let mut i = 0;
+                    while i < Self::SEGMENT_COUNT {
+                        arr[i] = (sizes[i], 0, capacities[i]);
+                        i += 1;
+                    }
+                    arr
+                };
+                $crate::account::segment::SegmentTableMut::init(
+                    &mut data[Self::TABLE_OFFSET..],
+                    Self::DATA_START_OFFSET as u32,
+                    &specs,
+                )?;
                 Ok(())
             }
 
-            /// Compute the total account size for given element counts.
+            /// Compute the total account size for given capacities.
             ///
-            /// `counts[i]` is the number of elements in segment `i`.
+            /// `capacities[i]` is the number of elements to reserve
+            /// space for in segment `i`. The account must be created with
+            /// at least this many bytes to hold the segment table plus
+            /// the full reserved regions.
             #[inline]
-            pub fn compute_account_size(counts: &[u16]) -> Result<usize, $crate::pinocchio::error::ProgramError> {
-                if counts.len() != Self::SEGMENT_COUNT {
+            pub fn compute_account_size(capacities: &[u16]) -> Result<usize, $crate::pinocchio::error::ProgramError> {
+                if capacities.len() != Self::SEGMENT_COUNT {
                     return Err($crate::pinocchio::error::ProgramError::InvalidArgument);
                 }
                 let sizes = Self::segment_sizes();
                 let mut total = Self::DATA_START_OFFSET;
                 let mut i = 0;
                 while i < Self::SEGMENT_COUNT {
-                    let seg_bytes = (counts[i] as usize)
+                    let seg_bytes = (capacities[i] as usize)
                         .checked_mul(sizes[i] as usize)
                         .ok_or($crate::pinocchio::error::ProgramError::ArithmeticOverflow)?;
                     total = total

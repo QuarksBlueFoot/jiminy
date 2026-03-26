@@ -72,9 +72,9 @@ impl<const N: usize> AlignedBuf<N> {
 // ══════════════════════════════════════════════════════════════════════════════
 
 #[test]
-fn descriptor_size_is_8() {
-    assert_eq!(SEGMENT_DESC_SIZE, 8);
-    assert_eq!(core::mem::size_of::<SegmentDescriptor>(), 8);
+fn descriptor_size_is_12() {
+    assert_eq!(SEGMENT_DESC_SIZE, 12);
+    assert_eq!(core::mem::size_of::<SegmentDescriptor>(), 12);
 }
 
 #[test]
@@ -84,18 +84,25 @@ fn descriptor_alignment_is_1() {
 
 #[test]
 fn descriptor_new_and_accessors() {
-    let desc = SegmentDescriptor::new(128, 10, 16);
+    let desc = SegmentDescriptor::new(128, 10, 10, 16);
     assert_eq!(desc.offset(), 128);
     assert_eq!(desc.count(), 10);
+    assert_eq!(desc.capacity(), 10);
     assert_eq!(desc.element_size(), 16);
+    assert_eq!(desc.flags(), 0);
     assert_eq!(desc.data_len(), 160);
+    assert_eq!(desc.max_data_len(), 160);
+    assert!(desc.is_full()); // count == capacity → is_full
     assert_eq!(desc.byte_range(), Some((128, 288)));
 }
 
 #[test]
 fn descriptor_zero_count() {
-    let desc = SegmentDescriptor::new(64, 0, 8);
+    let desc = SegmentDescriptor::new(64, 0, 4, 8);
+    assert_eq!(desc.count(), 0);
+    assert_eq!(desc.capacity(), 4);
     assert_eq!(desc.data_len(), 0);
+    assert_eq!(desc.max_data_len(), 32);
     assert_eq!(desc.byte_range(), Some((64, 64)));
 }
 
@@ -105,7 +112,7 @@ fn descriptor_zero_count() {
 
 #[test]
 fn table_from_bytes_too_small() {
-    let data = [0u8; 7]; // Need 8 for 1 descriptor.
+    let data = [0u8; 11]; // Need 12 for 1 descriptor.
     assert!(SegmentTable::from_bytes(&data, 1).is_err());
 }
 
@@ -125,15 +132,19 @@ fn table_zero_segments() {
 
 #[test]
 fn table_read_descriptors() {
-    let mut buf = [0u8; 16];
-    // Descriptor 0: offset=48, count=3, elem_size=16
+    let mut buf = [0u8; 24];
+    // Descriptor 0: offset=48, count=3, capacity=3, elem_size=16
     buf[0..4].copy_from_slice(&48u32.to_le_bytes());
     buf[4..6].copy_from_slice(&3u16.to_le_bytes());
-    buf[6..8].copy_from_slice(&16u16.to_le_bytes());
-    // Descriptor 1: offset=96, count=2, elem_size=16
-    buf[8..12].copy_from_slice(&96u32.to_le_bytes());
-    buf[12..14].copy_from_slice(&2u16.to_le_bytes());
-    buf[14..16].copy_from_slice(&16u16.to_le_bytes());
+    buf[6..8].copy_from_slice(&3u16.to_le_bytes());
+    buf[8..10].copy_from_slice(&16u16.to_le_bytes());
+    // buf[10..12] = flags = 0
+    // Descriptor 1: offset=96, count=2, capacity=2, elem_size=16
+    buf[12..16].copy_from_slice(&96u32.to_le_bytes());
+    buf[16..18].copy_from_slice(&2u16.to_le_bytes());
+    buf[18..20].copy_from_slice(&2u16.to_le_bytes());
+    buf[20..22].copy_from_slice(&16u16.to_le_bytes());
+    // buf[22..24] = flags = 0
 
     let table = SegmentTable::from_bytes(&buf, 2).unwrap();
     assert_eq!(table.len(), 2);
@@ -141,31 +152,35 @@ fn table_read_descriptors() {
     let d0 = table.descriptor(0).unwrap();
     assert_eq!(d0.offset(), 48);
     assert_eq!(d0.count(), 3);
+    assert_eq!(d0.capacity(), 3);
     assert_eq!(d0.element_size(), 16);
 
     let d1 = table.descriptor(1).unwrap();
     assert_eq!(d1.offset(), 96);
     assert_eq!(d1.count(), 2);
+    assert_eq!(d1.capacity(), 2);
 }
 
 #[test]
 fn table_descriptor_out_of_bounds() {
-    let buf = [0u8; 8];
+    let buf = [0u8; 12];
     let table = SegmentTable::from_bytes(&buf, 1).unwrap();
     assert!(table.descriptor(1).is_err());
 }
 
 #[test]
 fn table_validate_good() {
-    let mut buf = [0u8; 16];
-    // Seg 0 at offset 16, count 2, elem_size 4 → occupies [16..24)
+    let mut buf = [0u8; 24];
+    // Seg 0 at offset 16, count 2, capacity 2, elem_size 4 → reserved [16..24)
     buf[0..4].copy_from_slice(&16u32.to_le_bytes());
     buf[4..6].copy_from_slice(&2u16.to_le_bytes());
-    buf[6..8].copy_from_slice(&4u16.to_le_bytes());
-    // Seg 1 at offset 24, count 1, elem_size 4 → occupies [24..28)
-    buf[8..12].copy_from_slice(&24u32.to_le_bytes());
-    buf[12..14].copy_from_slice(&1u16.to_le_bytes());
-    buf[14..16].copy_from_slice(&4u16.to_le_bytes());
+    buf[6..8].copy_from_slice(&2u16.to_le_bytes());
+    buf[8..10].copy_from_slice(&4u16.to_le_bytes());
+    // Seg 1 at offset 24, count 1, capacity 1, elem_size 4 → reserved [24..28)
+    buf[12..16].copy_from_slice(&24u32.to_le_bytes());
+    buf[16..18].copy_from_slice(&1u16.to_le_bytes());
+    buf[18..20].copy_from_slice(&1u16.to_le_bytes());
+    buf[20..22].copy_from_slice(&4u16.to_le_bytes());
 
     let table = SegmentTable::from_bytes(&buf, 2).unwrap();
     assert!(table.validate(28, &[4, 4], 16).is_ok());
@@ -173,15 +188,17 @@ fn table_validate_good() {
 
 #[test]
 fn table_validate_overlap() {
-    let mut buf = [0u8; 16];
-    // Seg 0 at offset 16, count 3, elem_size 4 → occupies [16..28)
+    let mut buf = [0u8; 24];
+    // Seg 0 at offset 16, count 3, capacity 3, elem_size 4 → reserved [16..28)
     buf[0..4].copy_from_slice(&16u32.to_le_bytes());
     buf[4..6].copy_from_slice(&3u16.to_le_bytes());
-    buf[6..8].copy_from_slice(&4u16.to_le_bytes());
-    // Seg 1 at offset 20, count 1, elem_size 4 → overlaps with seg 0
-    buf[8..12].copy_from_slice(&20u32.to_le_bytes());
-    buf[12..14].copy_from_slice(&1u16.to_le_bytes());
-    buf[14..16].copy_from_slice(&4u16.to_le_bytes());
+    buf[6..8].copy_from_slice(&3u16.to_le_bytes());
+    buf[8..10].copy_from_slice(&4u16.to_le_bytes());
+    // Seg 1 at offset 20, count 1, capacity 1, elem_size 4 → overlaps seg 0
+    buf[12..16].copy_from_slice(&20u32.to_le_bytes());
+    buf[16..18].copy_from_slice(&1u16.to_le_bytes());
+    buf[18..20].copy_from_slice(&1u16.to_le_bytes());
+    buf[20..22].copy_from_slice(&4u16.to_le_bytes());
 
     let table = SegmentTable::from_bytes(&buf, 2).unwrap();
     assert!(table.validate(100, &[4, 4], 0).is_err());
@@ -189,10 +206,11 @@ fn table_validate_overlap() {
 
 #[test]
 fn table_validate_wrong_elem_size() {
-    let mut buf = [0u8; 8];
-    buf[0..4].copy_from_slice(&8u32.to_le_bytes());
+    let mut buf = [0u8; 12];
+    buf[0..4].copy_from_slice(&12u32.to_le_bytes());
     buf[4..6].copy_from_slice(&1u16.to_le_bytes());
-    buf[6..8].copy_from_slice(&8u16.to_le_bytes()); // elem_size = 8
+    buf[6..8].copy_from_slice(&1u16.to_le_bytes()); // capacity = 1
+    buf[8..10].copy_from_slice(&8u16.to_le_bytes()); // elem_size = 8
 
     let table = SegmentTable::from_bytes(&buf, 1).unwrap();
     // Expected size is 4, but descriptor says 8.
@@ -201,10 +219,11 @@ fn table_validate_wrong_elem_size() {
 
 #[test]
 fn table_validate_zero_elem_size() {
-    let mut buf = [0u8; 8];
-    buf[0..4].copy_from_slice(&8u32.to_le_bytes());
+    let mut buf = [0u8; 12];
+    buf[0..4].copy_from_slice(&12u32.to_le_bytes());
     buf[4..6].copy_from_slice(&1u16.to_le_bytes());
-    buf[6..8].copy_from_slice(&0u16.to_le_bytes()); // elem_size = 0
+    buf[6..8].copy_from_slice(&1u16.to_le_bytes()); // capacity = 1
+    buf[8..10].copy_from_slice(&0u16.to_le_bytes()); // elem_size = 0
 
     let table = SegmentTable::from_bytes(&buf, 1).unwrap();
     assert!(table.validate(100, &[0], 0).is_err()); // zero elem_size rejected
@@ -212,13 +231,14 @@ fn table_validate_zero_elem_size() {
 
 #[test]
 fn table_validate_exceeds_account() {
-    let mut buf = [0u8; 8];
-    buf[0..4].copy_from_slice(&8u32.to_le_bytes());
+    let mut buf = [0u8; 12];
+    buf[0..4].copy_from_slice(&12u32.to_le_bytes());
     buf[4..6].copy_from_slice(&10u16.to_le_bytes());
-    buf[6..8].copy_from_slice(&4u16.to_le_bytes()); // needs 40 bytes at offset 8 → total 48
+    buf[6..8].copy_from_slice(&10u16.to_le_bytes()); // capacity = 10
+    buf[8..10].copy_from_slice(&4u16.to_le_bytes()); // needs 40 bytes at offset 12 → total 52
 
     let table = SegmentTable::from_bytes(&buf, 1).unwrap();
-    assert!(table.validate(40, &[4], 0).is_err()); // account only 40 bytes, need 48
+    assert!(table.validate(40, &[4], 0).is_err()); // account only 40 bytes, need 52
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -227,8 +247,8 @@ fn table_validate_exceeds_account() {
 
 #[test]
 fn table_mut_init_and_read() {
-    let mut buf = [0u8; 32];
-    let specs = [(4u16, 3u16), (8u16, 2u16)];
+    let mut buf = [0u8; 24];
+    let specs = [(4u16, 3u16, 3u16), (8u16, 2u16, 2u16)];
     let data_start = 48u32;
 
     let table = SegmentTableMut::init(&mut buf, data_start, &specs).unwrap();
@@ -236,34 +256,37 @@ fn table_mut_init_and_read() {
     let d0 = table.descriptor(0).unwrap();
     assert_eq!(d0.offset(), 48);
     assert_eq!(d0.count(), 3);
+    assert_eq!(d0.capacity(), 3);
     assert_eq!(d0.element_size(), 4);
 
     let d1 = table.descriptor(1).unwrap();
     // offset = 48 + 3*4 = 60
     assert_eq!(d1.offset(), 60);
     assert_eq!(d1.count(), 2);
+    assert_eq!(d1.capacity(), 2);
     assert_eq!(d1.element_size(), 8);
 }
 
 #[test]
 fn table_mut_set_descriptor() {
-    let mut buf = [0u8; 16];
+    let mut buf = [0u8; 24];
     let mut table = SegmentTableMut::from_bytes(&mut buf, 2).unwrap();
 
-    let desc = SegmentDescriptor::new(100, 5, 12);
+    let desc = SegmentDescriptor::new(100, 5, 5, 12);
     table.set_descriptor(0, &desc).unwrap();
 
     let read_back = table.descriptor(0).unwrap();
     assert_eq!(read_back.offset(), 100);
     assert_eq!(read_back.count(), 5);
+    assert_eq!(read_back.capacity(), 5);
     assert_eq!(read_back.element_size(), 12);
 }
 
 #[test]
 fn table_mut_set_out_of_bounds() {
-    let mut buf = [0u8; 8];
+    let mut buf = [0u8; 12];
     let mut table = SegmentTableMut::from_bytes(&mut buf, 1).unwrap();
-    assert!(table.set_descriptor(1, &SegmentDescriptor::new(0, 0, 1)).is_err());
+    assert!(table.set_descriptor(1, &SegmentDescriptor::new(0, 0, 0, 1)).is_err());
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -276,7 +299,7 @@ fn slice_from_descriptor_good() {
     let buf = data.as_mut_slice();
 
     // Place 2 Entry (4-byte) elements at offset 16.
-    let desc = SegmentDescriptor::new(16, 2, 4);
+    let desc = SegmentDescriptor::new(16, 2, 2, 4);
     buf[16] = 0xAA;
     buf[17] = 0xBB;
     buf[18] = 0xCC;
@@ -300,21 +323,21 @@ fn slice_from_descriptor_good() {
 #[test]
 fn slice_wrong_element_size() {
     let data = [0u8; 64];
-    let desc = SegmentDescriptor::new(0, 1, 8); // 8 != Entry::SIZE (4)
+    let desc = SegmentDescriptor::new(0, 1, 1, 8); // 8 != Entry::SIZE (4)
     assert!(SegmentSlice::<Entry>::from_descriptor(&data, &desc).is_err());
 }
 
 #[test]
 fn slice_out_of_bounds_data() {
     let data = [0u8; 10];
-    let desc = SegmentDescriptor::new(0, 3, 4); // needs 12 bytes
+    let desc = SegmentDescriptor::new(0, 3, 3, 4); // needs 12 bytes
     assert!(SegmentSlice::<Entry>::from_descriptor(&data, &desc).is_err());
 }
 
 #[test]
 fn slice_read_out_of_bounds_index() {
     let data = [0u8; 64];
-    let desc = SegmentDescriptor::new(0, 2, 4);
+    let desc = SegmentDescriptor::new(0, 2, 2, 4);
     let slice = SegmentSlice::<Entry>::from_descriptor(&data, &desc).unwrap();
     assert!(slice.read(2).is_err());
 }
@@ -322,7 +345,7 @@ fn slice_read_out_of_bounds_index() {
 #[test]
 fn slice_empty_segment() {
     let data = [0u8; 64];
-    let desc = SegmentDescriptor::new(0, 0, 4);
+    let desc = SegmentDescriptor::new(0, 0, 0, 4);
     let slice = SegmentSlice::<Entry>::from_descriptor(&data, &desc).unwrap();
     assert!(slice.is_empty());
     assert_eq!(slice.len(), 0);
@@ -337,7 +360,7 @@ fn slice_iterate() {
     data[4..8].copy_from_slice(&[2, 0, 0, 0]);
     data[8..12].copy_from_slice(&[3, 0, 0, 0]);
 
-    let desc = SegmentDescriptor::new(0, 3, 4);
+    let desc = SegmentDescriptor::new(0, 3, 3, 4);
     let slice = SegmentSlice::<Entry>::from_descriptor(&data, &desc).unwrap();
 
     let items: Vec<Entry> = slice.iter().collect();
@@ -350,7 +373,7 @@ fn slice_iterate() {
 #[test]
 fn slice_mut_set_and_read() {
     let mut data = [0u8; 64];
-    let desc = SegmentDescriptor::new(0, 2, 4);
+    let desc = SegmentDescriptor::new(0, 2, 2, 4);
 
     let mut slice = SegmentSliceMut::<Entry>::from_descriptor(&mut data, &desc).unwrap();
     let entry = Entry { key: [0xDE, 0xAD, 0xBE, 0xEF] };
@@ -363,7 +386,7 @@ fn slice_mut_set_and_read() {
 #[test]
 fn slice_mut_out_of_bounds_set() {
     let mut data = [0u8; 64];
-    let desc = SegmentDescriptor::new(0, 2, 4);
+    let desc = SegmentDescriptor::new(0, 2, 2, 4);
     let mut slice = SegmentSliceMut::<Entry>::from_descriptor(&mut data, &desc).unwrap();
     assert!(slice.set(2, &Entry { key: [0; 4] }).is_err());
 }
@@ -379,8 +402,8 @@ fn macro_constants() {
     assert_eq!(OrderBook::FIXED_LEN, 48);  // 16 header + 32 market
     assert_eq!(OrderBook::SEGMENT_COUNT, 2);
     assert_eq!(OrderBook::TABLE_OFFSET, 48);
-    assert_eq!(OrderBook::DATA_START_OFFSET, 48 + 2 * 8); // 64
-    assert_eq!(OrderBook::MIN_ACCOUNT_SIZE, 64);
+    assert_eq!(OrderBook::DATA_START_OFFSET, 48 + 2 * 12); // 72
+    assert_eq!(OrderBook::MIN_ACCOUNT_SIZE, 72);
 }
 
 #[test]
@@ -398,9 +421,9 @@ fn macro_segmented_layout_id_differs_from_base() {
 
 #[test]
 fn macro_compute_account_size() {
-    // 2 bids, 3 asks  →  64 + 2*16 + 3*16 = 64 + 32 + 48 = 144
+    // 2 bids, 3 asks  →  72 + 2*16 + 3*16 = 72 + 32 + 48 = 152
     let size = OrderBook::compute_account_size(&[2, 3]).unwrap();
-    assert_eq!(size, 144);
+    assert_eq!(size, 152);
 }
 
 #[test]
@@ -479,13 +502,13 @@ fn macro_single_segment() {
     assert_eq!(Registry::SEGMENT_COUNT, 1);
     assert_eq!(Registry::FIXED_LEN, 16);
     assert_eq!(Registry::TABLE_OFFSET, 16);
-    assert_eq!(Registry::DATA_START_OFFSET, 16 + 8); // 24
+    assert_eq!(Registry::DATA_START_OFFSET, 16 + 12); // 28
 
     let sizes = Registry::segment_sizes();
     assert_eq!(sizes, &[4]); // Entry::SIZE = 4
 
     let size = Registry::compute_account_size(&[5]).unwrap();
-    assert_eq!(size, 24 + 5 * 4); // 44
+    assert_eq!(size, 28 + 5 * 4); // 48
 }
 
 #[test]
@@ -497,7 +520,7 @@ fn macro_init_segments_wrong_count() {
 
 #[test]
 fn segment_table_data_too_small() {
-    let data = [0u8; 60]; // Need at least 64 for OrderBook.
+    let data = [0u8; 60]; // Need at least 72 for OrderBook.
     assert!(OrderBook::segment_table(&data).is_err());
 }
 
@@ -511,7 +534,7 @@ fn iter_exact_size() {
     data[0..4].copy_from_slice(&[1, 0, 0, 0]);
     data[4..8].copy_from_slice(&[2, 0, 0, 0]);
 
-    let desc = SegmentDescriptor::new(0, 2, 4);
+    let desc = SegmentDescriptor::new(0, 2, 2, 4);
     let slice = SegmentSlice::<Entry>::from_descriptor(&data, &desc).unwrap();
     let iter = slice.iter();
     assert_eq!(iter.len(), 2);
@@ -523,9 +546,10 @@ fn iter_exact_size() {
 
 #[test]
 fn descriptor_max_values() {
-    let desc = SegmentDescriptor::new(u32::MAX, u16::MAX, u16::MAX);
+    let desc = SegmentDescriptor::new(u32::MAX, u16::MAX, u16::MAX, u16::MAX);
     assert_eq!(desc.offset(), u32::MAX);
     assert_eq!(desc.count(), u16::MAX);
+    assert_eq!(desc.capacity(), u16::MAX);
     assert_eq!(desc.element_size(), u16::MAX);
     // data_len overflows usize on 32-bit but not on 64-bit.
     // byte_range may overflow - that's OK, we just check it doesn't panic.
@@ -535,7 +559,7 @@ fn descriptor_max_values() {
 #[test]
 fn descriptor_byte_range_overflow() {
     // offset near u32::MAX + large count*size should overflow on usize.
-    let desc = SegmentDescriptor::new(u32::MAX, u16::MAX, u16::MAX);
+    let desc = SegmentDescriptor::new(u32::MAX, u16::MAX, u16::MAX, u16::MAX);
     // data_len = 65535 * 65535 = 4294836225, offset = 4294967295.
     // On 64-bit: start + len = ~8.5 billion, fits in usize → Some.
     // On 32-bit: start + len overflows usize → None.
@@ -550,15 +574,17 @@ fn descriptor_byte_range_overflow() {
 
 #[test]
 fn table_validate_out_of_order_segments() {
-    let mut buf = [0u8; 16];
+    let mut buf = [0u8; 24];
     // Seg 0 at offset 32 (comes after seg 1).
     buf[0..4].copy_from_slice(&32u32.to_le_bytes());
     buf[4..6].copy_from_slice(&1u16.to_le_bytes());
-    buf[6..8].copy_from_slice(&4u16.to_le_bytes());
+    buf[6..8].copy_from_slice(&1u16.to_le_bytes());
+    buf[8..10].copy_from_slice(&4u16.to_le_bytes());
     // Seg 1 at offset 16 (comes before seg 0).
-    buf[8..12].copy_from_slice(&16u32.to_le_bytes());
-    buf[12..14].copy_from_slice(&1u16.to_le_bytes());
-    buf[14..16].copy_from_slice(&4u16.to_le_bytes());
+    buf[12..16].copy_from_slice(&16u32.to_le_bytes());
+    buf[16..18].copy_from_slice(&1u16.to_le_bytes());
+    buf[18..20].copy_from_slice(&1u16.to_le_bytes());
+    buf[20..22].copy_from_slice(&4u16.to_le_bytes());
 
     let table = SegmentTable::from_bytes(&buf, 2).unwrap();
     assert!(table.validate(100, &[4, 4], 0).is_err());
@@ -724,10 +750,9 @@ fn segment_accessor_mut() {
 #[test]
 fn push_single_element() {
     // Start with capacity for 3 entries, 0 initial count.
-    let counts = [0u16];
     let size = Registry::compute_account_size(&[3]).unwrap();
     let mut data = vec![0u8; size];
-    Registry::init_segments(&mut data, &counts).unwrap();
+    Registry::init_segments_with_capacity(&mut data, &[3]).unwrap();
 
     let e = Entry { key: [0xAA, 0xBB, 0xCC, 0xDD] };
     Registry::push::<Entry>(&mut data, Registry::entries, &e).unwrap();
@@ -741,7 +766,7 @@ fn push_single_element() {
 fn push_multiple_elements() {
     let size = Registry::compute_account_size(&[5]).unwrap();
     let mut data = vec![0u8; size];
-    Registry::init_segments(&mut data, &[0]).unwrap();
+    Registry::init_segments_with_capacity(&mut data, &[5]).unwrap();
 
     for i in 0..5u8 {
         Registry::push::<Entry>(&mut data, Registry::entries, &Entry { key: [i, 0, 0, 0] }).unwrap();
@@ -758,7 +783,7 @@ fn push_multiple_elements() {
 fn push_exceeds_capacity() {
     let size = Registry::compute_account_size(&[2]).unwrap();
     let mut data = vec![0u8; size];
-    Registry::init_segments(&mut data, &[0]).unwrap();
+    Registry::init_segments_with_capacity(&mut data, &[2]).unwrap();
 
     Registry::push::<Entry>(&mut data, Registry::entries, &Entry { key: [1; 4] }).unwrap();
     Registry::push::<Entry>(&mut data, Registry::entries, &Entry { key: [2; 4] }).unwrap();
@@ -770,7 +795,7 @@ fn push_exceeds_capacity() {
 fn swap_remove_last() {
     let size = Registry::compute_account_size(&[3]).unwrap();
     let mut data = vec![0u8; size];
-    Registry::init_segments(&mut data, &[0]).unwrap();
+    Registry::init_segments_with_capacity(&mut data, &[3]).unwrap();
 
     let a = Entry { key: [1, 0, 0, 0] };
     let b = Entry { key: [2, 0, 0, 0] };
@@ -793,7 +818,7 @@ fn swap_remove_last() {
 fn swap_remove_middle() {
     let size = Registry::compute_account_size(&[3]).unwrap();
     let mut data = vec![0u8; size];
-    Registry::init_segments(&mut data, &[0]).unwrap();
+    Registry::init_segments_with_capacity(&mut data, &[3]).unwrap();
 
     let a = Entry { key: [1, 0, 0, 0] };
     let b = Entry { key: [2, 0, 0, 0] };
@@ -816,7 +841,7 @@ fn swap_remove_middle() {
 fn swap_remove_only_element() {
     let size = Registry::compute_account_size(&[1]).unwrap();
     let mut data = vec![0u8; size];
-    Registry::init_segments(&mut data, &[0]).unwrap();
+    Registry::init_segments_with_capacity(&mut data, &[1]).unwrap();
 
     let e = Entry { key: [42, 0, 0, 0] };
     Registry::push::<Entry>(&mut data, 0, &e).unwrap();
@@ -833,7 +858,7 @@ fn swap_remove_only_element() {
 fn swap_remove_out_of_bounds() {
     let size = Registry::compute_account_size(&[2]).unwrap();
     let mut data = vec![0u8; size];
-    Registry::init_segments(&mut data, &[0]).unwrap();
+    Registry::init_segments_with_capacity(&mut data, &[2]).unwrap();
 
     Registry::push::<Entry>(&mut data, 0, &Entry { key: [1; 4] }).unwrap();
     assert!(Registry::swap_remove::<Entry>(&mut data, 0, 1).is_err());
@@ -874,12 +899,13 @@ fn push_then_swap_remove_all() {
 
 #[test]
 fn validate_rejects_segment_overlapping_prefix() {
-    let mut buf = [0u8; 8];
-    // Segment at offset 4, count 1, elem_size 4 → occupies [4..8).
-    // But if min_offset = 8 (data starts after table), this should fail.
+    let mut buf = [0u8; 12];
+    // Segment at offset 4, count 1, capacity 1, elem_size 4 → reserved [4..8).
+    // But if min_offset = 8 (hypothetical prefix end), this should fail.
     buf[0..4].copy_from_slice(&4u32.to_le_bytes());
     buf[4..6].copy_from_slice(&1u16.to_le_bytes());
-    buf[6..8].copy_from_slice(&4u16.to_le_bytes());
+    buf[6..8].copy_from_slice(&1u16.to_le_bytes()); // capacity = 1
+    buf[8..10].copy_from_slice(&4u16.to_le_bytes());
 
     let table = SegmentTable::from_bytes(&buf, 1).unwrap();
     // With min_offset = 0, it's fine.

@@ -5,6 +5,27 @@ All notable changes to the Jiminy workspace are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.17.0] - 2025-06-XX
+
+### Changed
+
+- **Capacity-aware `SegmentDescriptor` (breaking)**: Segment descriptors
+  are now 12 bytes (was 8). Wire format:
+  `[offset:u32][count:u16][capacity:u16][element_size:u16][flags:u16]`.
+  The `capacity` field defines the reserved region per segment;
+  `count` tracks live elements. Invariant: `count ≤ capacity`.
+- **`SegmentDescriptor::new()` takes 4 arguments**: `(offset, count,
+  capacity, element_size)` instead of 3.
+- **`SegmentTableMut::init()` takes 3-tuples**: Specs are
+  `(element_size, count, capacity)` instead of 2-tuples.
+- **`init_segments()` sets `count == capacity`** (tight fit). Previously
+  only set `count`; now both are equal, making pushed-after-init
+  impossible. Use `init_segments_with_capacity()` for dynamic push.
+- **`push` checks `count < capacity`** as its primary guard instead
+  of computing overflow from adjacent segment offsets.
+- **Validation uses reserved regions**: `validate()` checks
+  `capacity × element_size` bounds and overlap, not just live data.
+
 ## [0.16.0] - 2025-03-24
 
 ### Added
