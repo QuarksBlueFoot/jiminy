@@ -31,6 +31,19 @@ Offset  Size  Field          Description
 
 Payload fields start at byte 16.
 
+## Trust Tiers
+
+Account loading is governed by five trust tiers. See
+[SAFETY_MODEL.md](SAFETY_MODEL.md) for the full model.
+
+| Tier | Name | Method | Validation |
+|------|------|--------|------------|
+| 1 | **Verified** | `load()` / `load_mut()` | owner + disc + version + layout_id + exact size |
+| 2 | **Foreign Verified** | `load_foreign()` | owner + layout_id + exact size |
+| 3 | **Compatibility** | `validate_version_compatible()` | owner + disc + version + min size (no layout_id) |
+| 4 | **Unsafe** | `load_unchecked()` | none (`unsafe`) |
+| 5 | **Unverified Overlay** | `load_unverified_overlay()` | header + layout_id if present, fallback to overlay |
+
 ## Cross-Program Read Protocol
 
 To read a Jiminy account owned by another program:

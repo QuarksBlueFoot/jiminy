@@ -70,8 +70,12 @@ pub struct DecodedSegment {
     pub element_type: &'static str,
     /// Number of active elements.
     pub count: u16,
+    /// Maximum element capacity.
+    pub capacity: u16,
     /// Size of each element in bytes.
     pub element_size: u16,
+    /// Reserved flags.
+    pub flags: u16,
     /// Byte offset of the segment data within the account.
     pub offset: u32,
     /// Raw element data (count × element_size bytes).
@@ -93,7 +97,7 @@ pub struct DecodedAccount {
 ///
 /// Returns `None` if the data is too short for the manifest's total size.
 pub fn decode_account(manifest: &LayoutManifest, data: &[u8]) -> Option<DecodedAccount> {
-    if data.len() < manifest.total_size() {
+    if data.len() < manifest.min_size() {
         return None;
     }
 
@@ -135,16 +139,18 @@ pub fn decode_account(manifest: &LayoutManifest, data: &[u8]) -> Option<DecodedA
     if !manifest.segments.is_empty() {
         let table_offset = offset; // end of fixed fields
         let seg_count = manifest.segments.len();
-        let table_end = table_offset + seg_count * 8; // 8 bytes per descriptor
+        let table_end = table_offset + seg_count * 12; // 12 bytes per descriptor
 
         if data.len() >= table_end {
             for (i, seg_desc) in manifest.segments.iter().enumerate() {
-                let desc_start = table_offset + i * 8;
-                let desc_bytes = &data[desc_start..desc_start + 8];
+                let desc_start = table_offset + i * 12;
+                let desc_bytes = &data[desc_start..desc_start + 12];
 
                 let seg_offset = u32::from_le_bytes(desc_bytes[0..4].try_into().ok()?);
                 let count = u16::from_le_bytes(desc_bytes[4..6].try_into().ok()?);
-                let element_size = u16::from_le_bytes(desc_bytes[6..8].try_into().ok()?);
+                let capacity = u16::from_le_bytes(desc_bytes[6..8].try_into().ok()?);
+                let element_size = u16::from_le_bytes(desc_bytes[8..10].try_into().ok()?);
+                let flags = u16::from_le_bytes(desc_bytes[10..12].try_into().ok()?);
 
                 let data_start = seg_offset as usize;
                 let data_end = data_start + (count as usize) * (element_size as usize);
@@ -159,7 +165,9 @@ pub fn decode_account(manifest: &LayoutManifest, data: &[u8]) -> Option<DecodedA
                     name: seg_desc.name,
                     element_type: seg_desc.element_type,
                     count,
+                    capacity,
                     element_size,
+                    flags,
                     offset: seg_offset,
                     data: seg_data,
                 });
@@ -282,32 +290,38 @@ mod tests {
     fn decode_segments_basic() {
         let manifest = segmented_manifest();
         // Fixed: header(16) + counter(8) = 24 bytes
-        // Segment table: 2 descriptors × 8 = 16 bytes (at offset 24)
-        // Data starts at offset 40
-        let mut data = vec![0u8; 104]; // 24 + 16 + 64 (4 elements total)
+        // Segment table: 2 descriptors × 12 = 24 bytes (at offset 24)
+        // Data starts at offset 48
+        let mut data = vec![0u8; 112]; // 24 + 24 + 64 (4 elements total)
         data[0] = 2; // disc
         data[1] = 1; // version
         data[16..24].copy_from_slice(&42u64.to_le_bytes()); // counter
 
-        // Segment 0 (bids): offset=40, count=2, element_size=16
-        data[24..28].copy_from_slice(&40u32.to_le_bytes());
+        // Segment 0 (bids): offset=48, count=2, capacity=4, element_size=16, flags=0
+        data[24..28].copy_from_slice(&48u32.to_le_bytes());
         data[28..30].copy_from_slice(&2u16.to_le_bytes());
-        data[30..32].copy_from_slice(&16u16.to_le_bytes());
+        data[30..32].copy_from_slice(&4u16.to_le_bytes());
+        data[32..34].copy_from_slice(&16u16.to_le_bytes());
+        data[34..36].copy_from_slice(&0u16.to_le_bytes());
 
-        // Segment 1 (asks): offset=72, count=2, element_size=16
-        data[32..36].copy_from_slice(&72u32.to_le_bytes());
-        data[36..38].copy_from_slice(&2u16.to_le_bytes());
-        data[38..40].copy_from_slice(&16u16.to_le_bytes());
+        // Segment 1 (asks): offset=80, count=2, capacity=4, element_size=16, flags=0
+        data[36..40].copy_from_slice(&80u32.to_le_bytes());
+        data[40..42].copy_from_slice(&2u16.to_le_bytes());
+        data[42..44].copy_from_slice(&4u16.to_le_bytes());
+        data[44..46].copy_from_slice(&16u16.to_le_bytes());
+        data[46..48].copy_from_slice(&0u16.to_le_bytes());
 
         // Write some element data
-        data[40] = 0xAA; // first bid
-        data[72] = 0xCC; // first ask
+        data[48] = 0xAA; // first bid
+        data[80] = 0xCC; // first ask
 
         let decoded = decode_account(&manifest, &data).unwrap();
         assert_eq!(decoded.segments.len(), 2);
         assert_eq!(decoded.segments[0].name, "bids");
         assert_eq!(decoded.segments[0].count, 2);
+        assert_eq!(decoded.segments[0].capacity, 4);
         assert_eq!(decoded.segments[0].element_size, 16);
+        assert_eq!(decoded.segments[0].flags, 0);
         assert_eq!(decoded.segments[0].data.len(), 32);
         assert_eq!(decoded.segments[0].data[0], 0xAA);
         assert_eq!(decoded.segments[1].name, "asks");
@@ -326,16 +340,20 @@ mod tests {
     fn decode_segments_truncated_data_returns_empty_vec() {
         let manifest = segmented_manifest();
         // Enough for fixed fields + segment table, but not for segment data
-        let mut data = vec![0u8; 40];
+        let mut data = vec![0u8; 48]; // 24 fixed + 24 table (2 × 12)
         data[0] = 2;
-        // Segment 0: offset=100, count=2, elem_size=16. Offset beyond data
+        // Segment 0: offset=100, count=2, capacity=4, elem_size=16, flags=0
         data[24..28].copy_from_slice(&100u32.to_le_bytes());
         data[28..30].copy_from_slice(&2u16.to_le_bytes());
-        data[30..32].copy_from_slice(&16u16.to_le_bytes());
-        // Segment 1: offset=200
-        data[32..36].copy_from_slice(&200u32.to_le_bytes());
-        data[36..38].copy_from_slice(&1u16.to_le_bytes());
-        data[38..40].copy_from_slice(&16u16.to_le_bytes());
+        data[30..32].copy_from_slice(&4u16.to_le_bytes());
+        data[32..34].copy_from_slice(&16u16.to_le_bytes());
+        data[34..36].copy_from_slice(&0u16.to_le_bytes());
+        // Segment 1: offset=200, count=1, capacity=4, elem_size=16, flags=0
+        data[36..40].copy_from_slice(&200u32.to_le_bytes());
+        data[40..42].copy_from_slice(&1u16.to_le_bytes());
+        data[42..44].copy_from_slice(&4u16.to_le_bytes());
+        data[44..46].copy_from_slice(&16u16.to_le_bytes());
+        data[46..48].copy_from_slice(&0u16.to_le_bytes());
 
         let decoded = decode_account(&manifest, &data).unwrap();
         assert_eq!(decoded.segments.len(), 2);

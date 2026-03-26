@@ -300,4 +300,17 @@ contract and will not change without a major version bump.
 | Le* types (Phase 1) | Segment elements use Le* types for alignment-1 safety |
 | Borrow-splitting (Phase 2) | `split_fields` works for the fixed portion; segment access is separate |
 | Manifest (Phase 3) | `LayoutManifest` gains a `segments` field describing dynamic regions |
-| Interface (Phase 4) | `jiminy_interface!` can declare foreign segmented layouts for read-only access |
+| Interface (Phase 4) | `segmented_interface!` provides read-only cross-program views of segmented accounts, including segment table access, typed segment reads, and segment validation. |
+
+## Known Limitations
+
+1. **Segment descriptors are not included in `layout_id`.** The
+   `SEGMENTED_LAYOUT_ID` incorporates segment metadata, but the
+   standard `LAYOUT_ID` only covers fixed fields. Foreign programs
+   reading segmented accounts should verify `SEGMENTED_LAYOUT_ID`.
+
+2. **`segmented_interface!` is read-only.** Cross-program reads of
+   segmented accounts are fully supported via `segmented_interface!`
+   (Tier 2 loading, segment table access, typed segment reads,
+   validation). Mutation requires the owning program's full
+   `segmented_layout!` type.

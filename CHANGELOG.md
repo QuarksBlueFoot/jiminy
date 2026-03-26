@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.17.0] - 2025-06-XX
 
+### Added
+
+- **`segmented_interface!` macro**: Cross-program read-only views for
+  segmented accounts. Generates `SEGMENTED_LAYOUT_ID`, segment table
+  access, typed segment reads, and `load_foreign_segmented()` (Tier 2
+  with min-size validation). Enables any program to read foreign
+  segmented accounts without crate dependencies.
+- **`validate_foreign_segmented()`**: Tier 2 loading function for
+  segmented accounts using min-size checking instead of exact-size.
+- **`min_size()` on `LayoutManifest`**: Returns the minimum account
+  size for segmented layouts (`total_size + segments.len() * 12`).
+  Emitted in `export_json()` output.
+- **Schema `verify()` segment validation**: Detects zero element_size,
+  duplicate segment names, and segment/field name collisions.
+- **Schema integration test**: End-to-end lifecycle test covering
+  manifest → verify → JSON → build bytes → verify account → decode.
+
 ### Changed
 
 - **Capacity-aware `SegmentDescriptor` (breaking)**: Segment descriptors

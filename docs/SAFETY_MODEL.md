@@ -10,25 +10,13 @@ invariant Jiminy maintains and exactly how each one is enforced.
 Every account load in Jiminy runs through one of five named trust tiers.
 Higher tiers validate more; lower tiers trade safety for flexibility.
 
-```text
-  Tier 1 -- Verified            load()                    full validation
-  ──────────────────────────────────────────────────────────────────────
-  Tier 2 -- Foreign Verified     load_foreign()            cross-program ABI proof
-  ──────────────────────────────────────────────────────────────────────
-  Tier 3 -- Compatibility        validate_version_compatible()   migration helper
-  ──────────────────────────────────────────────────────────────────────
-  Tier 4 -- Unsafe               load_unchecked()          no validation (unsafe)
-  ──────────────────────────────────────────────────────────────────────
-  Tier 5 -- Unverified Overlay   load_unverified_overlay()  no ABI guarantees
-```
-
-| Tier | Name | Method | Checks | Use when |
-|------|------|--------|--------|----------|
-| 1 | **Verified** | `load()` | owner + disc + version + layout_id + exact size | Loading your own program's accounts |
+| Tier | Name | Method | Validation | Use When |
+|------|------|--------|------------|----------|
+| 1 | **Verified** | `load()` / `load_mut()` | owner + disc + version + layout_id + exact size | Loading your own program's accounts |
 | 2 | **Foreign Verified** | `load_foreign()` | owner + layout_id + exact size | Reading another program's accounts (cross-program) |
 | 3 | **Compatibility** | `validate_version_compatible()` | owner + disc + version + min size (no layout_id) | Version migration, explicitly weaker |
-| 4 | **Unsafe** | `load_unchecked()` | none | Hot-path optimization -- caller assumes all risk |
-| 5 | **Unverified Overlay** | `load_unverified_overlay()` | header if present, fallback | Indexers, explorers, diagnostic tooling |
+| 4 | **Unsafe** | `load_unchecked()` | none (`unsafe`) | Hot path — caller assumes all risk |
+| 5 | **Unverified Overlay** | `load_unverified_overlay()` | header + layout_id if present, fallback to overlay | Indexers, explorers, diagnostic tooling |
 
 ## 1. Zero-Init Before Header Write
 
@@ -74,7 +62,7 @@ The tiered loading API in `zero_copy_layout!` generates:
 | 2 | Foreign Verified | `Layout::load_foreign(account, owner)` | safe | owner + layout_id + exact size |
 | 3 | Compatibility | `validate_version_compatible(...)` | safe | owner + disc + version + min size (no layout_id) |
 | 4 | Unsafe | `Layout::load_unchecked(data)` | **unsafe** | none |
-| 5 | Unverified Overlay | `Layout::load_unverified_overlay(data)` | safe | header if present, fallback to overlay |
+| 5 | Unverified Overlay | `Layout::load_unverified_overlay(data)` | safe | header + layout_id if present, fallback to overlay |
 
 `load_unchecked` is `unsafe` by design. This creates syntactic friction
 that pushes developers toward the validated `load()` path.

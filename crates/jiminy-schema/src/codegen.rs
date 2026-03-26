@@ -185,14 +185,18 @@ fn emit_segment_types(out: &mut String, manifest: &LayoutManifest) {
     writeln!(out, "export interface SegmentDescriptor {{").unwrap();
     writeln!(out, "  offset: number;").unwrap();
     writeln!(out, "  count: number;").unwrap();
+    writeln!(out, "  capacity: number;").unwrap();
     writeln!(out, "  elementSize: number;").unwrap();
+    writeln!(out, "  flags: number;").unwrap();
     writeln!(out, "}}").unwrap();
     writeln!(out).unwrap();
     writeln!(out, "function readSegmentDescriptor(view: DataView, pos: number): SegmentDescriptor {{").unwrap();
     writeln!(out, "  return {{").unwrap();
     writeln!(out, "    offset: view.getUint32(pos, true),").unwrap();
     writeln!(out, "    count: view.getUint16(pos + 4, true),").unwrap();
-    writeln!(out, "    elementSize: view.getUint16(pos + 6, true),").unwrap();
+    writeln!(out, "    capacity: view.getUint16(pos + 6, true),").unwrap();
+    writeln!(out, "    elementSize: view.getUint16(pos + 8, true),").unwrap();
+    writeln!(out, "    flags: view.getUint16(pos + 10, true),").unwrap();
     writeln!(out, "  }};").unwrap();
     writeln!(out, "}}").unwrap();
     writeln!(out).unwrap();
@@ -212,14 +216,14 @@ fn emit_segment_types(out: &mut String, manifest: &LayoutManifest) {
 
     // Decoder function
     writeln!(out, "export function decode{}Segments(data: Uint8Array): {}Segments {{", manifest.name, manifest.name).unwrap();
-    let table_end = fixed_size + seg_count * 8;
+    let table_end = fixed_size + seg_count * 12;
     writeln!(out, "  if (data.length < {}) {{", table_end).unwrap();
     writeln!(out, "    throw new Error('Account data too short for segment table: expected at least {} bytes, got ' + data.length);", table_end).unwrap();
     writeln!(out, "  }}").unwrap();
     writeln!(out, "  const view = new DataView(data.buffer, data.byteOffset, data.length);").unwrap();
 
     for (i, seg) in manifest.segments.iter().enumerate() {
-        let desc_off = fixed_size + i * 8;
+        let desc_off = fixed_size + i * 12;
         writeln!(out, "  const {}_desc = readSegmentDescriptor(view, {});", seg.name, desc_off).unwrap();
     }
     writeln!(out).unwrap();

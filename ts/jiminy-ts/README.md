@@ -90,7 +90,7 @@ console.log(stake.stakeAmount, stake.activationEpoch);
 
 | Export | Description |
 |--------|-------------|
-| `SEGMENT_DESCRIPTOR_SIZE` | Descriptor size constant (8) |
+| `SEGMENT_DESCRIPTOR_SIZE` | Descriptor size constant (12) |
 | `SegmentDescriptor` | Decoded descriptor interface |
 | `readSegmentDescriptor(data, pos)` | Read one descriptor |
 | `readSegmentTable(data, offset, count)` | Read full descriptor table |

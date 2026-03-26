@@ -169,7 +169,11 @@ pub struct LayoutManifest {
 }
 
 impl LayoutManifest {
-    /// Total size of the account in bytes (sum of all field sizes).
+    /// Size of the fixed-field portion in bytes (sum of all field sizes).
+    ///
+    /// For non-segmented layouts this equals the full account size.
+    /// For segmented layouts, the minimum account size is larger —
+    /// use [`min_size()`](Self::min_size) instead.
     pub const fn total_size(&self) -> usize {
         let mut total = 0;
         let mut i = 0;
@@ -178,6 +182,15 @@ impl LayoutManifest {
             i += 1;
         }
         total
+    }
+
+    /// Minimum account size in bytes: fixed fields + segment table.
+    ///
+    /// For non-segmented layouts this equals [`total_size()`](Self::total_size).
+    /// For segmented layouts this adds `segment_count × 12` for the
+    /// descriptor table (but no element data).
+    pub const fn min_size(&self) -> usize {
+        self.total_size() + self.segments.len() * 12
     }
 
     /// Number of fields in the layout.
@@ -249,6 +262,9 @@ impl LayoutManifest {
         }
         s.push_str("\",\n");
         writeln!(s, "  \"total_size\": {},", self.total_size()).unwrap();
+        if !self.segments.is_empty() {
+            writeln!(s, "  \"min_size\": {},", self.min_size()).unwrap();
+        }
         s.push_str("  \"fields\": [\n");
         let mut offset = 0usize;
         for (i, field) in self.fields.iter().enumerate() {
@@ -303,6 +319,9 @@ impl LayoutManifest {
     /// - The first field is a `Header` with size 16
     /// - No duplicate field names exist
     /// - `total_size()` equals the sum of field sizes
+    /// - Segment element sizes are non-zero (if any)
+    /// - No duplicate segment names
+    /// - No segment names collide with field names
     ///
     /// This does **not** recompute `layout_id` (that would require a
     /// SHA-256 dependency). Use [`hash_input()`](Self::hash_input) to
@@ -329,11 +348,40 @@ impl LayoutManifest {
             }
         }
 
-        // No duplicate names.
+        // No duplicate field names.
         for (i, a) in self.fields.iter().enumerate() {
             for b in &self.fields[i + 1..] {
                 if a.name == b.name {
                     return Err(format!("duplicate field name '{}'", a.name));
+                }
+            }
+        }
+
+        // ── Segment validation ───────────────────────────────────────
+
+        for seg in self.segments {
+            if seg.element_size == 0 {
+                return Err(format!("segment '{}' has zero element_size", seg.name));
+            }
+        }
+
+        // No duplicate segment names.
+        for (i, a) in self.segments.iter().enumerate() {
+            for b in &self.segments[i + 1..] {
+                if a.name == b.name {
+                    return Err(format!("duplicate segment name '{}'", a.name));
+                }
+            }
+        }
+
+        // No segment name collides with a field name.
+        for seg in self.segments {
+            for field in self.fields {
+                if seg.name == field.name {
+                    return Err(format!(
+                        "segment name '{}' collides with field name",
+                        seg.name,
+                    ));
                 }
             }
         }
@@ -352,7 +400,7 @@ impl LayoutManifest {
     /// manifest's internal consistency). Use this to validate that
     /// on-chain data belongs to the expected account type.
     pub fn verify_account(&self, data: &[u8]) -> Result<(), &'static str> {
-        let expected_size = self.total_size();
+        let expected_size = self.min_size();
         if data.len() < expected_size {
             return Err("account data too small for manifest");
         }
@@ -851,5 +899,161 @@ mod tests {
         };
         let json = manifest.export_json();
         assert!(json.contains(&format!("\"version\": \"{}\"", MANIFEST_VERSION)));
+    }
+
+    // ── min_size tests ───────────────────────────────────────────────
+
+    #[test]
+    fn min_size_equals_total_size_without_segments() {
+        let manifest = LayoutManifest {
+            name: "Vault",
+            version: 1,
+            discriminator: 1,
+            layout_id: [0; 8],
+            fields: &[
+                FieldDescriptor { name: "header", canonical_type: CanonicalType::Header, size: 16 },
+                FieldDescriptor { name: "balance", canonical_type: CanonicalType::U64, size: 8 },
+            ],
+            segments: &[],
+        };
+        assert_eq!(manifest.min_size(), manifest.total_size());
+        assert_eq!(manifest.min_size(), 24);
+    }
+
+    #[test]
+    fn min_size_includes_segment_table() {
+        let manifest = LayoutManifest {
+            name: "OrderBook",
+            version: 1,
+            discriminator: 5,
+            layout_id: [0; 8],
+            fields: &[
+                FieldDescriptor { name: "header", canonical_type: CanonicalType::Header, size: 16 },
+                FieldDescriptor { name: "market", canonical_type: CanonicalType::Pubkey, size: 32 },
+            ],
+            segments: &[
+                SegmentFieldDescriptor { name: "bids", element_type: "Order", element_size: 48 },
+                SegmentFieldDescriptor { name: "asks", element_type: "Order", element_size: 48 },
+            ],
+        };
+        // total_size = 16 + 32 = 48 (fixed only)
+        assert_eq!(manifest.total_size(), 48);
+        // min_size = 48 + 2 * 12 = 72 (fixed + table)
+        assert_eq!(manifest.min_size(), 72);
+    }
+
+    // ── Segment verification tests ───────────────────────────────────
+
+    #[test]
+    fn verify_rejects_zero_element_size_segment() {
+        let manifest = LayoutManifest {
+            name: "Bad",
+            version: 1,
+            discriminator: 1,
+            layout_id: [0; 8],
+            fields: &[
+                FieldDescriptor { name: "header", canonical_type: CanonicalType::Header, size: 16 },
+            ],
+            segments: &[
+                SegmentFieldDescriptor { name: "items", element_type: "Item", element_size: 0 },
+            ],
+        };
+        let err = manifest.verify().unwrap_err();
+        assert!(err.contains("zero element_size"));
+    }
+
+    #[test]
+    fn verify_rejects_duplicate_segment_names() {
+        let manifest = LayoutManifest {
+            name: "Bad",
+            version: 1,
+            discriminator: 1,
+            layout_id: [0; 8],
+            fields: &[
+                FieldDescriptor { name: "header", canonical_type: CanonicalType::Header, size: 16 },
+            ],
+            segments: &[
+                SegmentFieldDescriptor { name: "items", element_type: "A", element_size: 16 },
+                SegmentFieldDescriptor { name: "items", element_type: "B", element_size: 32 },
+            ],
+        };
+        let err = manifest.verify().unwrap_err();
+        assert!(err.contains("duplicate segment"));
+    }
+
+    #[test]
+    fn verify_rejects_segment_field_name_collision() {
+        let manifest = LayoutManifest {
+            name: "Bad",
+            version: 1,
+            discriminator: 1,
+            layout_id: [0; 8],
+            fields: &[
+                FieldDescriptor { name: "header", canonical_type: CanonicalType::Header, size: 16 },
+                FieldDescriptor { name: "items", canonical_type: CanonicalType::U64, size: 8 },
+            ],
+            segments: &[
+                SegmentFieldDescriptor { name: "items", element_type: "Item", element_size: 16 },
+            ],
+        };
+        let err = manifest.verify().unwrap_err();
+        assert!(err.contains("collides with field"));
+    }
+
+    #[test]
+    fn verify_accepts_valid_segmented_manifest() {
+        let manifest = LayoutManifest {
+            name: "Pool",
+            version: 1,
+            discriminator: 3,
+            layout_id: [0; 8],
+            fields: &[
+                FieldDescriptor { name: "header", canonical_type: CanonicalType::Header, size: 16 },
+                FieldDescriptor { name: "total", canonical_type: CanonicalType::U64, size: 8 },
+            ],
+            segments: &[
+                SegmentFieldDescriptor { name: "stakes", element_type: "StakeEntry", element_size: 48 },
+            ],
+        };
+        assert!(manifest.verify().is_ok());
+    }
+
+    #[test]
+    fn export_json_includes_min_size_for_segments() {
+        let manifest = LayoutManifest {
+            name: "OrderBook",
+            version: 1,
+            discriminator: 5,
+            layout_id: [0; 8],
+            fields: &[
+                FieldDescriptor { name: "header", canonical_type: CanonicalType::Header, size: 16 },
+                FieldDescriptor { name: "market", canonical_type: CanonicalType::Pubkey, size: 32 },
+            ],
+            segments: &[
+                SegmentFieldDescriptor { name: "bids", element_type: "Order", element_size: 48 },
+                SegmentFieldDescriptor { name: "asks", element_type: "Order", element_size: 48 },
+            ],
+        };
+        let json = manifest.export_json();
+        assert!(json.contains("\"total_size\": 48"));
+        assert!(json.contains("\"min_size\": 72"));
+    }
+
+    #[test]
+    fn export_json_omits_min_size_for_non_segmented() {
+        let manifest = LayoutManifest {
+            name: "Vault",
+            version: 1,
+            discriminator: 1,
+            layout_id: [0; 8],
+            fields: &[
+                FieldDescriptor { name: "header", canonical_type: CanonicalType::Header, size: 16 },
+                FieldDescriptor { name: "balance", canonical_type: CanonicalType::U64, size: 8 },
+            ],
+            segments: &[],
+        };
+        let json = manifest.export_json();
+        assert!(json.contains("\"total_size\": 24"));
+        assert!(!json.contains("\"min_size\""));
     }
 }

@@ -6,13 +6,13 @@
 //!
 //! ## Trust Tiers
 //!
-//! | Tier | Name | Method | Validates |
-//! |------|------|--------|-----------|
-//! | 1 | **Verified** | `load()` | owner + disc + version + exact size + layout_id |
-//! | 2 | **Foreign Verified** | `load_foreign()` | owner + exact size + layout_id |
-//! | 3 | **Compatibility** | `validate_version_compatible()` | owner + disc + version + min size (no layout_id) |
-//! | 4 | **Unsafe** | `load_unchecked()` | **none** (`unsafe`) |
-//! | 5 | **Unverified Overlay** | `load_unverified_overlay()` | header + layout_id if present, fallback to overlay |
+//! | Tier | Name | Method | Validation | Use When |
+//! |------|------|--------|------------|----------|
+//! | 1 | **Verified** | `load()` / `load_mut()` | owner + disc + version + layout_id + exact size | Loading your own program's accounts |
+//! | 2 | **Foreign Verified** | `load_foreign()` | owner + layout_id + exact size | Reading another program's accounts (cross-program) |
+//! | 3 | **Compatibility** | `validate_version_compatible()` | owner + disc + version + min size (no layout_id) | Version migration, explicitly weaker |
+//! | 4 | **Unsafe** | `load_unchecked()` | none (`unsafe`) | Hot path — caller assumes all risk |
+//! | 5 | **Unverified Overlay** | `load_unverified_overlay()` | header + layout_id if present, fallback to overlay | Indexers, explorers, diagnostic tooling |
 //!
 //! Tiers 1–2 are the standard paths. Tier 3 is a migration helper that
 //! trades `layout_id` verification for version-range flexibility. Tier 4
@@ -86,6 +86,43 @@ pub fn validate_foreign<'a>(
     let data = account.try_borrow()?;
 
     if data.len() != expected_size {
+        return Err(ProgramError::AccountDataTooSmall);
+    }
+
+    check_layout_id(&data, layout_id)?;
+    Ok(data)
+}
+
+/// **Tier 2 — Cross-program read for segmented accounts.**
+///
+/// Same as [`validate_foreign`] but uses minimum-size checking
+/// instead of exact-size. Segmented accounts have variable length
+/// depending on capacity, so exact-size matching is not possible.
+///
+/// Checks:
+/// - Owner matches `expected_owner`
+/// - Data length ≥ `min_size` (fixed prefix + segment table)
+/// - `layout_id` matches (uses `SEGMENTED_LAYOUT_ID`)
+///
+/// # Errors
+///
+/// - `IllegalOwner`: account is not owned by `expected_owner`.
+/// - `AccountDataTooSmall`: account data is smaller than `min_size`.
+/// - `InvalidAccountData`: `layout_id` does not match.
+#[inline(always)]
+pub fn validate_foreign_segmented<'a>(
+    account: &'a AccountView,
+    expected_owner: &Address,
+    layout_id: &[u8; 8],
+    min_size: usize,
+) -> Result<Ref<'a, [u8]>, ProgramError> {
+    if !account.owned_by(expected_owner) {
+        return Err(ProgramError::IllegalOwner);
+    }
+
+    let data = account.try_borrow()?;
+
+    if data.len() < min_size {
         return Err(ProgramError::AccountDataTooSmall);
     }
 

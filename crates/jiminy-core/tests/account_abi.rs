@@ -1194,3 +1194,244 @@ mod interface_tests {
         assert_ne!(PoolV2::LAYOUT_ID, foreign_v2::PoolV2Mismatch::LAYOUT_ID);
     }
 }
+
+// ── segmented_interface! tests ──────────────────────────────────────────────
+
+mod segmented_interface_tests {
+    use jiminy_core::account::{AccountHeader, Pod, FixedLayout};
+    use jiminy_core::abi::LeU64;
+    use jiminy_core::segmented_layout;
+    use pinocchio::Address;
+
+    const FOREIGN_PROGRAM: Address = Address::new_from_array([0xBB; 32]);
+
+    // Element type shared by both programs.
+    #[repr(C)]
+    #[derive(Clone, Copy)]
+    #[allow(dead_code)]
+    struct Order {
+        price: LeU64,
+        qty:   LeU64,
+    }
+    unsafe impl Pod for Order {}
+    impl FixedLayout for Order { const SIZE: usize = 16; }
+
+    // ── Program A's original segmented layout ────────────────────
+
+    segmented_layout! {
+        pub struct OrderBook, discriminator = 5, version = 1 {
+            header: AccountHeader = 16,
+            market: Address       = 32,
+        } segments {
+            bids: Order = 16,
+            asks: Order = 16,
+        }
+    }
+
+    // ── Program B's read-only interface ──────────────────────────
+
+    mod foreign_seg {
+        use jiminy_core::account::{AccountHeader, Pod, FixedLayout};
+        use jiminy_core::abi::LeU64;
+        use jiminy_core::segmented_interface;
+        use pinocchio::Address;
+
+        const FOREIGN_PROGRAM: Address = Address::new_from_array([0xBB; 32]);
+
+        #[repr(C)]
+        #[derive(Clone, Copy)]
+        pub struct Order {
+            pub price: LeU64,
+            pub qty:   LeU64,
+        }
+        unsafe impl Pod for Order {}
+        impl FixedLayout for Order { const SIZE: usize = 16; }
+
+        segmented_interface! {
+            /// Read-only view of DEX program's OrderBook.
+            pub struct OrderBook for FOREIGN_PROGRAM {
+                header: AccountHeader = 16,
+                market: Address       = 32,
+            } segments {
+                bids: Order = 16,
+                asks: Order = 16,
+            }
+        }
+    }
+
+    #[test]
+    fn segmented_interface_layout_id_matches_original() {
+        assert_eq!(
+            OrderBook::SEGMENTED_LAYOUT_ID,
+            foreign_seg::OrderBook::SEGMENTED_LAYOUT_ID,
+        );
+    }
+
+    #[test]
+    fn segmented_interface_base_layout_id_matches() {
+        // Base LAYOUT_ID (fixed fields only) should also match.
+        assert_eq!(OrderBook::LAYOUT_ID, foreign_seg::OrderBook::LAYOUT_ID);
+    }
+
+    #[test]
+    fn segmented_interface_segment_count() {
+        assert_eq!(foreign_seg::OrderBook::SEGMENT_COUNT, 2);
+    }
+
+    #[test]
+    fn segmented_interface_table_offset() {
+        assert_eq!(foreign_seg::OrderBook::TABLE_OFFSET, 48); // 16 + 32
+        assert_eq!(OrderBook::TABLE_OFFSET, foreign_seg::OrderBook::TABLE_OFFSET);
+    }
+
+    #[test]
+    fn segmented_interface_data_start_offset() {
+        // 48 (fixed) + 2 * 12 (table) = 72
+        assert_eq!(foreign_seg::OrderBook::DATA_START_OFFSET, 72);
+        assert_eq!(OrderBook::DATA_START_OFFSET, foreign_seg::OrderBook::DATA_START_OFFSET);
+    }
+
+    #[test]
+    fn segmented_interface_min_account_size() {
+        assert_eq!(foreign_seg::OrderBook::MIN_ACCOUNT_SIZE, 72);
+        assert_eq!(OrderBook::MIN_ACCOUNT_SIZE, foreign_seg::OrderBook::MIN_ACCOUNT_SIZE);
+    }
+
+    #[test]
+    fn segmented_interface_segment_sizes() {
+        assert_eq!(foreign_seg::OrderBook::segment_sizes(), &[16, 16]);
+    }
+
+    #[test]
+    fn segmented_interface_segment_indices() {
+        assert_eq!(foreign_seg::OrderBook::bids, 0);
+        assert_eq!(foreign_seg::OrderBook::asks, 1);
+        assert_eq!(foreign_seg::OrderBook::bids, OrderBook::bids);
+        assert_eq!(foreign_seg::OrderBook::asks, OrderBook::asks);
+    }
+
+    #[test]
+    fn segmented_interface_overlay_fixed_prefix() {
+        let mut data = vec![0u8; 72];
+        data[16..48].copy_from_slice(&[0xDD; 32]); // market
+
+        let overlay = foreign_seg::OrderBook::overlay(&data).unwrap();
+        assert_eq!(overlay.market, Address::new_from_array([0xDD; 32]));
+    }
+
+    #[test]
+    fn segmented_interface_read_segment_table() {
+        let mut data = vec![0u8; 136]; // 72 min + 64 data (2x2 elements)
+
+        // Init segment table.
+        // bids: offset=72, count=2, capacity=2, element_size=16, flags=0
+        data[48..52].copy_from_slice(&72u32.to_le_bytes());
+        data[52..54].copy_from_slice(&2u16.to_le_bytes());
+        data[54..56].copy_from_slice(&2u16.to_le_bytes());
+        data[56..58].copy_from_slice(&16u16.to_le_bytes());
+        data[58..60].copy_from_slice(&0u16.to_le_bytes());
+        // asks: offset=104, count=1, capacity=2, element_size=16, flags=0
+        data[60..64].copy_from_slice(&104u32.to_le_bytes());
+        data[64..66].copy_from_slice(&1u16.to_le_bytes());
+        data[66..68].copy_from_slice(&2u16.to_le_bytes());
+        data[68..70].copy_from_slice(&16u16.to_le_bytes());
+        data[70..72].copy_from_slice(&0u16.to_le_bytes());
+
+        // Write bid data
+        data[72..80].copy_from_slice(&100u64.to_le_bytes()); // bid[0].price
+        data[80..88].copy_from_slice(&50u64.to_le_bytes());  // bid[0].qty
+
+        let table = foreign_seg::OrderBook::segment_table(&data).unwrap();
+        let desc0 = table.descriptor(0).unwrap();
+        assert_eq!(desc0.offset(), 72);
+        assert_eq!(desc0.count(), 2);
+        assert_eq!(desc0.capacity(), 2);
+        assert_eq!(desc0.element_size(), 16);
+
+        // Typed segment access via interface.
+        let bids = foreign_seg::OrderBook::segment::<foreign_seg::Order>(
+            &data, foreign_seg::OrderBook::bids,
+        ).unwrap();
+        assert_eq!(bids.len(), 2);
+        let bid0 = bids.read(0).unwrap();
+        assert_eq!(bid0.price.get(), 100);
+        assert_eq!(bid0.qty.get(), 50);
+
+        let asks = foreign_seg::OrderBook::segment::<foreign_seg::Order>(
+            &data, foreign_seg::OrderBook::asks,
+        ).unwrap();
+        assert_eq!(asks.len(), 1);
+    }
+
+    #[test]
+    fn segmented_interface_validate_segments() {
+        let mut data = vec![0u8; 136];
+        // bids: offset=72, count=1, capacity=2, elem=16
+        data[48..52].copy_from_slice(&72u32.to_le_bytes());
+        data[52..54].copy_from_slice(&1u16.to_le_bytes());
+        data[54..56].copy_from_slice(&2u16.to_le_bytes());
+        data[56..58].copy_from_slice(&16u16.to_le_bytes());
+        data[58..60].copy_from_slice(&0u16.to_le_bytes());
+        // asks: offset=104, count=1, capacity=2, elem=16
+        data[60..64].copy_from_slice(&104u32.to_le_bytes());
+        data[64..66].copy_from_slice(&1u16.to_le_bytes());
+        data[66..68].copy_from_slice(&2u16.to_le_bytes());
+        data[68..70].copy_from_slice(&16u16.to_le_bytes());
+        data[70..72].copy_from_slice(&0u16.to_le_bytes());
+
+        assert!(foreign_seg::OrderBook::validate_segments(&data).is_ok());
+    }
+
+    #[test]
+    fn segmented_interface_owner_constant() {
+        assert_eq!(foreign_seg::OrderBook::OWNER, &FOREIGN_PROGRAM);
+    }
+
+    // ── Versioned segmented interface ────────────────────────────
+
+    segmented_layout! {
+        pub struct PoolV2, discriminator = 7, version = 2 {
+            header:    AccountHeader = 16,
+            authority: Address       = 32,
+        } segments {
+            stakes: Order = 16,
+        }
+    }
+
+    mod foreign_seg_v2 {
+        use jiminy_core::account::{AccountHeader, Pod, FixedLayout};
+        use jiminy_core::abi::LeU64;
+        use jiminy_core::segmented_interface;
+        use pinocchio::Address;
+
+        #[allow(dead_code)]
+        const FOREIGN_PROGRAM: Address = Address::new_from_array([0xBB; 32]);
+
+        #[repr(C)]
+        #[derive(Clone, Copy)]
+        #[allow(dead_code)]
+        pub struct Order {
+            pub price: LeU64,
+            pub qty:   LeU64,
+        }
+        unsafe impl Pod for Order {}
+        impl FixedLayout for Order { const SIZE: usize = 16; }
+
+        segmented_interface! {
+            pub struct PoolV2 for FOREIGN_PROGRAM, version = 2 {
+                header:    AccountHeader = 16,
+                authority: Address       = 32,
+            } segments {
+                stakes: Order = 16,
+            }
+        }
+    }
+
+    #[test]
+    fn versioned_segmented_interface_layout_id_matches() {
+        assert_eq!(
+            PoolV2::SEGMENTED_LAYOUT_ID,
+            foreign_seg_v2::PoolV2::SEGMENTED_LAYOUT_ID,
+        );
+    }
+}

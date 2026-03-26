@@ -78,6 +78,7 @@ The account header is what separates jiminy from a bag of utility functions. Eve
 | **Deterministic `layout_id`** | 8-byte SHA-256 fingerprint of struct name, version, field names, types, and sizes. Changes iff the schema changes. |
 | **`zero_copy_layout!`** | Declare `#[repr(C)]` structs that overlay directly onto account bytes. Generates `Pod`, `FixedLayout`, tiered loaders, and compile-time size + alignment assertions. |
 | **Alignment safety** | `zero_copy_layout!` enforces `align_of::<T>() <= 8` at compile time. Raw `u128` or any over-aligned type is a compile error. Use `LeU128` / `Le*` wrappers for 16-byte scalars. |
+| **Segmented layouts** | `segmented_layout!` extends fixed layouts with capacity-aware variable-length segments. 12-byte `SegmentDescriptor`: offset, count, capacity, element\_size, flags. Push/remove within reserved capacity; growth requires explicit realloc. |
 | **Cross-program reads** | `load_foreign()` validates `layout_id` without depending on the source program's crate. No deserialization. |
 | **Tiered loading** | `load` > `load_foreign` > `validate_version_compatible` > `load_unchecked` > `load_unverified_overlay`. Pick the trust level you need. |
 | **Version migration** | `validate_version_compatible()` for version transitions. Skips `layout_id`, so it's explicitly weaker. |
@@ -267,9 +268,9 @@ and there's nothing to forget.
 ### Docs
 </details>
 
-- **`SEGMENTED_ABI.md`**: Design for variable-length accounts with segment descriptors (implemented in v0.15.0).
+- **`SEGMENTED_ABI.md`**: Design for variable-length accounts with capacity-aware segment descriptors.
 - **`UNSAFE_INVENTORY.md`**: every `unsafe` site catalogued with file, purpose, and soundness justification.
-- **265+ Rust tests** across the workspace: 109 unit + 13 proptest + 59 segment (jiminy-core), 33 (jiminy-schema), 18 (jiminy-layouts), 25 (jiminy-anchor), plus doc tests.
+- **289+ Rust tests** across the workspace: 122 unit + 13 proptest + 59 segment (jiminy-core), 41 unit + 4 integration (jiminy-schema), 18 (jiminy-layouts), 25 (jiminy-anchor), plus doc tests.
 
 <details>
 <summary>New in 0.14</summary>
