@@ -8,7 +8,7 @@
 //! Solana's loader aligns program input to 8-byte boundaries. The
 //! functions below always check alignment on all targets and return
 //! `Err(InvalidAccountData)` if the pointer is misaligned. This prevents
-//! UB for types with alignment > 8 (e.g. `u128`). Use `Le128` / `Le*`
+//! UB for types with alignment > 8 (e.g. `u128`). Use `LeU128` / `Le*`
 //! wrappers for 16-byte scalars.
 //!
 //! - **`pod_from_bytes` / `pod_from_bytes_mut`**: return a direct
@@ -78,7 +78,7 @@ pub trait FixedLayout {
 ///
 /// Solana's loader aligns program input to 8-byte boundaries, which is
 /// sufficient for most layout types but not for alignments > 8 (e.g.
-/// `u128`). Use [`Le128`](crate::abi::Le128) for 16-byte scalars.
+/// `u128`). Use [`LeU128`](crate::abi::LeU128) for 16-byte scalars.
 /// For alignment-safe access by copy, use [`pod_read`] instead.
 #[inline(always)]
 pub fn pod_from_bytes<T: Pod + FixedLayout>(data: &[u8]) -> Result<&T, ProgramError> {
@@ -91,6 +91,7 @@ pub fn pod_from_bytes<T: Pod + FixedLayout>(data: &[u8]) -> Result<&T, ProgramEr
     if (data.as_ptr() as usize) % core::mem::align_of::<T>() != 0 {
         return Err(ProgramError::InvalidAccountData);
     }
+    // SAFETY: T: Pod (all bit patterns valid), length and alignment checked above.
     Ok(unsafe { &*(data.as_ptr() as *const T) })
 }
 
@@ -108,6 +109,8 @@ pub fn pod_from_bytes_mut<T: Pod + FixedLayout>(data: &mut [u8]) -> Result<&mut 
     if (data.as_ptr() as usize) % core::mem::align_of::<T>() != 0 {
         return Err(ProgramError::InvalidAccountData);
     }
+    // SAFETY: T: Pod (all bit patterns valid), length and alignment checked above.
+    // Exclusive access guaranteed by &mut.
     Ok(unsafe { &mut *(data.as_mut_ptr() as *mut T) })
 }
 
@@ -124,6 +127,7 @@ pub fn pod_read<T: Pod + FixedLayout>(data: &[u8]) -> Result<T, ProgramError> {
     if data.len() < T::SIZE {
         return Err(ProgramError::AccountDataTooSmall);
     }
+    // SAFETY: T: Pod, length checked. read_unaligned handles any alignment.
     Ok(unsafe { core::ptr::read_unaligned(data.as_ptr() as *const T) })
 }
 
@@ -135,6 +139,7 @@ pub fn pod_write<T: Pod + FixedLayout>(data: &mut [u8], value: &T) -> Result<(),
     }
     let src = value as *const T as *const u8;
     let dst = data.as_mut_ptr();
+    // SAFETY: T: Pod, length checked. copy_nonoverlapping copies T::SIZE bytes.
     unsafe {
         core::ptr::copy_nonoverlapping(src, dst, T::SIZE);
     }

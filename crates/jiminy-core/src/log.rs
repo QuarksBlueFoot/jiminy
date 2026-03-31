@@ -22,6 +22,7 @@
 #[inline(always)]
 fn sol_log(msg: &str) {
     #[cfg(target_os = "solana")]
+    // SAFETY: sol_log_ expects a valid pointer and length. msg is a valid &str.
     unsafe {
         pinocchio::syscalls::sol_log_(msg.as_ptr(), msg.len() as u64);
     }
@@ -84,7 +85,8 @@ pub fn log_val(label: &str, value: u64) {
         }
     }
 
-    // SAFETY: buf[..pos] is valid ASCII.
+    // SAFETY: buf[..pos] contains only ASCII digits, ':', ' ', and label bytes
+    // (validated as bytes from &str). All are valid UTF-8.
     let msg = unsafe { core::str::from_utf8_unchecked(&buf[..pos]) };
     sol_log(msg);
 }
@@ -128,6 +130,7 @@ pub fn log_signed(label: &str, value: i64) {
                 j -= 1;
             }
         }
+        // SAFETY: buf contains only ASCII digits, '-', ':', ' ', and label bytes.
         let msg = unsafe { core::str::from_utf8_unchecked(&buf[..pos]) };
         sol_log(msg);
     } else {
@@ -182,6 +185,7 @@ pub fn log_addr(label: &str, addr: &pinocchio::Address) {
     buf[pos] = b']';
     pos += 1;
 
+    // SAFETY: buf contains only ASCII hex digits, ':', ' ', '[', ']', '.', and label bytes.
     let msg = unsafe { core::str::from_utf8_unchecked(&buf[..pos]) };
     sol_log(msg);
 }
@@ -201,6 +205,7 @@ pub fn log_bool(label: &str, value: bool) {
         buf[label_len] = b':';
         buf[label_len + 1] = b' ';
         buf[label_len + 2] = b'Y';
+        // SAFETY: buf contains only label bytes (valid UTF-8) plus ASCII ':', ' ', 'Y'.
         let msg = unsafe { core::str::from_utf8_unchecked(&buf[..label_len + 3]) };
         sol_log(msg);
     } else {
@@ -211,6 +216,7 @@ pub fn log_bool(label: &str, value: bool) {
         buf[label_len] = b':';
         buf[label_len + 1] = b' ';
         buf[label_len + 2] = b'N';
+        // SAFETY: buf contains only label bytes (valid UTF-8) plus ASCII ':', ' ', 'N'.
         let msg = unsafe { core::str::from_utf8_unchecked(&buf[..label_len + 3]) };
         sol_log(msg);
     }

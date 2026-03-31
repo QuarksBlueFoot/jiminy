@@ -26,6 +26,7 @@ pub fn safe_close(account: &AccountView, destination: &AccountView) -> ProgramRe
     let new_dest = checked_add(destination.lamports(), lamports)?;
     destination.set_lamports(new_dest);
     account.set_lamports(0);
+    // SAFETY: No active borrows on account -- we only used .lamports() (Copy value).
     unsafe { account.close_unchecked() };
     Ok(())
 }
@@ -52,6 +53,8 @@ pub fn safe_close_with_sentinel(
     let new_dest = checked_add(destination.lamports(), lamports)?;
     destination.set_lamports(new_dest);
     account.set_lamports(0);
+    // SAFETY: The try_borrow_mut() scope above has ended (data dropped).
+    // No active borrows on account remain.
     unsafe { account.close_unchecked() };
     Ok(())
 }

@@ -380,6 +380,8 @@ pub fn check_program_allowed(
     account: &AccountView,
     allowed: &[Address],
 ) -> ProgramResult {
+    // SAFETY: account.owner() reads the owner field from the AccountView's backing data.
+    // No aliasing mutable references exist; we only read.
     let owner = unsafe { account.owner() };
     let mut i = 0;
     while i < allowed.len() {

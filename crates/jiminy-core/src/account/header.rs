@@ -57,6 +57,7 @@ impl AccountHeader {
         if data.len() < HEADER_LEN {
             return Err(ProgramError::AccountDataTooSmall);
         }
+        // SAFETY: Same as from_bytes, plus exclusive access via &mut.
         Ok(unsafe { &mut *(data.as_mut_ptr() as *mut Self) })
     }
 }

@@ -121,6 +121,7 @@ fn get_clock_buf() -> Result<[u8; CLOCK_LEN], ProgramError> {
     #[cfg(target_os = "solana")]
     {
         let mut buf = [0u8; CLOCK_LEN];
+        // SAFETY: buf is CLOCK_LEN bytes; sol_get_clock_sysvar writes at most that many.
         let rc = unsafe { sol_get_clock_sysvar(buf.as_mut_ptr()) };
         if rc != 0 {
             return Err(ProgramError::InvalidArgument);
@@ -139,6 +140,7 @@ fn get_rent_buf() -> Result<[u8; RENT_LEN], ProgramError> {
     #[cfg(target_os = "solana")]
     {
         let mut buf = [0u8; RENT_LEN];
+        // SAFETY: buf is RENT_LEN bytes; sol_get_rent_sysvar writes at most that many.
         let rc = unsafe { sol_get_rent_sysvar(buf.as_mut_ptr()) };
         if rc != 0 {
             return Err(ProgramError::InvalidArgument);

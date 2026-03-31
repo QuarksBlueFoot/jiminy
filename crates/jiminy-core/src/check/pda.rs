@@ -34,6 +34,7 @@ pub fn derive_address<const N: usize>(
     let mut i = 0;
 
     while i < N {
+        // SAFETY: i < N < MAX_SEEDS (compile-time assert above), so index is in bounds.
         unsafe {
             data.get_unchecked_mut(i).write(seeds.get_unchecked(i));
         }
@@ -42,6 +43,8 @@ pub fn derive_address<const N: usize>(
 
     let bump_seed = [bump.unwrap_or_default()];
 
+    // SAFETY: After the seed loop, i <= N < MAX_SEEDS. With bump at most i = N+1.
+    // MAX_SEEDS + 2 elements in data, so i+1 is always in bounds.
     unsafe {
         if bump.is_some() {
             data.get_unchecked_mut(i).write(&bump_seed);
@@ -55,6 +58,8 @@ pub fn derive_address<const N: usize>(
     {
         let mut pda = MaybeUninit::<[u8; 32]>::uninit();
 
+        // SAFETY: sol_sha256 writes 32 bytes to the output pointer.
+        // data contains (i + 2) initialized (ptr, len) pairs.
         unsafe {
             pinocchio::syscalls::sol_sha256(
                 data.as_ptr() as *const u8,
@@ -63,6 +68,7 @@ pub fn derive_address<const N: usize>(
             );
         }
 
+        // SAFETY: sol_sha256 wrote 32 bytes into pda, so it is fully initialized.
         unsafe { pda.assume_init() }
     }
 
