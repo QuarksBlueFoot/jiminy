@@ -35,6 +35,10 @@ pub fn emit_slices(segments: &[&[u8]]) {
         // sol_log_data expects a pointer to an array of (ptr, len) pairs.
         // On BPF, a Rust slice &[u8] is (ptr: *const u8, len: usize) which
         // is exactly 16 bytes. We pass the segments slice directly.
+        // SAFETY: segments is a valid &[&[u8]] slice whose repr matches the
+        // (ptr, len) pair layout expected by sol_log_data.  The pointer and
+        // length are derived from a live borrow so they remain valid for the
+        // duration of the syscall.
         unsafe {
             pinocchio::syscalls::sol_log_data(
                 segments.as_ptr() as *const u8,
