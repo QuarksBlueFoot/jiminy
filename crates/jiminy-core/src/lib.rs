@@ -2,10 +2,10 @@
 //! # jiminy-core
 //!
 //! Account layout, validation, math, PDA, and all the zero-copy primitives
-//! your pinocchio program needs before it touches a token.
+//! your Hopper program needs before it touches a token.
 //!
 //! This is the systems layer. Everything here works with raw `AccountView`
-//! bytes and has zero dependencies beyond pinocchio itself. If your program
+//! bytes and has zero dependencies beyond hopper-runtime itself. If your program
 //! never calls SPL Token, this crate is all you need.
 //!
 //! ```rust,ignore
@@ -72,12 +72,12 @@ pub mod abi;
 pub mod compat;
 pub mod interface;
 
-// ── Pinocchio re-exports ─────────────────────────────────────────────────────
+// ── Hopper Runtime re-exports ─────────────────────────────────────────────────
 //
-// Downstream crates depend on just jiminy-core; they get pinocchio for free.
+// Downstream crates depend on just jiminy-core; they get hopper-runtime for free.
 
-pub use pinocchio;
-pub use pinocchio::{error::ProgramError, AccountView, Address, ProgramResult};
+pub use hopper_runtime;
+pub use hopper_runtime::{ProgramError, AccountView, Address, ProgramResult};
 
 // ── Internal helpers (used by macros, not public API) ────────────────────────
 
@@ -215,13 +215,13 @@ macro_rules! check_accounts_unique {
     // Base case: two accounts.
     ($a:expr, $b:expr) => {
         if $a.address() == $b.address() {
-            return Err($crate::pinocchio::error::ProgramError::InvalidArgument);
+            return Err($crate::ProgramError::InvalidArgument);
         }
     };
     // Recursive: compare head against every tail, then recurse on tail.
     ($head:expr, $($tail:expr),+ $(,)?) => {
         $( if $head.address() == $tail.address() {
-            return Err($crate::pinocchio::error::ProgramError::InvalidArgument);
+            return Err($crate::ProgramError::InvalidArgument);
         } )+
         $crate::check_accounts_unique!($($tail),+);
     };
@@ -257,10 +257,10 @@ macro_rules! error_codes {
         }
 
         $(
-            impl From<errors::$name> for $crate::pinocchio::error::ProgramError {
+            impl From<errors::$name> for $crate::ProgramError {
                 #[inline(always)]
                 fn from(_: errors::$name) -> Self {
-                    $crate::pinocchio::error::ProgramError::Custom(errors::$name::CODE)
+                    $crate::ProgramError::Custom(errors::$name::CODE)
                 }
             }
         )+
@@ -309,7 +309,7 @@ macro_rules! instruction_dispatch {
         let tag = ix.read_u8()?;
         match tag {
             $( $tag => { let _ = &ix; $handler } )+
-            _ => Err($crate::pinocchio::error::ProgramError::InvalidInstructionData),
+            _ => Err($crate::ProgramError::InvalidInstructionData),
         }
     }};
 }
@@ -323,7 +323,7 @@ macro_rules! instruction_dispatch {
 /// Follow with `Layout::load_checked_mut()` to get a mutable overlay
 /// for setting field values.
 ///
-/// **Note:** Requires `pinocchio_system` in scope. This macro is re-exported
+/// **Note:** Requires `hopper_runtime::system` in scope. This macro is re-exported
 /// by the root `jiminy` crate which provides it automatically.
 ///
 /// ```rust,ignore
@@ -346,7 +346,7 @@ macro_rules! init_account {
     ($payer:expr, $account:expr, $program_id:expr, $Layout:ty) => {{
         let space = <$Layout>::LEN as u64;
         let lamports = $crate::check::rent_exempt_min(<$Layout>::LEN);
-        pinocchio_system::instructions::CreateAccount {
+        $crate::hopper_runtime::system::instructions::CreateAccount {
             from: $payer,
             to: $account,
             lamports,
@@ -363,7 +363,7 @@ macro_rules! init_account {
             <$Layout>::VERSION,
             &<$Layout>::LAYOUT_ID,
         )?;
-        Ok::<(), $crate::pinocchio::error::ProgramError>(())
+        Ok::<(), $crate::ProgramError>(())
     }};
 }
 
@@ -411,8 +411,8 @@ macro_rules! check_account {
 #[macro_export]
 macro_rules! __check_account_inner {
     // Terminal: no more constraints
-    ($account:expr, ) => { Ok::<(), $crate::pinocchio::error::ProgramError>(()) };
-    ($account:expr $(,)?) => { Ok::<(), $crate::pinocchio::error::ProgramError>(()) };
+    ($account:expr, ) => { Ok::<(), $crate::ProgramError>(()) };
+    ($account:expr $(,)?) => { Ok::<(), $crate::ProgramError>(()) };
 
     // owner = $id
     ($account:expr, owner = $id:expr $(, $($rest:tt)*)?) => {{

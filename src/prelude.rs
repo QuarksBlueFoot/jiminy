@@ -5,7 +5,7 @@
 //! ```
 //!
 //! One import gives you every check, reader, guard, macro, and CPI helper
-//! across all Jiminy subcrates, plus the pinocchio core types and entrypoint
+//! across all Jiminy subcrates, plus the hopper-runtime core types and entrypoint
 //! macros so downstream programs need no extra direct dependencies.
 
 // ── Ring 1: systems layer (jiminy-core) ──────────────────────────────────────

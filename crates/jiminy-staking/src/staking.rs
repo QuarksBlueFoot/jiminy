@@ -12,7 +12,7 @@
 //! All values use a `PRECISION` scaling factor (1e12) to avoid precision loss
 //! when dividing small reward amounts by large total stakes.
 
-use pinocchio::error::ProgramError;
+use hopper_runtime::ProgramError;
 
 /// Scaling factor for reward-per-token accumulator (1e12).
 ///

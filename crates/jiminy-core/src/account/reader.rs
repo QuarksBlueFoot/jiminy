@@ -1,6 +1,6 @@
 //! Zero-copy account reader with header awareness.
 
-use pinocchio::error::ProgramError;
+use hopper_runtime::ProgramError;
 
 use super::cursor::SliceCursor;
 use super::header::{AccountHeader, HEADER_LEN};

@@ -9,7 +9,7 @@
 //! verify_merkle_proof(&root, &leaf_hash, &proof_hashes)?;
 //! ```
 
-use pinocchio::error::ProgramError;
+use hopper_runtime::ProgramError;
 
 /// Verify a Merkle proof against a known root.
 ///
@@ -87,7 +87,7 @@ fn sha256_two_slices(a: &[u8], b: &[u8]) -> [u8; 32] {
         let slices: [&[u8]; 2] = [a, b];
         let mut result = MaybeUninit::<[u8; 32]>::uninit();
         unsafe {
-            pinocchio::syscalls::sol_sha256(
+            hopper_runtime::syscalls::sol_sha256(
                 slices.as_ptr() as *const u8,
                 2u64,
                 result.as_mut_ptr() as *mut u8,
@@ -110,7 +110,7 @@ fn sha256_three_slices(a: &[u8], b: &[u8], c: &[u8]) -> [u8; 32] {
         let slices: [&[u8]; 3] = [a, b, c];
         let mut result = MaybeUninit::<[u8; 32]>::uninit();
         unsafe {
-            pinocchio::syscalls::sol_sha256(
+            hopper_runtime::syscalls::sol_sha256(
                 slices.as_ptr() as *const u8,
                 3u64,
                 result.as_mut_ptr() as *mut u8,

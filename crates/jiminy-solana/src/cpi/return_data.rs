@@ -4,7 +4,7 @@
 //! returned by a CPI target (swap output amounts, oracle prices, etc.)
 //! and verify they came from the expected program.
 
-use pinocchio::{error::ProgramError, Address};
+use hopper_runtime::{ProgramError, Address};
 
 extern "C" {
     /// BPF syscall: read return data set by a CPI callee.

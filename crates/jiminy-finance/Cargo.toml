@@ -9,14 +9,14 @@ readme = "README.md"
 repository = "https://github.com/QuarksBlueFoot/jiminy"
 homepage = "https://github.com/QuarksBlueFoot/jiminy"
 documentation = "https://docs.rs/jiminy-finance"
-keywords = ["solana", "pinocchio", "defi", "amm", "zero-copy"]
+keywords = ["solana", "hopper", "defi", "amm", "zero-copy"]
 categories = ["no-std", "embedded"]
 
 [lib]
 name = "jiminy_finance"
 
 [dependencies]
-pinocchio = { workspace = true }
+hopper-runtime = { workspace = true }
 jiminy-core = { path = "../jiminy-core", version = "0.16.0", default-features = false }
 
 [features]

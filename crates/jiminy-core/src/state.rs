@@ -7,7 +7,7 @@
 //! Unlike discriminators (which identify the account *type*), state checks
 //! validate the account's *current phase* within its lifecycle.
 
-use pinocchio::{error::ProgramError, ProgramResult};
+use hopper_runtime::{ProgramError, ProgramResult};
 
 /// Verify the state byte at `offset` in account data equals `expected`.
 ///

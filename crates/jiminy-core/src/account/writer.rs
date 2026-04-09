@@ -1,6 +1,6 @@
 //! Zero-copy account writer with header awareness.
 
-use pinocchio::{error::ProgramError, Address};
+use hopper_runtime::{ProgramError, Address};
 
 use super::header::HEADER_LEN;
 

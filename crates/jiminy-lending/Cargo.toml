@@ -9,14 +9,14 @@ readme = "README.md"
 repository = "https://github.com/QuarksBlueFoot/jiminy"
 homepage = "https://github.com/QuarksBlueFoot/jiminy"
 documentation = "https://docs.rs/jiminy-lending"
-keywords = ["solana", "pinocchio", "lending", "defi", "zero-copy"]
+keywords = ["solana", "hopper", "lending", "defi", "zero-copy"]
 categories = ["no-std", "embedded"]
 
 [lib]
 name = "jiminy_lending"
 
 [dependencies]
-pinocchio = { workspace = true }
+hopper-runtime = { workspace = true }
 
 [features]
 default = []

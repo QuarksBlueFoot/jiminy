@@ -9,14 +9,14 @@ readme = "README.md"
 repository = "https://github.com/QuarksBlueFoot/jiminy"
 homepage = "https://github.com/QuarksBlueFoot/jiminy"
 documentation = "https://docs.rs/jiminy-vesting"
-keywords = ["solana", "pinocchio", "vesting", "token-lock", "zero-copy"]
+keywords = ["solana", "hopper", "vesting", "token-lock", "zero-copy"]
 categories = ["no-std", "embedded"]
 
 [lib]
 name = "jiminy_vesting"
 
 [dependencies]
-pinocchio = { workspace = true }
+hopper-runtime = { workspace = true }
 
 [features]
 default = []

@@ -5,7 +5,7 @@
 //! `sum(parts) == total` is guaranteed, and `net + fee == amount` holds
 //! exactly.
 
-use pinocchio::error::ProgramError;
+use hopper_runtime::ProgramError;
 
 /// Split `total` proportionally by `shares`, writing results to `out`.
 ///

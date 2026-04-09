@@ -19,7 +19,7 @@
 //! accept_authority(vault_data, AUTHORITY_OFFSET, PENDING_OFFSET, caller.address())?;
 //! ```
 
-use pinocchio::{error::ProgramError, Address};
+use hopper_runtime::{ProgramError, Address};
 
 /// Verify the pending_authority field matches the expected address.
 ///
@@ -47,7 +47,7 @@ pub fn check_pending_authority(
         return Err(ProgramError::InvalidAccountData);
     }
 
-    if stored != expected.as_ref() {
+    if stored != expected.as_array().as_ref() {
         return Err(ProgramError::InvalidArgument);
     }
 
@@ -72,7 +72,7 @@ pub fn write_pending_authority(
     if pending_offset + 32 > data.len() {
         return Err(ProgramError::AccountDataTooSmall);
     }
-    data[pending_offset..pending_offset + 32].copy_from_slice(new_authority.as_ref());
+    data[pending_offset..pending_offset + 32].copy_from_slice(new_authority.as_array());
     Ok(())
 }
 
@@ -109,7 +109,7 @@ pub fn accept_authority(
     if pending == [0u8; 32] {
         return Err(ProgramError::InvalidAccountData);
     }
-    if pending != *caller.as_ref() {
+    if pending != *caller.as_array() {
         return Err(ProgramError::InvalidArgument);
     }
 

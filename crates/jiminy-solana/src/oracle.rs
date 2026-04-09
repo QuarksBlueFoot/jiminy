@@ -21,7 +21,7 @@
 //!
 //! Works for both Solana and Pythnet price accounts (header is identical).
 
-use pinocchio::error::ProgramError;
+use hopper_runtime::ProgramError;
 
 // ── Constants ────────────────────────────────────────────────────────────────
 

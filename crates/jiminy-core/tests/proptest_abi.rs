@@ -5,7 +5,7 @@
 
 use jiminy_core::account::*;
 use jiminy_core::zero_copy_layout;
-use pinocchio::Address;
+use jiminy_core::Address;
 use proptest::prelude::*;
 
 // ── Test layout ──────────────────────────────────────────────────────────────
@@ -104,7 +104,7 @@ proptest! {
 
         let vault = PropVault::overlay(&buf.0).unwrap();
         prop_assert_eq!(vault.balance, balance);
-        prop_assert_eq!(vault.authority.as_ref(), &authority);
+        prop_assert_eq!(vault.authority.as_array(), &authority);
     }
 
     /// Overlay always fails on buffers shorter than LEN.

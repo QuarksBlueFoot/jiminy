@@ -9,14 +9,14 @@ readme = "README.md"
 repository = "https://github.com/QuarksBlueFoot/jiminy"
 homepage = "https://github.com/QuarksBlueFoot/jiminy"
 documentation = "https://docs.rs/jiminy-staking"
-keywords = ["solana", "pinocchio", "staking", "rewards", "zero-copy"]
+keywords = ["solana", "hopper", "staking", "rewards", "zero-copy"]
 categories = ["no-std", "embedded"]
 
 [lib]
 name = "jiminy_staking"
 
 [dependencies]
-pinocchio = { workspace = true }
+hopper-runtime = { workspace = true }
 
 [features]
 default = []

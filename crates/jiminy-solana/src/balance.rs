@@ -15,7 +15,7 @@
 //! check_balance_increased(vault, before, min_expected)?;
 //! ```
 
-use pinocchio::{error::ProgramError, AccountView, ProgramResult};
+use hopper_runtime::{ProgramError, AccountView, ProgramResult};
 
 use crate::token::TOKEN_ACCOUNT_LEN;
 

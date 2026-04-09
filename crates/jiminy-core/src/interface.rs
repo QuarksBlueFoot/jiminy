@@ -14,7 +14,7 @@
 //! use jiminy_core::jiminy_interface;
 //! use jiminy_core::account::{AccountHeader, Pod, FixedLayout};
 //! use jiminy_core::abi::LeU64;
-//! use pinocchio::Address;
+//! use hopper_runtime::Address;
 //!
 //! const PROGRAM_A: Address = [0u8; 32]; // Program A's address
 //!
@@ -179,17 +179,17 @@ macro_rules! jiminy_interface {
             };
 
             /// Expected owner program for this interface.
-            pub const OWNER: &'static $crate::pinocchio::Address = &$owner;
+            pub const OWNER: &'static $crate::Address = &$owner;
 
             /// Overlay an immutable reference onto borrowed account data.
             #[inline(always)]
-            pub fn overlay(data: &[u8]) -> Result<&Self, $crate::pinocchio::error::ProgramError> {
+            pub fn overlay(data: &[u8]) -> Result<&Self, $crate::ProgramError> {
                 $crate::account::pod_from_bytes::<Self>(data)
             }
 
             /// Read a copy of this struct from a byte slice (alignment-safe).
             #[inline(always)]
-            pub fn read(data: &[u8]) -> Result<Self, $crate::pinocchio::error::ProgramError> {
+            pub fn read(data: &[u8]) -> Result<Self, $crate::ProgramError> {
                 $crate::account::pod_read::<Self>(data)
             }
 
@@ -202,8 +202,8 @@ macro_rules! jiminy_interface {
             /// Returns a `VerifiedAccount` whose `get()` is infallible.
             #[inline(always)]
             pub fn load_foreign<'a>(
-                account: &'a $crate::pinocchio::AccountView,
-            ) -> Result<$crate::account::VerifiedAccount<'a, Self>, $crate::pinocchio::error::ProgramError> {
+                account: &'a $crate::AccountView,
+            ) -> Result<$crate::account::VerifiedAccount<'a, Self>, $crate::ProgramError> {
                 let data = $crate::account::view::validate_foreign(
                     account, &$owner, &Self::LAYOUT_ID, Self::LEN,
                 )?;
@@ -219,9 +219,9 @@ macro_rules! jiminy_interface {
             /// Split borrowed data into per-field `FieldRef` slices.
             #[inline]
             #[allow(unused_variables)]
-            pub fn split_fields(data: &[u8]) -> Result<( $( $crate::__field_ref_type!($field), )+ ), $crate::pinocchio::error::ProgramError> {
+            pub fn split_fields(data: &[u8]) -> Result<( $( $crate::__field_ref_type!($field), )+ ), $crate::ProgramError> {
                 if data.len() < Self::LEN {
-                    return Err($crate::pinocchio::error::ProgramError::AccountDataTooSmall);
+                    return Err($crate::ProgramError::AccountDataTooSmall);
                 }
                 let mut _pos = 0usize;
                 Ok(( $({
@@ -254,7 +254,7 @@ macro_rules! jiminy_interface {
 /// use jiminy_core::segmented_interface;
 /// use jiminy_core::account::{AccountHeader, Pod, FixedLayout};
 /// use jiminy_core::abi::LeU64;
-/// use pinocchio::Address;
+/// use hopper_runtime::Address;
 ///
 /// const DEX_PROGRAM: Address = [0u8; 32];
 ///
@@ -412,8 +412,8 @@ macro_rules! segmented_interface {
             /// [`segment`](Self::segment) for typed access.
             #[inline(always)]
             pub fn load_foreign_segmented<'a>(
-                account: &'a $crate::pinocchio::AccountView,
-            ) -> Result<$crate::pinocchio::account::Ref<'a, [u8]>, $crate::pinocchio::error::ProgramError> {
+                account: &'a $crate::AccountView,
+            ) -> Result<$crate::hopper_runtime::Ref<'a, [u8]>, $crate::ProgramError> {
                 $crate::account::view::validate_foreign_segmented(
                     account,
                     &$owner,
@@ -424,9 +424,9 @@ macro_rules! segmented_interface {
 
             /// Read the segment table from account data (read-only).
             #[inline(always)]
-            pub fn segment_table(data: &[u8]) -> Result<$crate::account::segment::SegmentTable<'_>, $crate::pinocchio::error::ProgramError> {
+            pub fn segment_table(data: &[u8]) -> Result<$crate::account::segment::SegmentTable<'_>, $crate::ProgramError> {
                 if data.len() < Self::DATA_START_OFFSET {
-                    return Err($crate::pinocchio::error::ProgramError::AccountDataTooSmall);
+                    return Err($crate::ProgramError::AccountDataTooSmall);
                 }
                 $crate::account::segment::SegmentTable::from_bytes(
                     &data[Self::TABLE_OFFSET..],
@@ -438,7 +438,7 @@ macro_rules! segmented_interface {
             ///
             /// Checks element sizes, bounds, ordering, and no overlaps.
             #[inline]
-            pub fn validate_segments(data: &[u8]) -> Result<(), $crate::pinocchio::error::ProgramError> {
+            pub fn validate_segments(data: &[u8]) -> Result<(), $crate::ProgramError> {
                 let table = Self::segment_table(data)?;
                 table.validate(data.len(), Self::segment_sizes(), Self::DATA_START_OFFSET)
             }
@@ -448,7 +448,7 @@ macro_rules! segmented_interface {
             pub fn segment<T: $crate::account::Pod + $crate::account::FixedLayout>(
                 data: &[u8],
                 index: usize,
-            ) -> Result<$crate::account::segment::SegmentSlice<'_, T>, $crate::pinocchio::error::ProgramError> {
+            ) -> Result<$crate::account::segment::SegmentSlice<'_, T>, $crate::ProgramError> {
                 let desc = {
                     let table = Self::segment_table(data)?;
                     table.descriptor(index)?

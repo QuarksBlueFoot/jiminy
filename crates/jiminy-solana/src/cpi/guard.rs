@@ -36,7 +36,7 @@
 //! instruction for these checks to work. It cannot be fetched via
 //! `get()` like Clock.
 
-use pinocchio::{error::ProgramError, AccountView, Address, ProgramResult};
+use hopper_runtime::{ProgramError, AccountView, Address, ProgramResult};
 
 #[cfg(feature = "programs")]
 use jiminy_core::programs;

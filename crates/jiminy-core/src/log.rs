@@ -24,7 +24,7 @@ fn sol_log(msg: &str) {
     #[cfg(target_os = "solana")]
     // SAFETY: sol_log_ expects a valid pointer and length. msg is a valid &str.
     unsafe {
-        pinocchio::syscalls::sol_log_(msg.as_ptr(), msg.len() as u64);
+        hopper_runtime::syscalls::sol_log_(msg.as_ptr(), msg.len() as u64);
     }
     #[cfg(not(target_os = "solana"))]
     {
@@ -148,7 +148,7 @@ pub fn log_signed(label: &str, value: i64) {
 /// // prints: "vault: [1a2b3c4d..f1e2d3c4]"
 /// ```
 #[inline(always)]
-pub fn log_addr(label: &str, addr: &pinocchio::Address) {
+pub fn log_addr(label: &str, addr: &hopper_runtime::Address) {
     let bytes = addr.as_array();
     let mut buf = [0u8; 128];
     let label_bytes = label.as_bytes();

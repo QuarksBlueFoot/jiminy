@@ -17,7 +17,7 @@
 //!  13..45   authority      (32 bytes, present only if tag == 1)
 //! ```
 
-use pinocchio::{error::ProgramError, AccountView, Address, ProgramResult};
+use hopper_runtime::{ProgramError, AccountView, Address, ProgramResult};
 
 /// Discriminator for the ProgramData variant of UpgradeableLoaderState.
 const PROGRAMDATA_DISC: u32 = 3;

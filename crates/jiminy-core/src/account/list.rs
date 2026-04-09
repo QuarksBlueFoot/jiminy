@@ -3,7 +3,7 @@
 //! [`AccountList`] provides sequential account consumption with validation,
 //! replacing manual index arithmetic.
 
-use pinocchio::{error::ProgramError, AccountView, Address};
+use hopper_runtime::{ProgramError, AccountView, Address};
 
 use crate::check::{
     check_account, check_executable, check_signer, check_system_program, check_writable,

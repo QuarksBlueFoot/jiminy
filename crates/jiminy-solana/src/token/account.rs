@@ -19,7 +19,7 @@
 //! 133..165 close_authority key (Address, if present)
 //! ```
 
-use pinocchio::{error::ProgramError, AccountView, Address, ProgramResult};
+use hopper_runtime::{ProgramError, AccountView, Address, ProgramResult};
 
 /// Minimum size of an SPL Token account.
 pub const TOKEN_ACCOUNT_LEN: usize = 165;

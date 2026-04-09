@@ -103,7 +103,7 @@
 
 #![no_std]
 
-use pinocchio::error::ProgramError;
+use hopper_runtime::ProgramError;
 
 /// Compute the Anchor 8-byte discriminator for an account type name
 /// at compile time.
@@ -439,10 +439,10 @@ pub fn check_anchor_with_version(
 /// - `InvalidAccountData` - discriminator mismatch.
 #[inline(always)]
 pub fn load_anchor_account<'a>(
-    account: &'a pinocchio::AccountView,
-    expected_owner: &pinocchio::Address,
+    account: &'a hopper_runtime::AccountView,
+    expected_owner: &hopper_runtime::Address,
     expected_disc: &[u8; 8],
-) -> Result<pinocchio::account::Ref<'a, [u8]>, ProgramError> {
+) -> Result<hopper_runtime::Ref<'a, [u8]>, ProgramError> {
     // SAFETY: owner() returns a pointer to data owned by the runtime;
     // we only read 32 bytes from it for comparison.
     if unsafe { account.owner() } != expected_owner {
@@ -480,10 +480,10 @@ pub fn load_anchor_account<'a>(
 /// - `InvalidAccountData` - discriminator mismatch or body too small.
 #[inline(always)]
 pub fn load_anchor_overlay<'a, T: jiminy_core::account::Pod + jiminy_core::account::FixedLayout>(
-    account: &'a pinocchio::AccountView,
-    expected_owner: &pinocchio::Address,
+    account: &'a hopper_runtime::AccountView,
+    expected_owner: &hopper_runtime::Address,
     expected_disc: &[u8; 8],
-) -> Result<pinocchio::account::Ref<'a, [u8]>, ProgramError> {
+) -> Result<hopper_runtime::Ref<'a, [u8]>, ProgramError> {
     // SAFETY: owner() returns a pointer to data owned by the runtime;
     // we only read 32 bytes from it for comparison.
     if unsafe { account.owner() } != expected_owner {

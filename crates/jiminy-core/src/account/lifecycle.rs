@@ -4,7 +4,7 @@
 //! a single module. These are the functions you reach for when an account
 //! is being created, resized, or destroyed.
 
-use pinocchio::{error::ProgramError, AccountView, ProgramResult};
+use hopper_runtime::{ProgramError, AccountView, ProgramResult};
 
 use crate::math::{checked_add, checked_sub};
 use crate::check::rent_exempt_min;

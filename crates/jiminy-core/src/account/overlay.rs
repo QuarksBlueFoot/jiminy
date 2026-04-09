@@ -15,7 +15,7 @@
 //! ```rust,ignore
 //! use jiminy_core::zero_copy_layout;
 //! use jiminy_core::account::{AccountHeader, Pod, FixedLayout, HEADER_LEN};
-//! use pinocchio::Address;
+//! use hopper_runtime::Address;
 //!
 //! zero_copy_layout! {
 //!     /// My on-chain vault account.
@@ -261,7 +261,7 @@ macro_rules! zero_copy_layout {
             /// Returns `AccountDataTooSmall` if the slice is shorter than
             /// the layout size.
             #[inline(always)]
-            pub fn overlay(data: &[u8]) -> Result<&Self, $crate::pinocchio::error::ProgramError> {
+            pub fn overlay(data: &[u8]) -> Result<&Self, $crate::ProgramError> {
                 $crate::account::pod_from_bytes::<Self>(data)
             }
 
@@ -270,7 +270,7 @@ macro_rules! zero_copy_layout {
             /// Returns `AccountDataTooSmall` if the slice is shorter than
             /// the layout size.
             #[inline(always)]
-            pub fn overlay_mut(data: &mut [u8]) -> Result<&mut Self, $crate::pinocchio::error::ProgramError> {
+            pub fn overlay_mut(data: &mut [u8]) -> Result<&mut Self, $crate::ProgramError> {
                 $crate::account::pod_from_bytes_mut::<Self>(data)
             }
 
@@ -279,14 +279,14 @@ macro_rules! zero_copy_layout {
             /// Alignment-safe on all targets (uses `read_unaligned`
             /// internally). Ideal for native tests.
             #[inline(always)]
-            pub fn read(data: &[u8]) -> Result<Self, $crate::pinocchio::error::ProgramError> {
+            pub fn read(data: &[u8]) -> Result<Self, $crate::ProgramError> {
                 $crate::account::pod_read::<Self>(data)
             }
 
             /// Load with full header validation (disc + version + layout_id),
             /// then overlay immutably.
             #[inline(always)]
-            pub fn load_checked(data: &[u8]) -> Result<&Self, $crate::pinocchio::error::ProgramError> {
+            pub fn load_checked(data: &[u8]) -> Result<&Self, $crate::ProgramError> {
                 $crate::account::check_header(data, Self::DISC, Self::VERSION, &Self::LAYOUT_ID)?;
                 $crate::account::pod_from_bytes::<Self>(data)
             }
@@ -294,7 +294,7 @@ macro_rules! zero_copy_layout {
             /// Load with full header validation (disc + version + layout_id),
             /// then overlay mutably.
             #[inline(always)]
-            pub fn load_checked_mut(data: &mut [u8]) -> Result<&mut Self, $crate::pinocchio::error::ProgramError> {
+            pub fn load_checked_mut(data: &mut [u8]) -> Result<&mut Self, $crate::ProgramError> {
                 $crate::account::check_header(data, Self::DISC, Self::VERSION, &Self::LAYOUT_ID)?;
                 $crate::account::pod_from_bytes_mut::<Self>(data)
             }
@@ -308,9 +308,9 @@ macro_rules! zero_copy_layout {
             /// This is the recommended way to load a Jiminy account.
             #[inline(always)]
             pub fn load<'a>(
-                account: &'a $crate::pinocchio::AccountView,
-                program_id: &$crate::pinocchio::Address,
-            ) -> Result<$crate::account::VerifiedAccount<'a, Self>, $crate::pinocchio::error::ProgramError> {
+                account: &'a $crate::AccountView,
+                program_id: &$crate::Address,
+            ) -> Result<$crate::account::VerifiedAccount<'a, Self>, $crate::ProgramError> {
                 let data = $crate::account::view::validate_account(
                     account, program_id, Self::DISC, Self::VERSION, &Self::LAYOUT_ID, Self::LEN,
                 )?;
@@ -321,9 +321,9 @@ macro_rules! zero_copy_layout {
             /// `load()` but returns `VerifiedAccountMut` for write access.
             #[inline(always)]
             pub fn load_mut<'a>(
-                account: &'a $crate::pinocchio::AccountView,
-                program_id: &$crate::pinocchio::Address,
-            ) -> Result<$crate::account::VerifiedAccountMut<'a, Self>, $crate::pinocchio::error::ProgramError> {
+                account: &'a $crate::AccountView,
+                program_id: &$crate::Address,
+            ) -> Result<$crate::account::VerifiedAccountMut<'a, Self>, $crate::ProgramError> {
                 let data = $crate::account::view::validate_account_mut(
                     account, program_id, Self::DISC, Self::VERSION, &Self::LAYOUT_ID, Self::LEN,
                 )?;
@@ -337,9 +337,9 @@ macro_rules! zero_copy_layout {
             /// Returns a `VerifiedAccount` whose `get()` is infallible.
             #[inline(always)]
             pub fn load_foreign<'a>(
-                account: &'a $crate::pinocchio::AccountView,
-                expected_owner: &$crate::pinocchio::Address,
-            ) -> Result<$crate::account::VerifiedAccount<'a, Self>, $crate::pinocchio::error::ProgramError> {
+                account: &'a $crate::AccountView,
+                expected_owner: &$crate::Address,
+            ) -> Result<$crate::account::VerifiedAccount<'a, Self>, $crate::ProgramError> {
                 let data = $crate::account::view::validate_foreign(
                     account, expected_owner, &Self::LAYOUT_ID, Self::LEN,
                 )?;
@@ -354,7 +354,7 @@ macro_rules! zero_copy_layout {
             /// this layout. Intended for legacy / non-Jiminy accounts
             /// where manual validation has already been performed.
             #[inline(always)]
-            pub unsafe fn load_unchecked(data: &[u8]) -> Result<&Self, $crate::pinocchio::error::ProgramError> {
+            pub unsafe fn load_unchecked(data: &[u8]) -> Result<&Self, $crate::ProgramError> {
                 $crate::account::pod_from_bytes::<Self>(data)
             }
 
@@ -365,7 +365,7 @@ macro_rules! zero_copy_layout {
             /// `validated` is `true` when the header matched. Useful for
             /// indexers/tooling. Never use in on-chain program logic.
             #[inline(always)]
-            pub fn load_unverified_overlay(data: &[u8]) -> Result<(&Self, bool), $crate::pinocchio::error::ProgramError> {
+            pub fn load_unverified_overlay(data: &[u8]) -> Result<(&Self, bool), $crate::ProgramError> {
                 $crate::account::view::load_unverified_overlay::<Self>(
                     data, Self::DISC, Self::VERSION, &Self::LAYOUT_ID,
                 )
@@ -383,9 +383,9 @@ macro_rules! zero_copy_layout {
             /// enabling typed reads of multiple fields without aliasing issues.
             #[inline]
             #[allow(unused_variables)]
-            pub fn split_fields(data: &[u8]) -> Result<( $( $crate::__field_ref_type!($field), )+ ), $crate::pinocchio::error::ProgramError> {
+            pub fn split_fields(data: &[u8]) -> Result<( $( $crate::__field_ref_type!($field), )+ ), $crate::ProgramError> {
                 if data.len() < Self::LEN {
-                    return Err($crate::pinocchio::error::ProgramError::AccountDataTooSmall);
+                    return Err($crate::ProgramError::AccountDataTooSmall);
                 }
                 let mut _pos = 0usize;
                 Ok(( $({
@@ -408,9 +408,9 @@ macro_rules! zero_copy_layout {
             /// ```
             #[inline]
             #[allow(unused_variables)]
-            pub fn split_fields_mut(data: &mut [u8]) -> Result<( $( $crate::__field_mut_type!($field), )+ ), $crate::pinocchio::error::ProgramError> {
+            pub fn split_fields_mut(data: &mut [u8]) -> Result<( $( $crate::__field_mut_type!($field), )+ ), $crate::ProgramError> {
                 if data.len() < Self::LEN {
-                    return Err($crate::pinocchio::error::ProgramError::AccountDataTooSmall);
+                    return Err($crate::ProgramError::AccountDataTooSmall);
                 }
                 let _remaining = &mut data[..Self::LEN];
                 $(
@@ -492,7 +492,7 @@ macro_rules! __gen_segment_indices {
 /// ```rust,ignore
 /// use jiminy_core::segmented_layout;
 /// use jiminy_core::account::{AccountHeader, Pod, FixedLayout};
-/// use pinocchio::Address;
+/// use hopper_runtime::Address;
 ///
 /// // A simple element type.
 /// #[repr(C)]
@@ -607,9 +607,9 @@ macro_rules! segmented_layout {
 
             /// Read the segment table from account data.
             #[inline(always)]
-            pub fn segment_table(data: &[u8]) -> Result<$crate::account::segment::SegmentTable<'_>, $crate::pinocchio::error::ProgramError> {
+            pub fn segment_table(data: &[u8]) -> Result<$crate::account::segment::SegmentTable<'_>, $crate::ProgramError> {
                 if data.len() < Self::DATA_START_OFFSET {
-                    return Err($crate::pinocchio::error::ProgramError::AccountDataTooSmall);
+                    return Err($crate::ProgramError::AccountDataTooSmall);
                 }
                 $crate::account::segment::SegmentTable::from_bytes(
                     &data[Self::TABLE_OFFSET..],
@@ -619,9 +619,9 @@ macro_rules! segmented_layout {
 
             /// Read the mutable segment table from account data.
             #[inline(always)]
-            pub fn segment_table_mut(data: &mut [u8]) -> Result<$crate::account::segment::SegmentTableMut<'_>, $crate::pinocchio::error::ProgramError> {
+            pub fn segment_table_mut(data: &mut [u8]) -> Result<$crate::account::segment::SegmentTableMut<'_>, $crate::ProgramError> {
                 if data.len() < Self::DATA_START_OFFSET {
-                    return Err($crate::pinocchio::error::ProgramError::AccountDataTooSmall);
+                    return Err($crate::ProgramError::AccountDataTooSmall);
                 }
                 $crate::account::segment::SegmentTableMut::from_bytes(
                     &mut data[Self::TABLE_OFFSET..],
@@ -633,7 +633,7 @@ macro_rules! segmented_layout {
             ///
             /// Checks element sizes, bounds, ordering, and no overlaps.
             #[inline]
-            pub fn validate_segments(data: &[u8]) -> Result<(), $crate::pinocchio::error::ProgramError> {
+            pub fn validate_segments(data: &[u8]) -> Result<(), $crate::ProgramError> {
                 let table = Self::segment_table(data)?;
                 table.validate(data.len(), Self::segment_sizes(), Self::DATA_START_OFFSET)
             }
@@ -652,9 +652,9 @@ macro_rules! segmented_layout {
             pub fn init_segments(
                 data: &mut [u8],
                 counts: &[u16],
-            ) -> Result<(), $crate::pinocchio::error::ProgramError> {
+            ) -> Result<(), $crate::ProgramError> {
                 if counts.len() != Self::SEGMENT_COUNT {
-                    return Err($crate::pinocchio::error::ProgramError::InvalidArgument);
+                    return Err($crate::ProgramError::InvalidArgument);
                 }
                 let sizes = Self::segment_sizes();
                 // count == capacity for pre-populated init (tight fit).
@@ -695,9 +695,9 @@ macro_rules! segmented_layout {
             pub fn init_segments_with_capacity(
                 data: &mut [u8],
                 capacities: &[u16],
-            ) -> Result<(), $crate::pinocchio::error::ProgramError> {
+            ) -> Result<(), $crate::ProgramError> {
                 if capacities.len() != Self::SEGMENT_COUNT {
-                    return Err($crate::pinocchio::error::ProgramError::InvalidArgument);
+                    return Err($crate::ProgramError::InvalidArgument);
                 }
                 let sizes = Self::segment_sizes();
                 // count = 0, capacity = capacities[i] (push workflow).
@@ -725,9 +725,9 @@ macro_rules! segmented_layout {
             /// at least this many bytes to hold the segment table plus
             /// the full reserved regions.
             #[inline]
-            pub fn compute_account_size(capacities: &[u16]) -> Result<usize, $crate::pinocchio::error::ProgramError> {
+            pub fn compute_account_size(capacities: &[u16]) -> Result<usize, $crate::ProgramError> {
                 if capacities.len() != Self::SEGMENT_COUNT {
-                    return Err($crate::pinocchio::error::ProgramError::InvalidArgument);
+                    return Err($crate::ProgramError::InvalidArgument);
                 }
                 let sizes = Self::segment_sizes();
                 let mut total = Self::DATA_START_OFFSET;
@@ -735,10 +735,10 @@ macro_rules! segmented_layout {
                 while i < Self::SEGMENT_COUNT {
                     let seg_bytes = (capacities[i] as usize)
                         .checked_mul(sizes[i] as usize)
-                        .ok_or($crate::pinocchio::error::ProgramError::ArithmeticOverflow)?;
+                        .ok_or($crate::ProgramError::ArithmeticOverflow)?;
                     total = total
                         .checked_add(seg_bytes)
-                        .ok_or($crate::pinocchio::error::ProgramError::ArithmeticOverflow)?;
+                        .ok_or($crate::ProgramError::ArithmeticOverflow)?;
                     i += 1;
                 }
                 Ok(total)
@@ -760,7 +760,7 @@ macro_rules! segmented_layout {
             pub fn segment<T: $crate::account::Pod + $crate::account::FixedLayout>(
                 data: &[u8],
                 index: usize,
-            ) -> Result<$crate::account::segment::SegmentSlice<'_, T>, $crate::pinocchio::error::ProgramError> {
+            ) -> Result<$crate::account::segment::SegmentSlice<'_, T>, $crate::ProgramError> {
                 let desc = {
                     let table = Self::segment_table(data)?;
                     table.descriptor(index)?
@@ -778,7 +778,7 @@ macro_rules! segmented_layout {
             pub fn segment_mut<T: $crate::account::Pod + $crate::account::FixedLayout>(
                 data: &mut [u8],
                 index: usize,
-            ) -> Result<$crate::account::segment::SegmentSliceMut<'_, T>, $crate::pinocchio::error::ProgramError> {
+            ) -> Result<$crate::account::segment::SegmentSliceMut<'_, T>, $crate::ProgramError> {
                 let desc = {
                     let table = Self::segment_table(data)?;
                     table.descriptor(index)?
@@ -798,7 +798,7 @@ macro_rules! segmented_layout {
                 data: &mut [u8],
                 index: usize,
                 value: &T,
-            ) -> Result<(), $crate::pinocchio::error::ProgramError> {
+            ) -> Result<(), $crate::ProgramError> {
                 $crate::account::segment::segment_push::<T>(
                     data, Self::TABLE_OFFSET, Self::SEGMENT_COUNT, index, value,
                 )
@@ -815,7 +815,7 @@ macro_rules! segmented_layout {
                 data: &mut [u8],
                 index: usize,
                 elem_index: u16,
-            ) -> Result<T, $crate::pinocchio::error::ProgramError> {
+            ) -> Result<T, $crate::ProgramError> {
                 $crate::account::segment::segment_swap_remove::<T>(
                     data, Self::TABLE_OFFSET, Self::SEGMENT_COUNT, index, elem_index,
                 )

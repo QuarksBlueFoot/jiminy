@@ -131,6 +131,6 @@ pub use crate::{
     // The function is exported above via check::*. The macro is #[macro_export] at crate root.
 };
 
-// ── Pinocchio core types ─────────────────────────────────────────────────────
-pub use pinocchio::{error::ProgramError, AccountView, Address, ProgramResult};
-pub use pinocchio::{no_allocator, nostd_panic_handler, program_entrypoint};
+// ── Runtime core types ───────────────────────────────────────────────────────
+pub use hopper_runtime::{ProgramError, AccountView, Address, ProgramResult};
+pub use hopper_runtime::{hopper_entrypoint, no_allocator, nostd_panic_handler, program_entrypoint};

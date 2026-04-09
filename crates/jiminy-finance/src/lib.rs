@@ -26,4 +26,4 @@ pub use slippage::{
     check_max_amount, check_max_input, check_min_amount, check_nonzero,
     check_price_bounds, check_slippage, check_within_bps,
 };
-pub use pinocchio;
+pub use hopper_runtime;

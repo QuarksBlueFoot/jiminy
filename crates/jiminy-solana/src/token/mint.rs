@@ -15,7 +15,7 @@
 //! 50..82   freeze_authority key (Address, if present)
 //! ```
 
-use pinocchio::{error::ProgramError, AccountView, Address, ProgramResult};
+use hopper_runtime::{ProgramError, AccountView, Address, ProgramResult};
 
 /// Minimum size of an SPL Token mint account.
 pub const MINT_LEN: usize = 82;

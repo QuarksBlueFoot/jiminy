@@ -38,13 +38,13 @@
 //! )?;
 //! ```
 
-use pinocchio::{address::address, error::ProgramError, Address};
+use hopper_runtime::{ProgramError, Address};
 
 use crate::introspect::{read_instruction_data_range, read_program_id_at};
 
 /// Ed25519 precompile program address.
 pub const ED25519_PROGRAM: Address =
-    address!("Ed25519SigVerify111111111111111111111111111");
+    hopper_runtime::address!("Ed25519SigVerify111111111111111111111111111");
 
 /// Size of one Ed25519 signature parameter block (14 bytes).
 const SIG_PARAM_SIZE: usize = 14;

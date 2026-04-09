@@ -22,9 +22,8 @@
 //! See [`SAFETY_MODEL.md`](https://github.com/QuarksBlueFoot/jiminy/blob/main/docs/SAFETY_MODEL.md)
 //! for the full trust tier model and all safety invariants.
 
-use pinocchio::{AccountView, Address};
-use pinocchio::account::{Ref, RefMut};
-use pinocchio::error::ProgramError;
+use hopper_runtime::{AccountView, Address, Ref, RefMut};
+use hopper_runtime::ProgramError;
 
 use super::{HEADER_LEN, check_header, check_layout_id, pod_from_bytes, Pod, FixedLayout};
 

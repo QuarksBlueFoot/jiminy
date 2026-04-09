@@ -4,7 +4,7 @@
 //! utilization rates, and simple interest. All u128 intermediates,
 //! all basis-point denominated.
 
-use pinocchio::error::ProgramError;
+use hopper_runtime::ProgramError;
 
 /// Collateralization ratio in basis points.
 ///

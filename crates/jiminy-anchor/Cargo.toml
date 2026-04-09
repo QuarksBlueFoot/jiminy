@@ -17,7 +17,7 @@ name = "jiminy_anchor"
 
 [dependencies]
 jiminy-core = { workspace = true }
-pinocchio = { workspace = true }
+hopper-runtime = { workspace = true }
 sha2-const-stable = { workspace = true }
 
 [dev-dependencies]

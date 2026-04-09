@@ -5,7 +5,7 @@
 
 pub mod pda;
 
-use pinocchio::{error::ProgramError, AccountView, Address, ProgramResult};
+use hopper_runtime::{ProgramError, AccountView, Address, ProgramResult};
 
 #[cfg(feature = "programs")]
 use crate::programs;

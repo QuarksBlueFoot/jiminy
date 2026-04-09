@@ -3,7 +3,7 @@
 //! Core constant-product math with u128 intermediates and overflow protection.
 //! Zero alloc.
 
-use pinocchio::error::ProgramError;
+use hopper_runtime::ProgramError;
 
 /// Integer square root via Newton's method.
 ///

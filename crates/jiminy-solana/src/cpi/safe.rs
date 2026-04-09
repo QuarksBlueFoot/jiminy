@@ -1,14 +1,14 @@
 //! Safe CPI wrappers that bundle validation + invocation.
 //!
-//! These combine the most common check patterns with pinocchio-system and
-//! pinocchio-token CPI structs so you can't forget a writable or signer
+//! These combine the most common check patterns with hopper-runtime system and
+//! token CPI structs so you can't forget a writable or signer
 //! check before issuing a CPI.
 //!
 //! All functions are `#[inline(always)]` and zero-copy.
 
-use pinocchio::{error::ProgramError, AccountView, Address, ProgramResult};
-use pinocchio_system::instructions::{CreateAccount, Transfer as SysTransfer};
-use pinocchio_token::instructions::{
+use hopper_runtime::{ProgramError, AccountView, Address, ProgramResult};
+use hopper_runtime::system::instructions::{CreateAccount, Transfer as SysTransfer};
+use hopper_runtime::token::instructions::{
     Burn, CloseAccount, MintTo, Transfer as TkTransfer,
 };
 
@@ -61,7 +61,7 @@ pub fn safe_create_account_signed(
     new_account: &AccountView,
     space: usize,
     owner: &Address,
-    signers: &[pinocchio::cpi::Signer],
+    signers: &[hopper_runtime::cpi::Signer],
 ) -> ProgramResult {
     check_signer(payer)?;
     check_writable(payer)?;
@@ -156,7 +156,7 @@ pub fn safe_transfer_tokens_signed(
     to: &AccountView,
     authority: &AccountView,
     amount: u64,
-    signers: &[pinocchio::cpi::Signer],
+    signers: &[hopper_runtime::cpi::Signer],
 ) -> ProgramResult {
     if amount == 0 {
         return Err(ProgramError::InvalidArgument);
@@ -247,7 +247,7 @@ pub fn safe_mint_to_signed(
     account: &AccountView,
     authority: &AccountView,
     amount: u64,
-    signers: &[pinocchio::cpi::Signer],
+    signers: &[hopper_runtime::cpi::Signer],
 ) -> ProgramResult {
     if amount == 0 {
         return Err(ProgramError::InvalidArgument);

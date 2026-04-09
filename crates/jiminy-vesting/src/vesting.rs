@@ -6,7 +6,7 @@
 //!
 //! All pure arithmetic, zero alloc, `#[inline(always)]`.
 
-use pinocchio::error::ProgramError;
+use hopper_runtime::ProgramError;
 
 /// Compute the vested amount under a linear schedule with cliff.
 ///

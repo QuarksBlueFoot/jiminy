@@ -10,4 +10,4 @@
 
 mod distribute;
 pub use distribute::*;
-pub use pinocchio;
+pub use hopper_runtime;

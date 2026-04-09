@@ -9,4 +9,4 @@
 
 mod vesting;
 pub use vesting::*;
-pub use pinocchio;
+pub use hopper_runtime;

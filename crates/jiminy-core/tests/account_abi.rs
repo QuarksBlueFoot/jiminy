@@ -5,7 +5,7 @@
 
 use jiminy_core::account::*;
 use jiminy_core::zero_copy_layout;
-use pinocchio::Address;
+use jiminy_core::Address;
 
 // ── Test layouts ─────────────────────────────────────────────────────────────
 
@@ -260,7 +260,7 @@ fn overlay_reads_fields() {
 
     let vault = TestVault::overlay(buf.as_slice()).unwrap();
     assert_eq!(vault.balance, 1000);
-    assert_eq!(vault.authority.as_ref(), &[0xAB; 32]);
+    assert_eq!(vault.authority.as_array(), &[0xAB; 32]);
 }
 
 #[test]
@@ -270,7 +270,7 @@ fn overlay_mut_writes_fields() {
 
     let vault = TestVault::overlay_mut(buf.as_mut_slice()).unwrap();
     vault.balance = 42;
-    vault.authority = pinocchio::Address::from([0xCD; 32]);
+    vault.authority = jiminy_core::Address::from([0xCD; 32]);
 
     // Verify via raw bytes.
     assert_eq!(u64::from_le_bytes(buf.0[16..24].try_into().unwrap()), 42);
@@ -387,7 +387,7 @@ fn v2_can_read_v1_prefix() {
     // Read as V1 overlay (first 56 bytes).
     let v1 = TestVault::overlay(&buf.0[..56]).unwrap();
     assert_eq!(v1.balance, 999);
-    assert_eq!(v1.authority.as_ref(), &[0x11; 32]);
+    assert_eq!(v1.authority.as_array(), &[0x11; 32]);
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -805,7 +805,7 @@ fn le_bool_nonzero_is_true() {
 mod layout_native {
     use jiminy_core::account::AccountHeader;
     use jiminy_core::zero_copy_layout;
-    use pinocchio::Address;
+    use jiminy_core::Address;
 
     zero_copy_layout! {
         pub struct Vault, discriminator = 99, version = 1 {
@@ -820,7 +820,7 @@ mod layout_le {
     use jiminy_core::account::AccountHeader;
     use jiminy_core::abi::LeU64;
     use jiminy_core::zero_copy_layout;
-    use pinocchio::Address;
+    use jiminy_core::Address;
 
     zero_copy_layout! {
         pub struct Vault, discriminator = 99, version = 1 {
@@ -1070,7 +1070,7 @@ mod interface_tests {
     use jiminy_core::account::AccountHeader;
     use jiminy_core::abi::LeU64;
     use jiminy_core::zero_copy_layout;
-    use pinocchio::Address;
+    use jiminy_core::Address;
 
     const FOREIGN_PROGRAM: Address = Address::new_from_array([0xAA; 32]);
 
@@ -1088,7 +1088,7 @@ mod interface_tests {
         use jiminy_core::account::AccountHeader;
         use jiminy_core::abi::LeU64;
         use jiminy_core::jiminy_interface;
-        use pinocchio::Address;
+        use jiminy_core::Address;
 
         const FOREIGN_PROGRAM: Address = Address::new_from_array([0xAA; 32]);
 
@@ -1158,7 +1158,7 @@ mod interface_tests {
         use jiminy_core::account::AccountHeader;
         use jiminy_core::abi::LeU64;
         use jiminy_core::jiminy_interface;
-        use pinocchio::Address;
+        use jiminy_core::Address;
 
         #[allow(dead_code)]
         const FOREIGN_PROGRAM: Address = Address::new_from_array([0xAA; 32]);
@@ -1201,7 +1201,7 @@ mod segmented_interface_tests {
     use jiminy_core::account::{AccountHeader, Pod, FixedLayout};
     use jiminy_core::abi::LeU64;
     use jiminy_core::segmented_layout;
-    use pinocchio::Address;
+    use jiminy_core::Address;
 
     const FOREIGN_PROGRAM: Address = Address::new_from_array([0xBB; 32]);
 
@@ -1234,7 +1234,7 @@ mod segmented_interface_tests {
         use jiminy_core::account::{AccountHeader, Pod, FixedLayout};
         use jiminy_core::abi::LeU64;
         use jiminy_core::segmented_interface;
-        use pinocchio::Address;
+        use jiminy_core::Address;
 
         const FOREIGN_PROGRAM: Address = Address::new_from_array([0xBB; 32]);
 
@@ -1402,7 +1402,7 @@ mod segmented_interface_tests {
         use jiminy_core::account::{AccountHeader, Pod, FixedLayout};
         use jiminy_core::abi::LeU64;
         use jiminy_core::segmented_interface;
-        use pinocchio::Address;
+        use jiminy_core::Address;
 
         #[allow(dead_code)]
         const FOREIGN_PROGRAM: Address = Address::new_from_array([0xBB; 32]);

@@ -9,14 +9,14 @@ readme = "README.md"
 repository = "https://github.com/QuarksBlueFoot/jiminy"
 homepage = "https://github.com/QuarksBlueFoot/jiminy"
 documentation = "https://docs.rs/jiminy-core"
-keywords = ["solana", "pinocchio", "bpf", "zero-copy", "no-std"]
+keywords = ["solana", "hopper", "bpf", "zero-copy", "no-std"]
 categories = ["no-std", "embedded"]
 
 [lib]
 name = "jiminy_core"
 
 [dependencies]
-pinocchio = { workspace = true }
+hopper-runtime = { workspace = true }
 sha2-const-stable = { workspace = true }
 solana-zero-copy = { version = "1", optional = true }
 

@@ -13,7 +13,7 @@
 //! to validate discriminator + version + layout_id in one shot, and
 //! [`header_payload`] to get the body slice after the header.
 
-use pinocchio::error::ProgramError;
+use hopper_runtime::ProgramError;
 
 /// Canonical account header size in bytes.
 pub const HEADER_LEN: usize = 16;

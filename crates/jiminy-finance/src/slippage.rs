@@ -5,7 +5,7 @@
 //! price manipulation. Every swap, deposit, and withdrawal should
 //! use at least one of these.
 
-use pinocchio::{error::ProgramError, ProgramResult};
+use hopper_runtime::{ProgramError, ProgramResult};
 
 /// Verify actual output meets the user's minimum (slippage protection).
 ///

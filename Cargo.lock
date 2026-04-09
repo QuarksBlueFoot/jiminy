@@ -842,6 +842,15 @@ dependencies = [
 
 [[package]]
 name = "five8_const"
+version = "0.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "26dec3da8bc3ef08f2c04f61eab298c3ab334523e55f076354d6d6f613799a7b"
+dependencies = [
+ "five8_core",
+]
+
+[[package]]
+name = "five8_const"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1a0f1728185f277989ca573a402716ae0beaaea3f76a8ff87ef9dd8fb19436c5"
@@ -965,6 +974,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "hopper-runtime"
+version = "0.1.0"
+dependencies = [
+ "five8_const 0.1.4",
+ "pinocchio",
+ "pinocchio-system",
+ "pinocchio-token",
+]
+
+[[package]]
 name = "im"
 version = "15.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1009,6 +1028,7 @@ checksum = "92ecc6618181def0457392ccd0ee51198e065e016d1d527a7ac1b6dc7c1f09d2"
 name = "jiminy"
 version = "0.16.0"
 dependencies = [
+ "hopper-runtime",
  "jiminy-core",
  "jiminy-distribute",
  "jiminy-finance",
@@ -1017,9 +1037,6 @@ dependencies = [
  "jiminy-solana",
  "jiminy-staking",
  "jiminy-vesting",
- "pinocchio",
- "pinocchio-system",
- "pinocchio-token",
  "sha2-const-stable",
 ]
 
@@ -1027,8 +1044,8 @@ dependencies = [
 name = "jiminy-anchor"
 version = "0.16.0"
 dependencies = [
+ "hopper-runtime",
  "jiminy-core",
- "pinocchio",
  "sha2-const-stable",
 ]
 
@@ -1036,7 +1053,7 @@ dependencies = [
 name = "jiminy-core"
 version = "0.16.0"
 dependencies = [
- "pinocchio",
+ "hopper-runtime",
  "proptest",
  "sha2-const-stable",
  "solana-zero-copy",
@@ -1046,7 +1063,7 @@ dependencies = [
 name = "jiminy-distribute"
 version = "0.16.0"
 dependencies = [
- "pinocchio",
+ "hopper-runtime",
 ]
 
 [[package]]
@@ -1060,30 +1077,30 @@ dependencies = [
 name = "jiminy-finance"
 version = "0.16.0"
 dependencies = [
+ "hopper-runtime",
  "jiminy-core",
- "pinocchio",
 ]
 
 [[package]]
 name = "jiminy-layouts"
 version = "0.16.0"
 dependencies = [
+ "hopper-runtime",
  "jiminy-core",
- "pinocchio",
 ]
 
 [[package]]
 name = "jiminy-lending"
 version = "0.16.0"
 dependencies = [
- "pinocchio",
+ "hopper-runtime",
 ]
 
 [[package]]
 name = "jiminy-multisig"
 version = "0.16.0"
 dependencies = [
- "pinocchio",
+ "hopper-runtime",
 ]
 
 [[package]]
@@ -1094,17 +1111,15 @@ version = "0.16.0"
 name = "jiminy-solana"
 version = "0.16.0"
 dependencies = [
+ "hopper-runtime",
  "jiminy-core",
- "pinocchio",
- "pinocchio-system",
- "pinocchio-token",
 ]
 
 [[package]]
 name = "jiminy-staking"
 version = "0.16.0"
 dependencies = [
- "pinocchio",
+ "hopper-runtime",
 ]
 
 [[package]]
@@ -1118,7 +1133,7 @@ dependencies = [
 name = "jiminy-vesting"
 version = "0.16.0"
 dependencies = [
- "pinocchio",
+ "hopper-runtime",
 ]
 
 [[package]]
@@ -1810,7 +1825,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "68c5d02824391b072dc5cd0aaa85fb0af9784a21d23286a767994d1e8a322131"
 dependencies = [
  "five8",
- "five8_const",
+ "five8_const 1.0.0",
  "solana-define-syscall 5.0.0",
  "solana-program-error",
 ]

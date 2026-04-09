@@ -1,4 +1,4 @@
-use pinocchio::Address;
+use hopper_runtime::Address;
 
 /// The system program — where lamports come from and where rent goes.
 ///

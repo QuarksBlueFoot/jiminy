@@ -97,16 +97,16 @@ pub use crate::upgrade::{
 // ── TWAP accumulators ────────────────────────────────────────────────────────
 pub use crate::twap::{update_twap_cumulative, compute_twap, check_twap_deviation};
 
-// ── pinocchio CPI helpers ────────────────────────────────────────────────────
-pub use pinocchio::cpi;
-pub use pinocchio::instruction::{InstructionAccount, InstructionView};
+// ── Hopper Runtime CPI helpers ────────────────────────────────────────────────
+pub use hopper_runtime::cpi;
+pub use hopper_runtime::instruction::{InstructionAccount, InstructionView};
 
 // ── System program CPI ──────────────────────────────────────────────────────
-pub use pinocchio_system::instructions::{
+pub use hopper_runtime::system::instructions::{
     CreateAccount, Transfer as SystemTransfer,
 };
 
 // ── Token program CPI ───────────────────────────────────────────────────────
-pub use pinocchio_token::instructions::{
+pub use hopper_runtime::token::instructions::{
     Burn, CloseAccount, InitializeAccount, MintTo, Transfer as TokenTransfer,
 };

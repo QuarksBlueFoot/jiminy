@@ -9,4 +9,4 @@
 
 mod multisig;
 pub use multisig::*;
-pub use pinocchio;
+pub use hopper_runtime;

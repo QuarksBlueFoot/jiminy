@@ -24,7 +24,7 @@
 //! that change transfer semantics (transfer fees, hooks, non-transferable,
 //! permanent delegate). Ignoring these is a critical vulnerability.
 
-use pinocchio::{error::ProgramError, AccountView, ProgramResult};
+use hopper_runtime::{ProgramError, AccountView, ProgramResult};
 
 /// Base mint length before extensions.
 pub const BASE_MINT_LEN: usize = 82;

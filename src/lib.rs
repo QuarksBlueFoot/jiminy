@@ -2,16 +2,16 @@
 //! # jiminy
 //!
 //! Zero-copy account layouts, safety checks, and ABI tooling for Solana
-//! programs built on pinocchio.
+//! programs built on Hopper Runtime.
 //!
-//! Sits between raw pinocchio and higher-level frameworks like Anchor.
+//! Sits between raw runtime primitives and higher-level frameworks like Anchor.
 //! You get deterministic account layouts, verified zero-copy access,
 //! explicit safety tiers for account loading, and reusable validation
 //! functions for on-chain correctness. No framework, no proc macros,
 //! no hidden control flow.
 //!
 //! `no_std`. `no_alloc`. Declarative macros only. Every function
-//! `#[inline(always)]`. Built on pinocchio.
+//! `#[inline(always)]`. Built on Hopper Runtime.
 //!
 //! ## Permanent non-goals
 //!
@@ -202,12 +202,10 @@ pub use jiminy_vesting;
 pub use jiminy_multisig;
 pub use jiminy_distribute;
 
-// ── Pinocchio ecosystem ──────────────────────────────────────────────────────
+// ── Hopper Runtime ───────────────────────────────────────────────────────────
 
-pub use pinocchio;
-pub use pinocchio_system;
-pub use pinocchio_token;
-pub use pinocchio::{error::ProgramError, AccountView, Address, ProgramResult};
+pub use hopper_runtime;
+pub use hopper_runtime::{ProgramError, AccountView, Address, ProgramResult};
 
 // ── Prelude ──────────────────────────────────────────────────────────────────
 
@@ -346,12 +344,12 @@ macro_rules! require_flag {
 macro_rules! check_accounts_unique {
     ($a:expr, $b:expr) => {
         if $a.address() == $b.address() {
-            return Err($crate::pinocchio::error::ProgramError::InvalidArgument);
+            return Err($crate::ProgramError::InvalidArgument);
         }
     };
     ($head:expr, $($tail:expr),+ $(,)?) => {
         $( if $head.address() == $tail.address() {
-            return Err($crate::pinocchio::error::ProgramError::InvalidArgument);
+            return Err($crate::ProgramError::InvalidArgument);
         } )+
         $crate::check_accounts_unique!($($tail),+);
     };
@@ -386,10 +384,10 @@ macro_rules! error_codes {
             $crate::error_codes!(@count $base; $( $(#[$meta])* $name ),+ );
         }
         $(
-            impl From<errors::$name> for $crate::pinocchio::error::ProgramError {
+            impl From<errors::$name> for $crate::ProgramError {
                 #[inline(always)]
                 fn from(_: errors::$name) -> Self {
-                    $crate::pinocchio::error::ProgramError::Custom(errors::$name::CODE)
+                    $crate::ProgramError::Custom(errors::$name::CODE)
                 }
             }
         )+
@@ -433,7 +431,7 @@ macro_rules! instruction_dispatch {
         let tag = ix.read_u8()?;
         match tag {
             $( $tag => { let _ = &ix; $handler } )+
-            _ => Err($crate::pinocchio::error::ProgramError::InvalidInstructionData),
+            _ => Err($crate::ProgramError::InvalidInstructionData),
         }
     }};
 }
@@ -479,7 +477,7 @@ macro_rules! init_account {
     ($payer:expr, $account:expr, $program_id:expr, $Layout:ty) => {{
         let space = <$Layout>::LEN as u64;
         let lamports = $crate::check::rent_exempt_min(<$Layout>::LEN);
-        $crate::pinocchio_system::instructions::CreateAccount {
+        $crate::hopper_runtime::system::instructions::CreateAccount {
             from: $payer,
             to: $account,
             lamports,
@@ -496,7 +494,7 @@ macro_rules! init_account {
             <$Layout>::VERSION,
             &<$Layout>::LAYOUT_ID,
         )?;
-        Ok::<(), $crate::pinocchio::error::ProgramError>(())
+        Ok::<(), $crate::ProgramError>(())
     }};
 }
 
@@ -543,8 +541,8 @@ macro_rules! check_account {
 #[doc(hidden)]
 #[macro_export]
 macro_rules! __check_account_inner {
-    ($account:expr, ) => { Ok::<(), $crate::pinocchio::error::ProgramError>(()) };
-    ($account:expr $(,)?) => { Ok::<(), $crate::pinocchio::error::ProgramError>(()) };
+    ($account:expr, ) => { Ok::<(), $crate::ProgramError>(()) };
+    ($account:expr $(,)?) => { Ok::<(), $crate::ProgramError>(()) };
 
     ($account:expr, owner = $id:expr $(, $($rest:tt)*)?) => {{
         $crate::check::check_owner($account, $id)?;
@@ -627,7 +625,7 @@ macro_rules! find_pda {
         #[cfg(target_os = "solana")]
         {
             let seeds: &[&[u8]] = &[$($seed.as_ref()),+];
-            ::pinocchio::Address::find_program_address(seeds, $program_id)
+            ::hopper_runtime::Address::find_program_address(seeds, $program_id)
         }
         #[cfg(not(target_os = "solana"))]
         {
@@ -644,7 +642,7 @@ macro_rules! find_pda {
 #[macro_export]
 macro_rules! derive_pda {
     ($program_id:expr, $bump:expr, $($seed:expr),+ $(,)?) => {{
-        ::pinocchio::Address::new_from_array($crate::check::pda::derive_address(
+        ::hopper_runtime::Address::new_from_array($crate::check::pda::derive_address(
             &[$($seed.as_ref()),+],
             Some($bump),
             ($program_id).as_array(),
@@ -656,7 +654,7 @@ macro_rules! derive_pda {
 #[macro_export]
 macro_rules! derive_pda_const {
     ($program_id:expr, $bump:expr, $($seed:expr),+ $(,)?) => {
-        ::pinocchio::Address::new_from_array($crate::check::pda::derive_address_const(
+        ::hopper_runtime::Address::new_from_array($crate::check::pda::derive_address_const(
             &[$(&$seed),+],
             Some($bump),
             &$program_id,

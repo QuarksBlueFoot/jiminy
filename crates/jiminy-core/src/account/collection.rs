@@ -16,7 +16,7 @@
 //!
 //! ```rust,ignore
 //! use jiminy_core::account::collection::{ZeroCopySlice, ZeroCopySliceMut};
-//! use pinocchio::Address;
+//! use hopper_runtime::Address;
 //!
 //! // Read a whitelist from account data at some offset:
 //! let whitelist = ZeroCopySlice::<Address>::from_bytes(&data[offset..])?;
@@ -27,7 +27,7 @@
 //! *list.get_mut(0)? = new_address;
 //! ```
 
-use pinocchio::error::ProgramError;
+use hopper_runtime::ProgramError;
 
 use super::pod::{FixedLayout, Pod};
 

@@ -1,6 +1,6 @@
 //! Bit-level helpers for account flags and bitmask fields.
 
-use pinocchio::error::ProgramError;
+use hopper_runtime::ProgramError;
 
 /// Read bit `n` from a byte. Returns `true` if the bit is set.
 ///

@@ -5,7 +5,7 @@
 //! These checks compose with the sysvar clock reader to provide
 //! one-line time validation.
 
-use pinocchio::{error::ProgramError, ProgramResult};
+use hopper_runtime::{ProgramError, ProgramResult};
 
 /// Verify the current time has NOT passed a deadline.
 ///
@@ -95,7 +95,7 @@ pub fn check_cooldown(
 #[cfg(feature = "programs")]
 #[inline(always)]
 pub fn check_deadline(
-    clock_account: &pinocchio::AccountView,
+    clock_account: &hopper_runtime::AccountView,
     deadline: i64,
 ) -> ProgramResult {
     let timestamp = crate::sysvar::read_clock_timestamp(clock_account)?;
@@ -113,7 +113,7 @@ pub fn check_deadline(
 #[cfg(feature = "programs")]
 #[inline(always)]
 pub fn check_after(
-    clock_account: &pinocchio::AccountView,
+    clock_account: &hopper_runtime::AccountView,
     deadline: i64,
 ) -> ProgramResult {
     let timestamp = crate::sysvar::read_clock_timestamp(clock_account)?;

@@ -3,7 +3,7 @@
 
 use jiminy_core::account::*;
 use jiminy_core::segmented_layout;
-use pinocchio::Address;
+use jiminy_core::Address;
 
 // ── Test element types ───────────────────────────────────────────────────────
 

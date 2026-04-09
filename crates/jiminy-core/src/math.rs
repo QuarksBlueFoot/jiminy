@@ -1,4 +1,4 @@
-use pinocchio::error::ProgramError;
+use hopper_runtime::ProgramError;
 
 /// Checked u64 addition: returns `ArithmeticOverflow` on overflow.
 #[inline(always)]

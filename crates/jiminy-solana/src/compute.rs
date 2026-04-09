@@ -5,7 +5,7 @@
 //! can bail early with a clean error instead of hitting a mysterious
 //! "compute budget exceeded" at some random instruction.
 
-use pinocchio::error::ProgramError;
+use hopper_runtime::ProgramError;
 
 extern "C" {
     fn sol_remaining_compute_units() -> u64;

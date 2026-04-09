@@ -53,7 +53,5 @@ pub mod upgrade;
 // ── Re-exports ───────────────────────────────────────────────────────────────
 
 pub use jiminy_core;
-pub use pinocchio;
-pub use pinocchio_system;
-pub use pinocchio_token;
-pub use pinocchio::{error::ProgramError, AccountView, Address, ProgramResult};
+pub use hopper_runtime;
+pub use hopper_runtime::{ProgramError, AccountView, Address, ProgramResult};

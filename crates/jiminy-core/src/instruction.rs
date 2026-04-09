@@ -21,7 +21,7 @@
 //!   [current_instruction_index: u16 LE]
 //! ```
 
-use pinocchio::{error::ProgramError, Address, ProgramResult};
+use hopper_runtime::{ProgramError, Address, ProgramResult};
 
 /// Read the number of instructions in the transaction.
 #[inline(always)]

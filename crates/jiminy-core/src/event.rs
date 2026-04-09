@@ -40,7 +40,7 @@ pub fn emit_slices(segments: &[&[u8]]) {
         // length are derived from a live borrow so they remain valid for the
         // duration of the syscall.
         unsafe {
-            pinocchio::syscalls::sol_log_data(
+            hopper_runtime::syscalls::sol_log_data(
                 segments.as_ptr() as *const u8,
                 segments.len() as u64,
             );

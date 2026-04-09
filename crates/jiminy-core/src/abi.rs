@@ -342,10 +342,10 @@ impl<'a> FieldRef<'a> {
     ///
     /// Copies the bytes into an owned `Address`.
     #[inline(always)]
-    pub fn read_address(&self) -> pinocchio::Address {
+    pub fn read_address(&self) -> hopper_runtime::Address {
         let mut addr = [0u8; 32];
         addr.copy_from_slice(&self.data[..32]);
-        pinocchio::Address::from(addr)
+        hopper_runtime::Address::from(addr)
     }
 
     /// Borrow the field bytes as an `&Address` reference.
@@ -354,10 +354,10 @@ impl<'a> FieldRef<'a> {
     ///
     /// Panics if the field is smaller than 32 bytes.
     #[inline(always)]
-    pub fn as_address(&self) -> &pinocchio::Address {
+    pub fn as_address(&self) -> &hopper_runtime::Address {
         // SAFETY: Address is repr(transparent) over [u8; 32], alignment 1.
         // The slice has been bounds-checked to 32 bytes.
-        let ptr = self.data[..32].as_ptr() as *const pinocchio::Address;
+        let ptr = self.data[..32].as_ptr() as *const hopper_runtime::Address;
         unsafe { &*ptr }
     }
 
@@ -497,23 +497,23 @@ impl<'a> FieldMut<'a> {
 
     /// Read as an `Address` (32-byte public key).
     #[inline(always)]
-    pub fn read_address(&self) -> pinocchio::Address {
+    pub fn read_address(&self) -> hopper_runtime::Address {
         let mut addr = [0u8; 32];
         addr.copy_from_slice(&self.data[..32]);
-        pinocchio::Address::from(addr)
+        hopper_runtime::Address::from(addr)
     }
 
     /// Borrow the field bytes as an `&Address` reference.
     #[inline(always)]
-    pub fn as_address(&self) -> &pinocchio::Address {
+    pub fn as_address(&self) -> &hopper_runtime::Address {
         // SAFETY: Address is repr(transparent) over [u8; 32], alignment 1.
-        let ptr = self.data[..32].as_ptr() as *const pinocchio::Address;
+        let ptr = self.data[..32].as_ptr() as *const hopper_runtime::Address;
         unsafe { &*ptr }
     }
 
     /// Write an `Address` (32-byte public key).
     #[inline(always)]
-    pub fn write_address(&mut self, addr: &pinocchio::Address) {
+    pub fn write_address(&mut self, addr: &hopper_runtime::Address) {
         self.data[..32].copy_from_slice(addr.as_ref());
     }
 

@@ -28,7 +28,7 @@
 //! 16       burn_percent            (u8)
 //! ```
 
-use pinocchio::{error::ProgramError, AccountView, ProgramResult};
+use hopper_runtime::{ProgramError, AccountView, ProgramResult};
 
 #[cfg(feature = "programs")]
 use crate::programs;

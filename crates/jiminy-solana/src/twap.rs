@@ -7,7 +7,7 @@
 //! Uses u128 throughout to avoid overflow when accumulating over long
 //! periods.
 
-use pinocchio::error::ProgramError;
+use hopper_runtime::ProgramError;
 
 /// Advance the cumulative price accumulator.
 ///

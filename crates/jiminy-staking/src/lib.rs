@@ -10,4 +10,4 @@
 
 mod staking;
 pub use staking::*;
-pub use pinocchio;
+pub use hopper_runtime;

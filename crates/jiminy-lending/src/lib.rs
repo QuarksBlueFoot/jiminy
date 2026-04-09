@@ -10,4 +10,4 @@
 
 mod lending;
 pub use lending::*;
-pub use pinocchio;
+pub use hopper_runtime;

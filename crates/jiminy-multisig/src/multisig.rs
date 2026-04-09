@@ -4,7 +4,7 @@
 //! operations. Counts signers, checks thresholds, and prevents the
 //! duplicate-signer attack (same account passed in multiple slots).
 
-use pinocchio::{error::ProgramError, AccountView, ProgramResult};
+use hopper_runtime::{ProgramError, AccountView, ProgramResult};
 
 /// Count how many accounts in the slice are transaction signers.
 ///

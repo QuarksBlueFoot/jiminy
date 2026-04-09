@@ -35,7 +35,7 @@
 //! let state = pod_from_bytes::<MyState>(&data)?;
 //! ```
 
-use pinocchio::error::ProgramError;
+use hopper_runtime::ProgramError;
 
 /// Marker trait for types that can be safely transmuted from any byte pattern.
 ///

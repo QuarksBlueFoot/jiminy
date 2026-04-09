@@ -7,8 +7,8 @@
 //! every access.
 
 use core::marker::PhantomData;
-use pinocchio::account::{Ref, RefMut};
-use pinocchio::error::ProgramError;
+use hopper_runtime::{Ref, RefMut};
+use hopper_runtime::ProgramError;
 
 use super::{Pod, FixedLayout, pod_from_bytes};
 

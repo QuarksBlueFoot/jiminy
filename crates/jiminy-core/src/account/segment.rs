@@ -69,7 +69,7 @@
 //! }
 //! ```
 
-use pinocchio::error::ProgramError;
+use hopper_runtime::ProgramError;
 
 use super::pod::{FixedLayout, Pod};
 

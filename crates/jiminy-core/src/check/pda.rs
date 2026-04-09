@@ -6,9 +6,9 @@
 
 use core::mem::MaybeUninit;
 
-use pinocchio::{
+use hopper_runtime::{
     address::{MAX_SEEDS, PDA_MARKER},
-    error::ProgramError,
+    ProgramError,
     Address,
 };
 use sha2_const_stable::Sha256;
@@ -61,7 +61,7 @@ pub fn derive_address<const N: usize>(
         // SAFETY: sol_sha256 writes 32 bytes to the output pointer.
         // data contains (i + 2) initialized (ptr, len) pairs.
         unsafe {
-            pinocchio::syscalls::sol_sha256(
+            hopper_runtime::syscalls::sol_sha256(
                 data.as_ptr() as *const u8,
                 (i + 2) as u64,
                 pda.as_mut_ptr() as *mut u8,
@@ -169,7 +169,7 @@ macro_rules! derive_ata_const {
     ($wallet:expr, $mint:expr, $bump:expr) => {{
         const TOKEN_BYTES: [u8; 32] = $crate::programs::TOKEN.to_bytes();
         const ATA_BYTES: [u8; 32] = $crate::programs::ASSOCIATED_TOKEN.to_bytes();
-        ::pinocchio::Address::new_from_array($crate::check::pda::derive_address_const(
+        ::hopper_runtime::Address::new_from_array($crate::check::pda::derive_address_const(
             &[&$wallet, &TOKEN_BYTES, &$mint],
             Some($bump),
             &ATA_BYTES,
@@ -188,7 +188,7 @@ macro_rules! find_pda {
         #[cfg(target_os = "solana")]
         {
             let seeds: &[&[u8]] = &[$($seed.as_ref()),+];
-            ::pinocchio::Address::find_program_address(seeds, $program_id)
+            ::hopper_runtime::Address::find_program_address(seeds, $program_id)
         }
         #[cfg(not(target_os = "solana"))]
         {
@@ -204,7 +204,7 @@ macro_rules! find_pda {
 #[macro_export]
 macro_rules! derive_pda {
     ($program_id:expr, $bump:expr, $($seed:expr),+ $(,)?) => {{
-        ::pinocchio::Address::new_from_array($crate::check::pda::derive_address(
+        ::hopper_runtime::Address::new_from_array($crate::check::pda::derive_address(
             &[$($seed.as_ref()),+],
             Some($bump),
             ($program_id).as_array(),
@@ -216,7 +216,7 @@ macro_rules! derive_pda {
 #[macro_export]
 macro_rules! derive_pda_const {
     ($program_id:expr, $bump:expr, $($seed:expr),+ $(,)?) => {
-        ::pinocchio::Address::new_from_array($crate::check::pda::derive_address_const(
+        ::hopper_runtime::Address::new_from_array($crate::check::pda::derive_address_const(
             &[$(&$seed),+],
             Some($bump),
             &$program_id,
@@ -228,10 +228,10 @@ macro_rules! derive_pda_const {
 #[cfg(feature = "programs")]
 #[inline(always)]
 pub fn check_ata(
-    account: &pinocchio::AccountView,
+    account: &hopper_runtime::AccountView,
     wallet: &Address,
     mint: &Address,
-) -> pinocchio::ProgramResult {
+) -> hopper_runtime::ProgramResult {
     let (expected, _) = derive_ata(wallet, mint)?;
     if *account.address() != expected {
         return Err(ProgramError::InvalidSeeds);
@@ -243,11 +243,11 @@ pub fn check_ata(
 #[cfg(feature = "programs")]
 #[inline(always)]
 pub fn check_ata_with_program(
-    account: &pinocchio::AccountView,
+    account: &hopper_runtime::AccountView,
     wallet: &Address,
     mint: &Address,
     token_program: &Address,
-) -> pinocchio::ProgramResult {
+) -> hopper_runtime::ProgramResult {
     let (expected, _) = derive_ata_with_program(wallet, mint, token_program)?;
     if *account.address() != expected {
         return Err(ProgramError::InvalidSeeds);
