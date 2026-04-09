@@ -18,10 +18,14 @@ access and ad-hoc validation.
 
 ```toml
 [dependencies]
-# Replace direct pinocchio dependency - jiminy re-exports everything.
-jiminy = "0.15"
+# Replace the direct pinocchio dependency if you only need Jiminy's common surface.
+jiminy = "0.16"
 # pinocchio = "0.10"   ← remove
 ```
+
+For the common path, use `jiminy::prelude::*` or `jiminy::hopper_runtime::*`.
+Keep the direct `pinocchio` dependency only if you still call backend-specific
+APIs during migration.
 
 ### Step 2: Replace account access
 
@@ -104,10 +108,10 @@ your-program/
 ```toml
 [dependencies]
 anchor-lang = "0.30"
-jiminy = "0.15"
+jiminy = "0.16"
 ```
 
-### Step 2: Move hot instructions to pinocchio/jiminy
+### Step 2: Move hot instructions to hopper-runtime/jiminy
 
 ```rust
 // hot_path/swap.rs: processes raw account data, no Anchor overhead

@@ -9,7 +9,8 @@ Token/mint readers, Token-2022 screening, CPI guards, Ed25519, Merkle proofs, Py
 jiminy-solana = "0.16"
 ```
 
-Pulls in `jiminy-core`, `pinocchio-token`, and `pinocchio-system` for you.
+Builds on `jiminy-core` and Hopper Runtime's Solana-facing account surface.
+In this workspace, that runtime is wired to the pinocchio backend.
 
 ## What's in here
 

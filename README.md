@@ -4,7 +4,7 @@
 [![docs.rs](https://docs.rs/jiminy/badge.svg)](https://docs.rs/jiminy)
 [![license](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
-Deterministic account ABI + safety layer for Solana programs built on [pinocchio](https://github.com/febo/pinocchio).
+Deterministic account ABI + safety layer for Solana programs built on Hopper Runtime, with the pinocchio backend wired in today.
 
 ---
 
@@ -47,11 +47,14 @@ Deterministic account ABI + safety layer for Solana programs built on [pinocchio
 ```text
 Anchor         = full framework
 Jiminy         = safety + ABI layer
-Pinocchio      = raw execution layer
+Hopper Runtime = execution surface
+Pinocchio      = backend compatibility today
 ```
 
 Jiminy enforces correctness without taking control. You write `process_instruction`,
-you own the control flow, and you can drop any module and call pinocchio directly.
+you own the control flow, and you can drop any module and call Hopper Runtime
+directly. If you still need backend-specific APIs, keep a direct pinocchio
+dependency while you migrate.
 
 `no_std`. `no_alloc`. Declarative macros only. Everything `#[inline(always)]`.
 
@@ -62,7 +65,7 @@ you own the control flow, and you can drop any module and call pinocchio directl
 | I want to... | Start with |
 |---|---|
 | Start a new program | [`examples/jiminy-vault`](examples/jiminy-vault) |
-| Add jiminy to a pinocchio program | [MIGRATION_COOKBOOK](docs/MIGRATION_COOKBOOK.md) |
+| Add jiminy to a pinocchio or Hopper Runtime program | [MIGRATION_COOKBOOK](docs/MIGRATION_COOKBOOK.md) |
 | Read another program's accounts | [ACCOUNT_ABI_CONTRACT](docs/ACCOUNT_ABI_CONTRACT.md) |
 | Build off-chain tooling | [`jiminy-schema`](crates/jiminy-schema) |
 
@@ -448,15 +451,15 @@ This works fine. Cargo deduplicates the pinocchio crate as long as versions are
 compatible. You keep your existing `use pinocchio::*` imports and add jiminy
 imports alongside them.
 
-### Option 2: Drop the direct pinocchio dependency (recommended)
+### Option 2: Drop the direct pinocchio dependency for common Jiminy flows
 
 ```toml
 [dependencies]
 jiminy = "0.16"
 ```
 
-Jiminy re-exports the entire pinocchio crate, plus `pinocchio-system` and
-`pinocchio-token`. Replace your pinocchio imports:
+Jiminy re-exports the Hopper Runtime surface you author against. Replace your
+direct runtime imports:
 
 ```rust
 // Before
@@ -464,17 +467,17 @@ use pinocchio::{AccountView, Address, ProgramResult};
 use pinocchio::{program_entrypoint, no_allocator, nostd_panic_handler};
 
 // After
-use jiminy::pinocchio::{AccountView, Address, ProgramResult};
-use jiminy::pinocchio::{program_entrypoint, no_allocator, nostd_panic_handler};
+use jiminy::prelude::{AccountView, Address, ProgramResult};
+use jiminy::prelude::{hopper_entrypoint, no_allocator, nostd_panic_handler};
 
-// Or just use the prelude for the most common types
-use jiminy::prelude::*;
+// Or pull the runtime module explicitly
+use jiminy::hopper_runtime::{AccountView, Address, ProgramResult};
 ```
 
-The `pub use pinocchio;` re-export in `lib.rs` makes the **entire** pinocchio
-API available under `jiminy::pinocchio`, so there's no need for a direct
-dependency. Same for `jiminy::pinocchio_system` and `jiminy::pinocchio_token`.
-One crate, one version, no duplication.
+Jiminy re-exports `hopper_runtime` as `jiminy::hopper_runtime`, and
+`jiminy::prelude::*` already pulls in the common account types and entrypoint
+macros. Keep a direct `pinocchio` dependency only if you are intentionally
+calling backend-specific APIs that Jiminy and Hopper Runtime do not expose.
 
 The prelude also re-exports the most common CPI structs:
 
@@ -510,8 +513,10 @@ use jiminy::prelude::*;
 ```
 
 One import. Everything listed above lands in scope. Account checks, token
-readers, CPI wrappers, DeFi math, macros, `AccountList`, cursors, and the
-pinocchio core types. You don't need a direct pinocchio dependency anymore.
+readers, CPI wrappers, DeFi math, macros, `AccountList`, cursors, Hopper
+Runtime core types, and entrypoint macros. You do not need a direct
+`hopper-runtime` dependency for the common path, and you only need a direct
+`pinocchio` dependency when you intentionally use backend-specific APIs.
 
 All public functions are available both via the prelude and through their
 module paths (`jiminy::token::*`, `jiminy::cpi::*`, `jiminy::math::*`, etc.).

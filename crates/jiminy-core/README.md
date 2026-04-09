@@ -1,6 +1,6 @@
 # jiminy-core
 
-Account layout, zero-copy IO, validation, PDA, sysvar access, lifecycle, math, time checks. Everything your pinocchio program needs before it touches a token.
+Account layout, zero-copy IO, validation, PDA, sysvar access, lifecycle, math, time checks. The core systems layer behind Jiminy's account and ABI model.
 
 `#![no_std]` / `no_alloc` / BPF-safe
 

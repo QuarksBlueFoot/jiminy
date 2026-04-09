@@ -95,10 +95,11 @@ match the expected schema.
 ### No proc macros, no alloc, no std
 
 Jiminy uses only `macro_rules!` and runs in `no_std` + `no_alloc`
-environments. Two runtime dependencies: pinocchio and
-sha2-const-stable. That's it. No framework opinions, no allocator,
-no proc-macro compilation tax. Your build stays fast because there's
-nothing to slow it down.
+environments. Two core runtime dependencies in this workspace:
+hopper-runtime and sha2-const-stable. Jiminy's workspace wiring currently
+selects Hopper Runtime's pinocchio backend. No framework opinions, no
+allocator, no proc-macro compilation tax. Your build stays fast because
+there's nothing to slow it down.
 
 ## What Jiminy Does Not Do
 

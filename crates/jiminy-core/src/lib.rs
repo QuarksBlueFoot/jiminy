@@ -23,8 +23,11 @@
 //! | [`instruction`] | Transaction introspection (sysvar Instructions) |
 //! | [`interface`] | Cross-program ABI interfaces (`jiminy_interface!`) |
 //! | [`math`] | Checked arithmetic, BPS, scaling |
+//! | [`field`] | Typed field descriptors for named zero-copy offsets |
+//! | [`packed`] | Reserved bytes and extension-region helpers |
 //! | [`sysvar`] | Clock & Rent sysvar readers |
 //! | [`state`] | State machine transition checks |
+//! | [`state_utils`] | State hygiene helpers for layout lifecycle work |
 //! | [`time`] | Deadline, cooldown, staleness checks |
 //! | [`event`] | Zero-alloc event emission via `sol_log_data` |
 //! | [`programs`] | Well-known program IDs *(feature: `programs`)* |
@@ -55,10 +58,13 @@
 pub mod account;
 pub mod check;
 pub mod event;
+pub mod field;
 pub mod instruction;
 pub mod math;
+pub mod packed;
 pub mod prelude;
 pub mod state;
+pub mod state_utils;
 pub mod sysvar;
 pub mod time;
 
@@ -71,6 +77,10 @@ pub mod programs;
 pub mod abi;
 pub mod compat;
 pub mod interface;
+
+pub use field::*;
+pub use packed::*;
+pub use state_utils::*;
 
 // ── Hopper Runtime re-exports ─────────────────────────────────────────────────
 //

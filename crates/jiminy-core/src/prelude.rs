@@ -78,6 +78,16 @@ pub use crate::check::pda::{
 // ── Account iteration ────────────────────────────────────────────────────────
 pub use crate::account::AccountList;
 
+// ── Field descriptors ────────────────────────────────────────────────────────
+pub use crate::field::Field;
+
+// ── State hygiene ────────────────────────────────────────────────────────────
+pub use crate::state::{
+    zero_bytes, write_version, write_disc, write_layout_id,
+    ExtensionRegion,
+};
+pub use crate::packed::ReservedBytes;
+
 // ── ABI field types ──────────────────────────────────────────────────────────
 pub use crate::abi::{
     FieldMut, FieldRef, LeBool, LeI128, LeI16, LeI32, LeI64, LeU128, LeU16, LeU32, LeU64,

@@ -119,3 +119,90 @@ pub fn write_state(data: &mut [u8], offset: usize, new_state: u8) -> ProgramResu
     data[offset] = new_state;
     Ok(())
 }
+
+// ══════════════════════════════════════════════════════════════════════
+//  State hygiene helpers
+// ══════════════════════════════════════════════════════════════════════
+
+/// Zero all bytes in a mutable slice.
+///
+/// Use when closing accounts or reinitializing data regions.
+#[inline(always)]
+pub fn zero_bytes(data: &mut [u8]) {
+    let mut i = 0;
+    while i < data.len() {
+        data[i] = 0;
+        i += 1;
+    }
+}
+
+/// Write a version byte at the standard Hopper header offset (byte 1).
+#[inline(always)]
+pub fn write_version(data: &mut [u8], version: u8) -> ProgramResult {
+    if data.len() < 2 {
+        return Err(ProgramError::AccountDataTooSmall);
+    }
+    data[1] = version;
+    Ok(())
+}
+
+/// Write the discriminator byte at the standard Hopper header offset (byte 0).
+#[inline(always)]
+pub fn write_disc(data: &mut [u8], disc: u8) -> ProgramResult {
+    if data.is_empty() {
+        return Err(ProgramError::AccountDataTooSmall);
+    }
+    data[0] = disc;
+    Ok(())
+}
+
+/// Write the 8-byte layout_id at the standard Hopper header offset (bytes 4..12).
+#[inline(always)]
+pub fn write_layout_id(data: &mut [u8], layout_id: &[u8; 8]) -> ProgramResult {
+    if data.len() < 12 {
+        return Err(ProgramError::AccountDataTooSmall);
+    }
+    data[4..12].copy_from_slice(layout_id);
+    Ok(())
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  Extension region
+// ══════════════════════════════════════════════════════════════════════
+
+/// A reserved byte region for forward-compatible layout expansion.
+///
+/// Place at the end of a layout struct to claim bytes that future versions
+/// can use without requiring realloc.
+///
+/// ```rust,ignore
+/// #[repr(C)]
+/// #[derive(Copy, Clone)]
+/// pub struct MyLayout {
+///     pub authority: [u8; 32],
+///     pub balance: hopper_runtime::LeU64,
+///     pub _reserved: ExtensionRegion<64>,
+/// }
+/// ```
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct ExtensionRegion<const N: usize> {
+    pub bytes: [u8; N],
+}
+
+impl<const N: usize> Default for ExtensionRegion<N> {
+    fn default() -> Self {
+        Self { bytes: [0u8; N] }
+    }
+}
+
+impl<const N: usize> ExtensionRegion<N> {
+    /// Number of reserved bytes in this region.
+    pub const SIZE: usize = N;
+
+    /// Construct a zeroed extension region.
+    #[inline(always)]
+    pub const fn zeroed() -> Self {
+        Self { bytes: [0u8; N] }
+    }
+}
