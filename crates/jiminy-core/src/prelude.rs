@@ -143,4 +143,11 @@ pub use crate::{
 
 // ── Runtime core types ───────────────────────────────────────────────────────
 pub use hopper_runtime::{ProgramError, AccountView, Address, ProgramResult};
-pub use hopper_runtime::{hopper_entrypoint, no_allocator, nostd_panic_handler, program_entrypoint};
+pub use hopper_runtime::{
+    hopper_entrypoint,
+    hopper_lazy_entrypoint,
+    lazy_entrypoint,
+    no_allocator,
+    nostd_panic_handler,
+    program_entrypoint,
+};
