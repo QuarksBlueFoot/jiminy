@@ -42,7 +42,7 @@ pub fn mint_authority(account: &AccountView) -> Result<Option<&Address>, Program
             .try_into()
             .map_err(|_| ProgramError::InvalidAccountData)?,
     );
-    let ptr = data.as_ptr();
+    let ptr = data.as_ptr().cast::<u8>();
     drop(data);
     if tag == 0 {
         Ok(None)
@@ -130,7 +130,7 @@ pub fn mint_freeze_authority(account: &AccountView) -> Result<Option<&Address>, 
             .try_into()
             .map_err(|_| ProgramError::InvalidAccountData)?,
     );
-    let ptr = data.as_ptr();
+    let ptr = data.as_ptr().cast::<u8>();
     drop(data);
     if tag == 0 {
         Ok(None)

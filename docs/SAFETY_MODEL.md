@@ -15,7 +15,7 @@ Higher tiers validate more; lower tiers trade safety for flexibility.
 | 1 | **Verified** | `load()` / `load_mut()` | owner + disc + version + layout_id + exact size | Loading your own program's accounts |
 | 2 | **Foreign Verified** | `load_foreign()` | owner + layout_id + exact size | Reading another program's accounts (cross-program) |
 | 3 | **Compatibility** | `validate_version_compatible()` | owner + disc + version + min size (no layout_id) | Version migration, explicitly weaker |
-| 4 | **Unsafe** | `load_unchecked()` | none (`unsafe`) | Hot path — caller assumes all risk |
+| 4 | **Unsafe** | `load_unchecked()` | none (`unsafe`) | Hot path. Caller assumes all risk |
 | 5 | **Unverified Overlay** | `load_unverified_overlay()` | header + layout_id if present, fallback to overlay | Indexers, explorers, diagnostic tooling |
 
 ## 1. Zero-Init Before Header Write

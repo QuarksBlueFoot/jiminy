@@ -42,7 +42,7 @@ pub fn token_account_owner(account: &AccountView) -> Result<&Address, ProgramErr
     // SAFETY: data is borrowed and lives as long as the AccountView.
     // We return a reference into account data via pointer cast.
     // The borrow is dropped but the underlying data is pinned by the runtime.
-    let ptr = data.as_ptr();
+    let ptr = data.as_ptr().cast::<u8>();
     drop(data);
     Ok(unsafe { &*(ptr.add(32) as *const Address) })
 }
@@ -83,7 +83,7 @@ pub fn token_account_mint(account: &AccountView) -> Result<&Address, ProgramErro
     if data.len() < TOKEN_ACCOUNT_LEN {
         return Err(ProgramError::AccountDataTooSmall);
     }
-    let ptr = data.as_ptr();
+    let ptr = data.as_ptr().cast::<u8>();
     drop(data);
     Ok(unsafe { &*(ptr as *const Address) })
 }
@@ -108,7 +108,7 @@ pub fn token_account_delegate(account: &AccountView) -> Result<Option<&Address>,
             .try_into()
             .map_err(|_| ProgramError::InvalidAccountData)?,
     );
-    let ptr = data.as_ptr();
+    let ptr = data.as_ptr().cast::<u8>();
     drop(data);
     if tag == 0 {
         Ok(None)
@@ -159,7 +159,7 @@ pub fn token_account_close_authority(
             .try_into()
             .map_err(|_| ProgramError::InvalidAccountData)?,
     );
-    let ptr = data.as_ptr();
+    let ptr = data.as_ptr().cast::<u8>();
     drop(data);
     if tag == 0 {
         Ok(None)

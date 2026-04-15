@@ -209,7 +209,7 @@ OrderBook::validate_segments(&data)?;
 | **Counts** | Set to `counts[i]` | Set to `0` |
 | **Capacity** | Set to `counts[i]` (tight fit) | Set to `capacities[i]` |
 | **Offsets** | Spaced by `counts[i] * elem_size` | Spaced by `capacities[i] * elem_size` |
-| **Push safe?** | No — segment is already full (`count == capacity`) | Yes, up to `capacities[i]` elements |
+| **Push safe?** | No, segment is already full (`count == capacity`) | Yes, up to `capacities[i]` elements |
 
 ## Bounds Checking & Overflow
 

@@ -72,31 +72,31 @@ pub mod indexer;
 /// one canonical type.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CanonicalType {
-    /// `u8` — unsigned 8-bit integer.
+    /// `u8`: unsigned 8-bit integer.
     U8,
-    /// `u16` — unsigned 16-bit integer (LE).
+    /// `u16`: unsigned 16-bit integer (LE).
     U16,
-    /// `u32` — unsigned 32-bit integer (LE).
+    /// `u32`: unsigned 32-bit integer (LE).
     U32,
-    /// `u64` — unsigned 64-bit integer (LE).
+    /// `u64`: unsigned 64-bit integer (LE).
     U64,
-    /// `u128` — unsigned 128-bit integer (LE).
+    /// `u128`: unsigned 128-bit integer (LE).
     U128,
-    /// `i8` — signed 8-bit integer.
+    /// `i8`: signed 8-bit integer.
     I8,
-    /// `i16` — signed 16-bit integer (LE).
+    /// `i16`: signed 16-bit integer (LE).
     I16,
-    /// `i32` — signed 32-bit integer (LE).
+    /// `i32`: signed 32-bit integer (LE).
     I32,
-    /// `i64` — signed 64-bit integer (LE).
+    /// `i64`: signed 64-bit integer (LE).
     I64,
-    /// `i128` — signed 128-bit integer (LE).
+    /// `i128`: signed 128-bit integer (LE).
     I128,
-    /// `bool` — boolean (1 byte, 0 or 1).
+    /// `bool`: boolean (1 byte, 0 or 1).
     Bool,
-    /// `pubkey` — 32-byte public key / address.
+    /// `pubkey`: 32-byte public key / address.
     Pubkey,
-    /// `header` — Jiminy 16-byte `AccountHeader`.
+    /// `header`: Jiminy 16-byte `AccountHeader`.
     Header,
     /// Fixed-size byte array `[u8; N]`.
     Bytes(usize),
@@ -172,8 +172,8 @@ impl LayoutManifest {
     /// Size of the fixed-field portion in bytes (sum of all field sizes).
     ///
     /// For non-segmented layouts this equals the full account size.
-    /// For segmented layouts, the minimum account size is larger —
-    /// use [`min_size()`](Self::min_size) instead.
+    /// For segmented layouts, the minimum account size is larger.
+    /// Use [`min_size()`](Self::min_size) instead.
     pub const fn total_size(&self) -> usize {
         let mut total = 0;
         let mut i = 0;
@@ -763,7 +763,7 @@ mod tests {
 
     #[test]
     fn canonical_type_bytes_as_str() {
-        // Bytes variant always returns "bytes" — caller appends size
+        // Bytes variant always returns "bytes"; caller appends size.
         assert_eq!(CanonicalType::Bytes(32).as_str(), "bytes");
         assert_eq!(CanonicalType::Bytes(128).as_str(), "bytes");
     }
@@ -864,7 +864,7 @@ mod tests {
         };
         let mut hash = [0u8; 32];
         hash[..8].copy_from_slice(&layout_id);
-        // Rest can be anything — only first 8 bytes matter.
+        // Rest can be anything; only first 8 bytes matter.
         hash[8] = 0xFF;
         assert!(manifest.verify_hash(&hash).is_ok());
     }
