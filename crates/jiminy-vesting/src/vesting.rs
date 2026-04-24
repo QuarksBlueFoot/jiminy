@@ -11,7 +11,16 @@ use hopper_runtime::ProgramError;
 /// Compute the vested amount under a linear schedule with cliff.
 ///
 /// Returns 0 before the cliff, `total` after `end`, and a proportional
-/// amount in between. Uses u128 intermediate to avoid overflow.
+/// amount in between. Uses u128 intermediates to avoid overflow.
+///
+/// # Schedule invariants
+///
+/// This function is **defensive against caller-provided timestamps**:
+/// any schedule where `start > cliff`, `cliff > end`, or `start > end`
+/// is treated as "not yet vested" (returns 0 in the linear region)
+/// instead of silently producing a huge unlocked amount via a signed→
+/// unsigned cast. The math only runs when `start <= cliff <= end` and
+/// `cliff <= now < end`, where `(now - start) >= 0` is guaranteed.
 ///
 /// ```rust,ignore
 /// let vested = vested_amount(1_000_000, start, cliff, end, now);
@@ -23,6 +32,12 @@ pub fn vested_amount(total: u64, start: i64, cliff: i64, end: i64, now: i64) -> 
     }
     if now >= end {
         return total;
+    }
+    // Guard against pathological schedules. Without these checks, casting
+    // `now - start` to u128 when `start > now` would wrap to a huge value
+    // and bypass the cliff entirely. Bail out as "unvested" instead.
+    if start > cliff || cliff > end || now < start {
+        return 0;
     }
     // Linear interpolation: total * (now - start) / (end - start)
     let elapsed = (now - start) as u128;

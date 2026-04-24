@@ -4,19 +4,25 @@
 //! appended after the base account/mint data. Zero-copy accessors to
 //! detect, read, and validate extensions without deserialization.
 //!
-//! ## Extension layout
+//! ## Extension layout (must match spl-token-2022 on mainnet)
 //!
-//! After the base mint (82 bytes) or token account (165 bytes), Token-2022
-//! adds a 1-byte account type discriminator, followed by zero or more
-//! TLV entries:
+//! Token-2022 extended accounts always carry the account-type byte at
+//! offset `BASE_ACCOUNT_LEN` (165). Mints are **padded** from their 82-byte
+//! base up to `BASE_ACCOUNT_LEN` so that the type byte lives at the same
+//! absolute position for both shapes. TLV entries begin immediately after
+//! the type byte.
 //!
 //! ```text
-//! [base data][padding to multisig len][account_type: u8][ext_type: u16][ext_len: u16][ext_data]...
+//!   byte 0      ..82    : Mint body (or Account body 0..165)
+//!   byte 82     ..165   : zero padding for extended mints (not present on Accounts)
+//!   byte 165            : account-type discriminator (0x01=Mint, 0x02=Account)
+//!   byte 166    ..      : TLV stream: [type:u16 LE][length:u16 LE][value: length bytes]...
 //! ```
 //!
-//! The Multisig length is 355 bytes, so:
-//! - For mints: extensions start at byte 166 (82 base + 83 padding + 1 account_type)
-//! - For token accounts: extensions start at byte 166 (165 base + 0 padding + 1 account_type)
+//! A **non-extended** Token-2022 mint or account is indistinguishable from
+//! its SPL Token counterpart: 82 bytes for a mint, 165 bytes for an account,
+//! with no type byte and no TLV. `find_extension_*` returns `None` in that
+//! case.
 //!
 //! ## Safety
 //!
@@ -32,21 +38,22 @@ pub const BASE_MINT_LEN: usize = 82;
 /// Base token account length before extensions.
 pub const BASE_ACCOUNT_LEN: usize = 165;
 
-/// The MultisigAccount length - the padding boundary for TLV extensions.
-/// Both mints and accounts are padded to this length before the account
-/// type byte and TLV data begin.
-const MULTISIG_LEN: usize = 355;
+/// Offset of the account-type discriminator byte in an **extended**
+/// Token-2022 account (mint padded, account natural).
+///
+/// Equal to `spl-token-2022`'s `BASE_ACCOUNT_LENGTH` constant.
+pub const ACCOUNT_TYPE_OFFSET: usize = BASE_ACCOUNT_LEN;
 
-/// Offset where the account type byte lives (same for both mints and accounts
-/// after padding).
-const ACCOUNT_TYPE_OFFSET: usize = MULTISIG_LEN;
+/// Offset where TLV extension data begins (account-type byte + 1).
+pub const TLV_START: usize = ACCOUNT_TYPE_OFFSET + 1;
 
-/// Offset where TLV extension data begins (after the account type byte).
-const TLV_START: usize = ACCOUNT_TYPE_OFFSET + 1;
-
-/// Account type discriminators used by Token-2022.
+/// Account-type byte value for an uninitialized extended account.
 pub const ACCOUNT_TYPE_UNINITIALIZED: u8 = 0;
+
+/// Account-type byte value for an extended Mint.
 pub const ACCOUNT_TYPE_MINT: u8 = 1;
+
+/// Account-type byte value for an extended Token Account.
 pub const ACCOUNT_TYPE_ACCOUNT: u8 = 2;
 
 /// Declare an extension type enum with auto-generated `from_u16`.

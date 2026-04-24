@@ -51,6 +51,12 @@ pub fn constant_product_out(
     if reserve_in == 0 || reserve_out == 0 || amount_in == 0 {
         return Err(ProgramError::ArithmeticOverflow);
     }
+    // `fee_bps` is u16 (max 65_535) so values above 10_000 are representable
+    // and would underflow the fee-factor subtraction (panic in debug, wrap in
+    // release). Reject explicitly — a >=100% fee is never a valid swap config.
+    if fee_bps as u32 >= 10_000 {
+        return Err(ProgramError::InvalidArgument);
+    }
     let fee_factor = 10_000u128 - fee_bps as u128;
     let amount_in_after_fee = (amount_in as u128)
         .checked_mul(fee_factor)
@@ -86,6 +92,11 @@ pub fn constant_product_in(
 ) -> Result<u64, ProgramError> {
     if reserve_in == 0 || reserve_out == 0 || amount_out == 0 || amount_out >= reserve_out {
         return Err(ProgramError::ArithmeticOverflow);
+    }
+    // See `constant_product_out`: fee_bps must be < 10_000 to avoid the
+    // `10_000 - fee_bps` subtraction under-flowing.
+    if fee_bps as u32 >= 10_000 {
+        return Err(ProgramError::InvalidArgument);
     }
     let fee_factor = 10_000u128 - fee_bps as u128;
     let numerator = (reserve_in as u128)

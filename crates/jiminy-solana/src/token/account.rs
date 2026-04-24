@@ -26,25 +26,28 @@ pub const TOKEN_ACCOUNT_LEN: usize = 165;
 
 /// Read the owner field from a token account (bytes 32..64).
 ///
-/// Returns the 32-byte owner address without copying or deserializing.
-/// Fails if account data is too small.
+/// Returns the 32-byte owner address. Fails if account data is too small.
+///
+/// Returns by value (not `&Address`) because the borrow guard from
+/// [`AccountView::try_borrow`] cannot be safely outlived by a reference;
+/// releasing the guard to return a `&Address` would allow a concurrent
+/// `try_borrow_mut` to create an aliasing `&mut [u8]` to the same memory,
+/// violating Rust's aliasing rules. A 32-byte copy is zero-deserialization
+/// and compiles to a handful of BPF loads on-chain.
 ///
 /// ```rust,ignore
 /// let owner = token_account_owner(token_account)?;
-/// require_keys_eq!(owner, authority.address(), ProgramError::InvalidArgument);
+/// require_keys_eq!(&owner, authority.address(), ProgramError::InvalidArgument);
 /// ```
 #[inline(always)]
-pub fn token_account_owner(account: &AccountView) -> Result<&Address, ProgramError> {
+pub fn token_account_owner(account: &AccountView) -> Result<Address, ProgramError> {
     let data = account.try_borrow()?;
     if data.len() < TOKEN_ACCOUNT_LEN {
         return Err(ProgramError::AccountDataTooSmall);
     }
-    // SAFETY: data is borrowed and lives as long as the AccountView.
-    // We return a reference into account data via pointer cast.
-    // The borrow is dropped but the underlying data is pinned by the runtime.
-    let ptr = data.as_ptr().cast::<u8>();
-    drop(data);
-    Ok(unsafe { &*(ptr.add(32) as *const Address) })
+    let mut bytes = [0u8; 32];
+    bytes.copy_from_slice(&data[32..64]);
+    Ok(Address::new_from_array(bytes))
 }
 
 /// Read the amount field from a token account (bytes 64..72).
@@ -71,26 +74,27 @@ pub fn token_account_amount(account: &AccountView) -> Result<u64, ProgramError> 
 
 /// Read the mint field from a token account (bytes 0..32).
 ///
-/// Returns a reference to the 32-byte mint address.
+/// Returns the 32-byte mint address by value. See [`token_account_owner`]
+/// for the rationale behind value returns instead of `&Address`.
 ///
 /// ```rust,ignore
 /// let mint = token_account_mint(token_account)?;
-/// require_keys_eq!(mint, &expected_mint, MyError::WrongMint);
+/// require_keys_eq!(&mint, &expected_mint, MyError::WrongMint);
 /// ```
 #[inline(always)]
-pub fn token_account_mint(account: &AccountView) -> Result<&Address, ProgramError> {
+pub fn token_account_mint(account: &AccountView) -> Result<Address, ProgramError> {
     let data = account.try_borrow()?;
     if data.len() < TOKEN_ACCOUNT_LEN {
         return Err(ProgramError::AccountDataTooSmall);
     }
-    let ptr = data.as_ptr().cast::<u8>();
-    drop(data);
-    Ok(unsafe { &*(ptr as *const Address) })
+    let mut bytes = [0u8; 32];
+    bytes.copy_from_slice(&data[0..32]);
+    Ok(Address::new_from_array(bytes))
 }
 
 /// Read the delegate field from a token account (bytes 76..108).
 ///
-/// Returns `Some(&Address)` if a delegate is set, `None` otherwise.
+/// Returns `Some(Address)` if a delegate is set, `None` otherwise.
 ///
 /// ```rust,ignore
 /// if let Some(delegate) = token_account_delegate(token_account)? {
@@ -98,7 +102,7 @@ pub fn token_account_mint(account: &AccountView) -> Result<&Address, ProgramErro
 /// }
 /// ```
 #[inline(always)]
-pub fn token_account_delegate(account: &AccountView) -> Result<Option<&Address>, ProgramError> {
+pub fn token_account_delegate(account: &AccountView) -> Result<Option<Address>, ProgramError> {
     let data = account.try_borrow()?;
     if data.len() < TOKEN_ACCOUNT_LEN {
         return Err(ProgramError::AccountDataTooSmall);
@@ -108,12 +112,12 @@ pub fn token_account_delegate(account: &AccountView) -> Result<Option<&Address>,
             .try_into()
             .map_err(|_| ProgramError::InvalidAccountData)?,
     );
-    let ptr = data.as_ptr().cast::<u8>();
-    drop(data);
     if tag == 0 {
         Ok(None)
     } else {
-        Ok(Some(unsafe { &*(ptr.add(76) as *const Address) }))
+        let mut bytes = [0u8; 32];
+        bytes.copy_from_slice(&data[76..108]);
+        Ok(Some(Address::new_from_array(bytes)))
     }
 }
 
@@ -139,7 +143,7 @@ pub fn token_account_state(account: &AccountView) -> Result<u8, ProgramError> {
 
 /// Read the close authority field from a token account (bytes 129..165).
 ///
-/// Returns `Some(&Address)` if a close authority is set, `None` otherwise.
+/// Returns `Some(Address)` if a close authority is set, `None` otherwise.
 /// An unexpected close authority can drain the token account by closing it.
 ///
 /// ```rust,ignore
@@ -149,7 +153,7 @@ pub fn token_account_state(account: &AccountView) -> Result<u8, ProgramError> {
 #[inline(always)]
 pub fn token_account_close_authority(
     account: &AccountView,
-) -> Result<Option<&Address>, ProgramError> {
+) -> Result<Option<Address>, ProgramError> {
     let data = account.try_borrow()?;
     if data.len() < TOKEN_ACCOUNT_LEN {
         return Err(ProgramError::AccountDataTooSmall);
@@ -159,12 +163,12 @@ pub fn token_account_close_authority(
             .try_into()
             .map_err(|_| ProgramError::InvalidAccountData)?,
     );
-    let ptr = data.as_ptr().cast::<u8>();
-    drop(data);
     if tag == 0 {
         Ok(None)
     } else {
-        Ok(Some(unsafe { &*(ptr.add(133) as *const Address) }))
+        let mut bytes = [0u8; 32];
+        bytes.copy_from_slice(&data[133..165]);
+        Ok(Some(Address::new_from_array(bytes)))
     }
 }
 
@@ -210,7 +214,7 @@ pub fn check_token_account_mint(
     expected_mint: &Address,
 ) -> ProgramResult {
     let mint = token_account_mint(account)?;
-    if mint != expected_mint {
+    if &mint != expected_mint {
         return Err(ProgramError::InvalidArgument);
     }
     Ok(())
@@ -231,7 +235,7 @@ pub fn check_token_account_owner(
     expected_owner: &Address,
 ) -> ProgramResult {
     let owner = token_account_owner(account)?;
-    if owner != expected_owner {
+    if &owner != expected_owner {
         return Err(ProgramError::InvalidArgument);
     }
     Ok(())

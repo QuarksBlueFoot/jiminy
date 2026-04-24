@@ -22,7 +22,7 @@ pub const MINT_LEN: usize = 82;
 
 /// Read the mint authority field (bytes 0..36).
 ///
-/// Returns `Some(&Address)` if a mint authority is set, `None` otherwise.
+/// Returns `Some(Address)` if a mint authority is set, `None` otherwise.
 /// The mint authority can mint new tokens for this mint.
 ///
 /// ```rust,ignore
@@ -32,7 +32,7 @@ pub const MINT_LEN: usize = 82;
 /// }
 /// ```
 #[inline(always)]
-pub fn mint_authority(account: &AccountView) -> Result<Option<&Address>, ProgramError> {
+pub fn mint_authority(account: &AccountView) -> Result<Option<Address>, ProgramError> {
     let data = account.try_borrow()?;
     if data.len() < MINT_LEN {
         return Err(ProgramError::AccountDataTooSmall);
@@ -42,12 +42,12 @@ pub fn mint_authority(account: &AccountView) -> Result<Option<&Address>, Program
             .try_into()
             .map_err(|_| ProgramError::InvalidAccountData)?,
     );
-    let ptr = data.as_ptr().cast::<u8>();
-    drop(data);
     if tag == 0 {
         Ok(None)
     } else {
-        Ok(Some(unsafe { &*(ptr.add(4) as *const Address) }))
+        let mut bytes = [0u8; 32];
+        bytes.copy_from_slice(&data[4..36]);
+        Ok(Some(Address::new_from_array(bytes)))
     }
 }
 
@@ -108,7 +108,7 @@ pub fn mint_is_initialized(account: &AccountView) -> Result<bool, ProgramError> 
 
 /// Read the freeze authority field (bytes 46..82).
 ///
-/// Returns `Some(&Address)` if a freeze authority is set, `None` otherwise.
+/// Returns `Some(Address)` if a freeze authority is set, `None` otherwise.
 /// A freeze authority can freeze any token account for this mint, blocking
 /// transfers out.
 ///
@@ -120,7 +120,7 @@ pub fn mint_is_initialized(account: &AccountView) -> Result<bool, ProgramError> 
 /// require!(freeze_auth.is_none(), MyError::MintHasFreezeAuthority);
 /// ```
 #[inline(always)]
-pub fn mint_freeze_authority(account: &AccountView) -> Result<Option<&Address>, ProgramError> {
+pub fn mint_freeze_authority(account: &AccountView) -> Result<Option<Address>, ProgramError> {
     let data = account.try_borrow()?;
     if data.len() < MINT_LEN {
         return Err(ProgramError::AccountDataTooSmall);
@@ -130,12 +130,12 @@ pub fn mint_freeze_authority(account: &AccountView) -> Result<Option<&Address>, 
             .try_into()
             .map_err(|_| ProgramError::InvalidAccountData)?,
     );
-    let ptr = data.as_ptr().cast::<u8>();
-    drop(data);
     if tag == 0 {
         Ok(None)
     } else {
-        Ok(Some(unsafe { &*(ptr.add(50) as *const Address) }))
+        let mut bytes = [0u8; 32];
+        bytes.copy_from_slice(&data[50..82]);
+        Ok(Some(Address::new_from_array(bytes)))
     }
 }
 
@@ -172,7 +172,7 @@ pub fn check_mint_owner(account: &AccountView, token_program: &Address) -> Progr
 #[inline(always)]
 pub fn check_mint_authority(account: &AccountView, expected: &Address) -> ProgramResult {
     match mint_authority(account)? {
-        Some(auth) if auth == expected => Ok(()),
+        Some(auth) if &auth == expected => Ok(()),
         _ => Err(ProgramError::InvalidArgument),
     }
 }

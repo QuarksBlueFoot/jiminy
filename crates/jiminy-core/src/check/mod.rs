@@ -151,10 +151,24 @@ pub fn check_has_one(stored: &Address, account: &AccountView) -> ProgramResult {
 
 /// Approximate minimum lamports for rent exemption at the current mainnet rate.
 ///
-/// Formula: `(128 + data_len) * 6960`
+/// Formula: `(ACCOUNT_STORAGE_OVERHEAD + data_len) * lamports_per_byte_year * exemption_threshold`
+/// which on mainnet is `(128 + data_len) * 3480 * 2 = (128 + data_len) * 6960`.
+///
+/// `saturating_*` is deliberately avoided: silently capping at `u64::MAX`
+/// would let a caller under-fund an account and then not detect the problem
+/// until the runtime rejects the CPI with an opaque rent error. For any
+/// data size Solana actually permits (≤10 MiB) the arithmetic cannot
+/// overflow u64, so `checked_*` is free in the happy path and correct in
+/// the hostile one.
 #[inline(always)]
 pub fn rent_exempt_min(data_len: usize) -> u64 {
-    (128u64 + data_len as u64).saturating_mul(6960)
+    // `usize as u64` is lossless on every Solana target (32-bit sbf-v1
+    // or 64-bit host tests). Any `checked_*` failure indicates the caller
+    // passed a nonsensical `data_len` well beyond any account limit.
+    128u64
+        .checked_add(data_len as u64)
+        .and_then(|n| n.checked_mul(6960))
+        .unwrap_or(u64::MAX)
 }
 
 /// Verify an account holds enough lamports to be rent-exempt for its data size.
@@ -380,12 +394,12 @@ pub fn check_program_allowed(
     account: &AccountView,
     allowed: &[Address],
 ) -> ProgramResult {
-    // SAFETY: account.owner() reads the owner field from the AccountView's backing data.
-    // No aliasing mutable references exist; we only read.
-    let owner = unsafe { account.owner() };
+    // `owned_by` is the safe wrapper around the unsafe `owner()` accessor;
+    // the hopper runtime already handles the "no aliasing mutable borrow"
+    // invariant internally so we never reach for raw `unsafe` here.
     let mut i = 0;
     while i < allowed.len() {
-        if *owner == allowed[i] {
+        if account.owned_by(&allowed[i]) {
             return Ok(());
         }
         i += 1;
