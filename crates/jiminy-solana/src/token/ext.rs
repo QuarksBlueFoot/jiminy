@@ -143,10 +143,14 @@ extension_types! {
 
 // ── TLV Walking ──────────────────────────────────────────────────────────────
 
-/// Find a specific extension in TLV data and return its payload slice.
+/// Walk TLV entries without any account-type check.
 ///
-/// Walks the TLV entries after the base mint/account data. Returns `None`
-/// if the extension is not present or if the data is too short for TLV.
+/// **This is the raw primitive.** It will happily walk TLV on any buffer whose
+/// length is `> TLV_START`, regardless of whether the account-type byte at
+/// offset 165 matches the caller's expectation. Use this only when you have
+/// already verified the account kind (e.g. via
+/// [`find_extension_mint`]/[`find_extension_account`], or by screening data
+/// length for a non-extended account).
 ///
 /// `data` should be the full borrowed account data (`account.try_borrow()?`).
 ///
@@ -191,9 +195,93 @@ pub fn find_extension(data: &[u8], ext_type: ExtensionType) -> Option<&[u8]> {
     None
 }
 
+/// Find an extension, requiring the buffer to match a specific account kind.
+///
+/// This is the **safe** walker. It rejects cross-kind confusion: if `data`
+/// represents an extended Token-2022 account but the account-type byte at
+/// offset 165 doesn't match `expected_kind` (`ACCOUNT_TYPE_MINT = 0x01` or
+/// `ACCOUNT_TYPE_ACCOUNT = 0x02`), the function returns
+/// `Err(InvalidAccountData)` rather than silently missing the extension.
+///
+/// Handling of the classic (non-extended) shape:
+///
+/// * A buffer of exactly `BASE_MINT_LEN` (82) bytes is a classic SPL Mint —
+///   no TLV is possible, returns `Ok(None)` when `expected_kind` is Mint, and
+///   `Err` otherwise.
+/// * A buffer of exactly `BASE_ACCOUNT_LEN` (165) bytes is a classic SPL
+///   Token Account — no TLV is possible, returns `Ok(None)` when
+///   `expected_kind` is Account, and `Err` otherwise.
+/// * Any buffer of length `>= TLV_START` (166) must carry the correct
+///   account-type byte or is rejected.
+/// * Anything else is malformed and rejected.
+///
+/// Pinocchio users can call this directly with their own `&[u8]` borrow; it
+/// has no Hopper-native dependencies beyond the `ProgramError` enum.
+#[inline]
+pub fn find_extension_typed(
+    data: &[u8],
+    expected_kind: u8,
+    ext_type: ExtensionType,
+) -> Result<Option<&[u8]>, ProgramError> {
+    // Classic (non-extended) shapes: no type byte, no TLV possible.
+    // We still enforce that the classic *length* matches the kind the caller
+    // asked about, so a 165-byte classic Account can't be screened as a Mint.
+    if data.len() == BASE_MINT_LEN {
+        return if expected_kind == ACCOUNT_TYPE_MINT {
+            Ok(None)
+        } else {
+            Err(ProgramError::InvalidAccountData)
+        };
+    }
+    if data.len() == BASE_ACCOUNT_LEN {
+        return if expected_kind == ACCOUNT_TYPE_ACCOUNT {
+            Ok(None)
+        } else {
+            Err(ProgramError::InvalidAccountData)
+        };
+    }
+
+    // Extended Token-2022 shape: must contain the type byte and it must match.
+    if data.len() < TLV_START {
+        return Err(ProgramError::InvalidAccountData);
+    }
+    if data[ACCOUNT_TYPE_OFFSET] != expected_kind {
+        return Err(ProgramError::InvalidAccountData);
+    }
+
+    Ok(find_extension(data, ext_type))
+}
+
+/// Find a mint-level extension on a Token-2022 buffer.
+///
+/// Same contract as [`find_extension_typed`] with `expected_kind =
+/// ACCOUNT_TYPE_MINT`. Classic 82-byte SPL mints return `Ok(None)`.
+#[inline(always)]
+pub fn find_extension_mint(
+    data: &[u8],
+    ext_type: ExtensionType,
+) -> Result<Option<&[u8]>, ProgramError> {
+    find_extension_typed(data, ACCOUNT_TYPE_MINT, ext_type)
+}
+
+/// Find an account-level extension on a Token-2022 buffer.
+///
+/// Same contract as [`find_extension_typed`] with `expected_kind =
+/// ACCOUNT_TYPE_ACCOUNT`. Classic 165-byte SPL accounts return `Ok(None)`.
+#[inline(always)]
+pub fn find_extension_account(
+    data: &[u8],
+    ext_type: ExtensionType,
+) -> Result<Option<&[u8]>, ProgramError> {
+    find_extension_typed(data, ACCOUNT_TYPE_ACCOUNT, ext_type)
+}
+
 /// Check if a specific extension exists in the account data.
 ///
 /// Returns `true` if the extension type is found in the TLV entries.
+/// **Does not validate the account-type byte** — prefer
+/// [`has_extension_mint`]/[`has_extension_account`] when you know which kind
+/// you are looking at.
 ///
 /// ```rust,ignore
 /// let data = mint_account.try_borrow()?;
@@ -206,10 +294,37 @@ pub fn has_extension(data: &[u8], ext_type: ExtensionType) -> bool {
     find_extension(data, ext_type).is_some()
 }
 
+/// Typed variant of [`has_extension`] for mint-level extensions.
+///
+/// Returns `Ok(false)` for classic 82-byte SPL mints. Returns
+/// `Err(InvalidAccountData)` if the buffer does not look like a valid
+/// mint (e.g. it is actually an account, or is truncated/malformed).
+#[inline(always)]
+pub fn has_extension_mint(
+    data: &[u8],
+    ext_type: ExtensionType,
+) -> Result<bool, ProgramError> {
+    Ok(find_extension_mint(data, ext_type)?.is_some())
+}
+
+/// Typed variant of [`has_extension`] for account-level extensions.
+///
+/// Returns `Ok(false)` for classic 165-byte SPL accounts. Returns
+/// `Err(InvalidAccountData)` if the buffer does not look like a valid
+/// account (e.g. it is actually a mint, or is truncated/malformed).
+#[inline(always)]
+pub fn has_extension_account(
+    data: &[u8],
+    ext_type: ExtensionType,
+) -> Result<bool, ProgramError> {
+    Ok(find_extension_account(data, ext_type)?.is_some())
+}
+
 /// Assert that a specific extension does NOT exist on the account.
 ///
-/// Returns `InvalidAccountData` if the extension is found. Use this to
-/// reject tokens with dangerous extensions your program doesn't support.
+/// Returns `InvalidAccountData` if the extension is found. This is the
+/// **untyped** primitive; prefer the `check_no_*` helpers below (which are
+/// routed through the typed walker) for safety-critical checks.
 ///
 /// ```rust,ignore
 /// let data = mint_account.try_borrow()?;
@@ -223,13 +338,40 @@ pub fn check_no_extension(data: &[u8], ext_type: ExtensionType) -> ProgramResult
     Ok(())
 }
 
+/// Assert a mint-level extension is absent, failing closed on wrong kind.
+///
+/// Unlike [`check_no_extension`], this returns `InvalidAccountData` both
+/// when the extension is present **and** when the caller passed data that
+/// does not look like a mint (e.g. a token account buffer). Use this for
+/// any screen that is only meaningful on a mint.
+#[inline(always)]
+pub fn check_no_extension_mint(data: &[u8], ext_type: ExtensionType) -> ProgramResult {
+    if find_extension_mint(data, ext_type)?.is_some() {
+        return Err(ProgramError::InvalidAccountData);
+    }
+    Ok(())
+}
+
+/// Assert an account-level extension is absent, failing closed on wrong kind.
+#[inline(always)]
+pub fn check_no_extension_account(data: &[u8], ext_type: ExtensionType) -> ProgramResult {
+    if find_extension_account(data, ext_type)?.is_some() {
+        return Err(ProgramError::InvalidAccountData);
+    }
+    Ok(())
+}
+
 // ── Convenience Checks ───────────────────────────────────────────────────────
 //
 // One-line safety guards for the most commonly dangerous extensions.
-// Generated by macro to avoid copy-paste for each extension type.
+// Each helper routes through the *typed* walker for its kind, so passing the
+// wrong kind of buffer (mint data where an account was expected, or vice
+// versa) is rejected as `InvalidAccountData` rather than silently returning
+// `Ok(())` — the exact failure mode that made the previous offset bug
+// dangerous.
 
-/// Generate a `check_no_$name` function that rejects a specific extension.
-macro_rules! check_no_ext {
+/// Generate `check_no_$name` helpers that reject a mint-level extension.
+macro_rules! check_no_ext_mint {
     ($(
         $(#[$meta:meta])*
         $fn_name:ident => $ext:ident;
@@ -238,18 +380,37 @@ macro_rules! check_no_ext {
             $(#[$meta])*
             #[inline(always)]
             pub fn $fn_name(data: &[u8]) -> ProgramResult {
-                check_no_extension(data, ExtensionType::$ext)
+                check_no_extension_mint(data, ExtensionType::$ext)
             }
         )*
     };
 }
 
-check_no_ext! {
+/// Generate `check_no_$name` helpers that reject an account-level extension.
+macro_rules! check_no_ext_account {
+    ($(
+        $(#[$meta:meta])*
+        $fn_name:ident => $ext:ident;
+    )*) => {
+        $(
+            $(#[$meta])*
+            #[inline(always)]
+            pub fn $fn_name(data: &[u8]) -> ProgramResult {
+                check_no_extension_account(data, ExtensionType::$ext)
+            }
+        )*
+    };
+}
+
+check_no_ext_mint! {
     /// Reject mints with transfer fee extensions.
     ///
     /// If your AMM/vault doesn't account for transfer fees, accepting a
     /// fee-on-transfer mint means the pool receives fewer tokens than expected,
     /// draining LPs over time.
+    ///
+    /// Also returns `InvalidAccountData` if `data` is not a valid mint buffer
+    /// (e.g. a token-account buffer was passed by mistake).
     ///
     /// ```rust,ignore
     /// let data = mint_account.try_borrow()?;
@@ -263,16 +424,20 @@ check_no_ext! {
     /// program doesn't pass the extra accounts the hook requires, transfers
     /// will fail. If you don't audit the hook program, it could be malicious.
     ///
+    /// Also returns `InvalidAccountData` on wrong-kind buffers.
+    ///
     /// ```rust,ignore
     /// let data = mint_account.try_borrow()?;
     /// check_no_transfer_hook(&data)?;
     /// ```
     check_no_transfer_hook => TransferHook;
 
-    /// Reject non-transferable (soulbound) tokens.
+    /// Reject non-transferable (soulbound) mints.
     ///
     /// Non-transferable tokens cannot be moved between accounts. Attempting
     /// to transfer them will fail inside the token program.
+    ///
+    /// Also returns `InvalidAccountData` on wrong-kind buffers.
     ///
     /// ```rust,ignore
     /// let data = mint_account.try_borrow()?;
@@ -286,34 +451,43 @@ check_no_ext! {
     /// this mint at any time, without the owner's permission. This is
     /// extremely dangerous for DeFi pools and escrows.
     ///
+    /// Also returns `InvalidAccountData` on wrong-kind buffers.
+    ///
     /// ```rust,ignore
     /// let data = mint_account.try_borrow()?;
     /// check_no_permanent_delegate(&data)?;
     /// ```
     check_no_permanent_delegate => PermanentDelegate;
 
-    /// Reject token accounts with the CPI guard enabled.
-    ///
-    /// The CPI guard prevents transfers initiated via CPI. If your program
-    /// needs to transfer tokens from this account via CPI, the transfer will
-    /// fail silently.
-    ///
-    /// ```rust,ignore
-    /// let data = token_account.try_borrow()?;
-    /// check_no_cpi_guard(&data)?;
-    /// ```
-    check_no_cpi_guard => CpiGuard;
-
     /// Reject mints with a default frozen account state.
     ///
     /// Mints with `DefaultAccountState` set to `Frozen` will create all new
     /// token accounts in a frozen state, requiring explicit unfreezing.
+    ///
+    /// Also returns `InvalidAccountData` on wrong-kind buffers.
     ///
     /// ```rust,ignore
     /// let data = mint_account.try_borrow()?;
     /// check_no_default_account_state(&data)?;
     /// ```
     check_no_default_account_state => DefaultAccountState;
+}
+
+check_no_ext_account! {
+    /// Reject token accounts with the CPI guard enabled.
+    ///
+    /// The CPI guard prevents transfers initiated via CPI. If your program
+    /// needs to transfer tokens from this account via CPI, the transfer will
+    /// fail silently.
+    ///
+    /// Also returns `InvalidAccountData` if `data` is not a valid token
+    /// account buffer (e.g. a mint buffer was passed by mistake).
+    ///
+    /// ```rust,ignore
+    /// let data = token_account.try_borrow()?;
+    /// check_no_cpi_guard(&data)?;
+    /// ```
+    check_no_cpi_guard => CpiGuard;
 }
 
 // ── Transfer Fee Reader ──────────────────────────────────────────────────────
@@ -346,9 +520,14 @@ pub struct TransferFeeConfig {
 
 /// Read the TransferFeeConfig extension from mint account data.
 ///
-/// Returns `None` if the extension is not present. Use this when your
+/// Returns `Ok(None)` if the extension is not present. Use this when your
 /// program DOES want to handle transfer fees correctly instead of rejecting
 /// them outright.
+///
+/// Fails with `InvalidAccountData` if the buffer is not a valid mint
+/// (classic 82-byte mint or extended Token-2022 mint with the correct
+/// account-type byte). Pass token-account data by mistake? This surfaces
+/// the error instead of silently returning `None`.
 ///
 /// ```rust,ignore
 /// let data = mint_account.try_borrow()?;
@@ -358,7 +537,7 @@ pub struct TransferFeeConfig {
 /// ```
 #[inline]
 pub fn read_transfer_fee_config(data: &[u8]) -> Result<Option<TransferFeeConfig>, ProgramError> {
-    let ext_data = match find_extension(data, ExtensionType::TransferFeeConfig) {
+    let ext_data = match find_extension_mint(data, ExtensionType::TransferFeeConfig)? {
         Some(d) => d,
         None => return Ok(None),
     };

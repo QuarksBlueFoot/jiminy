@@ -92,6 +92,12 @@ pub fn max_liquidation_amount(
 ///
 /// `bonus_bps`: liquidation incentive, e.g. 500 = 5% bonus.
 ///
+/// Returns `ArithmeticOverflow` if `bonus_bps` is so large that
+/// `10_000 + bonus_bps` would overflow a `u64`, or if the multiplication
+/// would exceed `u64::MAX`. The overflow guard lives in `u128` space so a
+/// `u64` bonus near the top of the range (e.g. `u64::MAX`) is rejected
+/// cleanly instead of wrapping during the addition.
+///
 /// ```rust,ignore
 /// let seized = liquidation_seize_amount(repay, 500)?;
 /// ```
@@ -100,8 +106,12 @@ pub fn liquidation_seize_amount(
     repay_amount: u64,
     bonus_bps: u64,
 ) -> Result<u64, ProgramError> {
+    // Do the `+10_000` in u128 so a `u64::MAX` bonus never wraps the add.
+    let factor = (bonus_bps as u128)
+        .checked_add(10_000)
+        .ok_or(ProgramError::ArithmeticOverflow)?;
     let seized = (repay_amount as u128)
-        .checked_mul((10_000u64 + bonus_bps) as u128)
+        .checked_mul(factor)
         .ok_or(ProgramError::ArithmeticOverflow)?
         / 10_000;
     if seized > u64::MAX as u128 {

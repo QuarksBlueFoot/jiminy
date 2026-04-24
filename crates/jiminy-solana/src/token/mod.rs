@@ -27,10 +27,13 @@ pub use mint::{
 // ── Re-exports: Token-2022 extensions ────────────────────────────────────────
 pub use ext::{
     calculate_transfer_fee, check_no_cpi_guard, check_no_default_account_state,
-    check_no_extension, check_no_permanent_delegate, check_no_transfer_fee,
-    check_no_transfer_hook, check_not_non_transferable, check_safe_token_2022_mint,
-    check_token_program_for_mint, find_extension, has_extension,
+    check_no_extension, check_no_extension_account, check_no_extension_mint,
+    check_no_permanent_delegate, check_no_transfer_fee, check_no_transfer_hook,
+    check_not_non_transferable, check_safe_token_2022_mint, check_token_program_for_mint,
+    find_extension, find_extension_account, find_extension_mint, find_extension_typed,
+    has_extension, has_extension_account, has_extension_mint,
     read_transfer_fee_config, ExtensionType, TransferFeeConfig, TransferFeeEpochConfig,
     BASE_ACCOUNT_LEN, BASE_MINT_LEN,
     ACCOUNT_TYPE_UNINITIALIZED, ACCOUNT_TYPE_MINT, ACCOUNT_TYPE_ACCOUNT,
+    ACCOUNT_TYPE_OFFSET, TLV_START,
 };

@@ -90,7 +90,14 @@ pub fn extract_fee(
     fee_bps: u64,
     flat_fee: u64,
 ) -> Result<(u64, u64), ProgramError> {
-    // ceiling bps fee
+    // A `fee_bps` of 10_000 means 100% fee (net = 0 - flat_fee slack).
+    // Anything above that is a configuration error, not "insufficient funds".
+    // Surface it as `InvalidArgument` so callers can tell the difference.
+    if fee_bps > 10_000 {
+        return Err(ProgramError::InvalidArgument);
+    }
+    // ceiling bps fee. `amount * fee_bps + 9_999` cannot overflow u128:
+    //   max = u64::MAX * 10_000 + 9_999  ≈ 1.84e23  ≪ u128::MAX ≈ 3.40e38.
     #[allow(clippy::manual_div_ceil)]
     let bps_fee = ((amount as u128) * (fee_bps as u128) + 9_999) / 10_000;
     let total_fee_128 = bps_fee + flat_fee as u128;

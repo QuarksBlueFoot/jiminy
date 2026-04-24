@@ -43,6 +43,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Validation uses reserved regions**: `validate()` checks
   `capacity × element_size` bounds and overlap, not just live data.
 
+### Security
+
+- **Token-2022 TLV offset corrected** (`jiminy-solana/src/token/ext.rs`):
+  `TLV_START` and `ACCOUNT_TYPE_OFFSET` now track the real spl-token-2022
+  layout (account-type discriminator at byte 165, TLV stream at byte 166),
+  replacing the previous `356`/`355` constants that caused every
+  dangerous-extension screen (`check_no_transfer_fee`,
+  `check_no_transfer_hook`, `check_no_permanent_delegate`,
+  `check_no_default_account_state`, `check_not_non_transferable`,
+  `check_no_cpi_guard`, `check_safe_token_2022_mint`) to silently return
+  `Ok(())` on real mainnet mints/accounts.
+- **Typed TLV walkers added**: `find_extension_typed`,
+  `find_extension_mint`, `find_extension_account`, plus their
+  `has_extension_*` and `check_no_extension_*` counterparts. The
+  `check_no_*` convenience helpers now route through the kind-aware
+  walkers, so passing a token-account buffer to a mint-level screen (or
+  vice versa) fails closed as `InvalidAccountData` instead of missing the
+  extension. The untyped `find_extension` / `has_extension` primitives are
+  retained for advanced Pinocchio users.
+- **Unsound `&Address` returns removed** (`token/account.rs`,
+  `token/mint.rs`): every field reader now returns an owned `Address` or
+  `Option<Address>` instead of smuggling a `&Address` out of a dropped
+  `try_borrow` guard. Eliminates the UB window where a concurrent
+  `try_borrow_mut` could create an aliasing `&mut [u8]` to the same bytes.
+- **AMM fee underflow guard** (`jiminy-finance/src/amm.rs`):
+  `constant_product_out` / `constant_product_in` now explicitly reject
+  `fee_bps >= 10_000` before the `10_000 - fee_bps` subtraction (panic in
+  debug, wrap in release).
+- **Vesting bypass on pathological schedules** (`jiminy-vesting`):
+  `vested_amount` now validates `start <= cliff <= end` and `now >= start`
+  before casting `(now - start)` to `u128`; previously a config with
+  `start > cliff` could wrap the subtraction into a huge value and release
+  `total` at the cliff instead of `0`.
+- **`rent_exempt_min` overflow** (`jiminy-core/src/check/mod.rs`): swapped
+  `saturating_mul(6960)` for `checked_add` + `checked_mul`, so nonsensical
+  sizes fall to `u64::MAX` deliberately rather than silently capping.
+- **`liquidation_seize_amount` u64 wrap** (`jiminy-lending`): the
+  `10_000u64 + bonus_bps` addition is now performed in `u128` via
+  `checked_add`, rejecting a `u64::MAX`-adjacent bonus cleanly instead of
+  wrapping during the add.
+- **`extract_fee` config validation** (`jiminy-distribute`): `fee_bps >
+  10_000` is now rejected as `InvalidArgument` up-front, distinguishing
+  a misconfigured fee from a true `InsufficientFunds` case.
+- **Needless `unsafe` removed** (`jiminy-core/src/check/mod.rs::check_program_allowed`):
+  replaced with Hopper-native `account.owned_by(&Address)`.
+
 ## [0.16.0] - 2025-03-24
 
 ### Added

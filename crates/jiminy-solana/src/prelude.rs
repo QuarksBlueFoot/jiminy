@@ -23,10 +23,13 @@ pub use crate::token::{
 // ── Token-2022 extension reader ──────────────────────────────────────────────
 pub use crate::token::{
     calculate_transfer_fee, check_no_cpi_guard as check_no_token_cpi_guard,
-    check_no_default_account_state, check_no_permanent_delegate, check_no_transfer_fee,
+    check_no_default_account_state, check_no_extension, check_no_extension_account,
+    check_no_extension_mint, check_no_permanent_delegate, check_no_transfer_fee,
     check_no_transfer_hook, check_not_non_transferable, check_safe_token_2022_mint,
-    check_token_program_for_mint, find_extension, has_extension, check_no_extension,
-    read_transfer_fee_config, ExtensionType, TransferFeeConfig, TransferFeeEpochConfig,
+    check_token_program_for_mint, find_extension, find_extension_account,
+    find_extension_mint, find_extension_typed, has_extension, has_extension_account,
+    has_extension_mint, read_transfer_fee_config, ExtensionType, TransferFeeConfig,
+    TransferFeeEpochConfig,
 };
 
 // ── CPI guard (reentrancy protection) ────────────────────────────────────────
