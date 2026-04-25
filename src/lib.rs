@@ -10,8 +10,10 @@
 //! functions for on-chain correctness. No framework, no proc macros,
 //! no hidden control flow.
 //!
-//! `no_std`. `no_alloc`. Declarative macros only. Every function
-//! `#[inline(always)]`. Built on Hopper Runtime.
+//! `no_std`. `no_alloc`. Declarative macros only. Hot-path helpers are
+//! `#[inline(always)]`; larger walkers use plain `#[inline]` so the BPF
+//! linker can decide. Built on Hopper Runtime, Pinocchio backend wired in
+//! today.
 //!
 //! ## Permanent non-goals
 //!

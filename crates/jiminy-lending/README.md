@@ -15,6 +15,11 @@ use jiminy_lending::*;
 
 let ratio = collateralization_ratio_bps(collateral_value, debt_value)?;
 check_healthy(collateral_value, debt_value, min_ratio_bps)?;
+
+// liquidation_seize_amount(repay, bonus_bps) computes the `+10_000` factor in
+// u128, so a `u64::MAX` bonus is rejected as ArithmeticOverflow rather than
+// wrapping during the addition.
+let seized = liquidation_seize_amount(repay_amount, 500)?; // 5% bonus
 ```
 
 `#![no_std]` / `no_alloc` / BPF-safe / Apache-2.0

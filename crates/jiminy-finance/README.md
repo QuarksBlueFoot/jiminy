@@ -13,7 +13,10 @@ jiminy-finance = "0.16"
 ```rust,ignore
 use jiminy_finance::prelude::*;
 
-let out = constant_product_out(amount_in, reserve_in, reserve_out, fee_bps)?;
+// Signature: (reserve_in, reserve_out, amount_in, fee_bps).
+// fee_bps must be < 10_000 (a 100% fee would underflow the fee factor) — the
+// function rejects anything >= 10_000 with InvalidArgument.
+let out = constant_product_out(reserve_in, reserve_out, amount_in, 30)?; // 30 bps fee
 check_slippage(actual_output, minimum_output)?;
 ```
 

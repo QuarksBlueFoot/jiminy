@@ -56,7 +56,10 @@ you own the control flow, and you can drop any module and call Hopper Runtime
 directly. If you still need backend-specific APIs, keep a direct pinocchio
 dependency while you migrate.
 
-`no_std`. `no_alloc`. Declarative macros only. Everything `#[inline(always)]`.
+`no_std`. `no_alloc`. Declarative macros only. Hot-path helpers are
+`#[inline(always)]`; larger walkers use plain `#[inline]`. Built on Hopper
+Runtime, Pinocchio backend wired in today — drop the umbrella crate to fall
+back to direct Pinocchio at any time.
 
 ---
 
@@ -234,6 +237,49 @@ and there's nothing to forget.
 - **`init_segments_with_capacity()`**: new initializer for segmented layouts that spaces segment offsets by max capacity with counts starting at zero. Enables safe push/remove workflows.
 - **Exact size enforcement**: Tiers 1 and 2 now require `data.len() == expected_size` (was `<`). Prevents hidden trailing data attacks.
 - **`load_mut()` backed by `RefMut`**: eliminates UB from mutable aliasing.
+
+### Security hardening (audit pass)
+
+A focused audit pass tightened a handful of safety-critical surfaces. None of
+these change public function signatures.
+
+- **Token-2022 TLV offset corrected**: the extension walker was reading TLV at
+  byte 356 instead of 166, so `check_no_transfer_fee` /
+  `check_no_transfer_hook` / `check_no_permanent_delegate` /
+  `check_no_default_account_state` / `check_not_non_transferable` /
+  `check_no_cpi_guard` / `check_safe_token_2022_mint` were silently returning
+  `Ok(())` on real mainnet mints. Fixed; constants now match
+  `spl-token-2022`'s layout.
+- **Typed TLV walkers added**: new `find_extension_mint`,
+  `find_extension_account`, `find_extension_typed`, plus matching
+  `has_extension_*` and `check_no_extension_*` helpers. Every kind-specific
+  `check_no_*` convenience now routes through the typed walker, so passing a
+  token-account buffer to a mint-level screen (or vice versa) fails closed
+  as `InvalidAccountData` instead of missing the extension.
+- **Owned `Address` returns** from `token_account_owner`,
+  `token_account_mint`, `token_account_delegate`,
+  `token_account_close_authority`, `mint_authority`, and
+  `mint_freeze_authority`: the previous `&Address` return smuggled a pointer
+  out of a dropped `try_borrow` guard, opening a UB window where a concurrent
+  `try_borrow_mut` could create an aliasing `&mut [u8]`. Now returns the
+  32-byte address by value (a handful of BPF loads).
+- **AMM fee underflow guard**: `constant_product_out` /
+  `constant_product_in` reject `fee_bps >= 10_000` up-front (>=100% would
+  underflow the `10_000 - fee_bps` subtraction).
+- **Vesting bypass on pathological schedules**: `vested_amount` now validates
+  `start <= cliff <= end` and `now >= start` before casting `(now - start)`
+  to `u128`; previously a config with `start > cliff` could wrap and release
+  `total` at the cliff instead of `0`.
+- **`liquidation_seize_amount` u64 wrap**: `10_000 + bonus_bps` is now
+  `u128 checked_add`, so a `u64::MAX`-adjacent bonus rejects cleanly.
+- **`extract_fee` config validation**: `fee_bps > 10_000` is now an
+  `InvalidArgument`, distinguishing a misconfigured fee from a true
+  `InsufficientFunds`.
+- **`rent_exempt_min` overflow**: swapped `saturating_mul(6960)` for
+  `checked_*`, so nonsensical sizes fall to `u64::MAX` deliberately rather
+  than silently capping.
+- **Needless `unsafe` removed** from `check_program_allowed` — replaced with
+  the safe Hopper-native `account.owned_by(&Address)` API.
 
 <details>
 <summary>New in 0.15</summary>
@@ -696,8 +742,26 @@ if let Some(config) = read_transfer_fee_config(&data)? {
 }
 ```
 
-Also: `find_extension`, `has_extension`, `check_no_extension`, `check_token_program_for_mint`,
-and the full `ExtensionType` enum covering all 24 known extension types.
+The convenience guards are **kind-aware**. Each one routes through the typed
+TLV walker for its kind: mint-level checks (`check_no_transfer_fee`,
+`check_no_transfer_hook`, `check_no_permanent_delegate`,
+`check_no_default_account_state`, `check_not_non_transferable`,
+`check_safe_token_2022_mint`) verify that byte 165 of the buffer is the mint
+discriminator (`0x01`); the account-level check (`check_no_cpi_guard`) verifies
+it's the account discriminator (`0x02`). Pass token-account data where a mint
+was expected (or vice versa) and you get `InvalidAccountData` instead of a
+silently-passing `Ok(())`.
+
+Typed primitives if you want them directly:
+`find_extension_mint` / `find_extension_account` / `find_extension_typed`,
+`has_extension_mint` / `has_extension_account`, and
+`check_no_extension_mint` / `check_no_extension_account`. The untyped
+`find_extension` / `has_extension` / `check_no_extension` are kept as raw
+primitives for advanced callers (Pinocchio users with custom kinds) that have
+already verified buffer kind.
+
+Plus `check_token_program_for_mint` and the full `ExtensionType` enum covering
+all 24 known extension types.
 
 ### CPI reentrancy protection
 
@@ -976,7 +1040,10 @@ function call.
 Anchor deserializes token accounts but doesn't screen extensions. A mint with a
 permanent delegate can drain your vault. A transfer hook can make your CPI fail.
 Jiminy's `check_safe_token_2022_mint` rejects all commonly dangerous extensions
-in a single call, or you can check them individually.
+in a single call, or you can check them individually. The screening helpers are
+kind-aware — they verify the account-type byte at offset 165 against the kind
+they're checking (mint `0x01` vs account `0x02`), so a wrong-kind buffer fails
+closed instead of silently passing.
 
 ### Slippage + economic guards
 
@@ -1090,7 +1157,10 @@ swap math with u128 intermediates and fee support. K-invariant verification
 for post-swap safety. Price impact estimation.
 
 ```rust
-let out = constant_product_out(reserve_a, reserve_b, amount_in, 30)?; // 30 bps fee
+// Signature is (reserve_in, reserve_out, amount_in, fee_bps).
+// fee_bps must be < 10_000 (>=100% would underflow the fee factor) — the
+// function rejects it with InvalidArgument rather than wrapping silently.
+let out = constant_product_out(reserve_in, reserve_out, amount_in, 30)?; // 30 bps fee
 check_k_invariant(ra_before, rb_before, ra_after, rb_after)?;
 let lp = isqrt(amount_a as u128 * amount_b as u128)?;
 ```
@@ -1151,6 +1221,10 @@ computation. Pure arithmetic for team tokens, investor unlocks, grant programs.
 let vested = vested_amount(total_grant, start, cliff, end, now);
 let claim = claimable(vested, user.already_claimed);
 ```
+
+`vested_amount` is defensive against caller-provided timestamps: any schedule
+where `start > cliff`, `cliff > end`, or `now < start` returns `0` instead of
+wrapping `(now - start)` into a huge `u128` and silently releasing `total`.
 
 ### Multi-signer threshold
 
@@ -1251,6 +1325,10 @@ let max_repay = max_liquidation_amount(debt, 5_000)?; // 50% close factor
 let seized = liquidation_seize_amount(repay, 500)?;   // 5% bonus
 ```
 
+`liquidation_seize_amount` does the `+10_000` factor in `u128` via
+`checked_add`, so a `u64::MAX` bonus is rejected as `ArithmeticOverflow`
+instead of wrapping during the addition.
+
 ### Proportional distribution
 
 `proportional_split`, `extract_fee`.
@@ -1268,6 +1346,10 @@ proportional_split(1_000_003, &shares, &mut amounts)?;
 let (net, fee) = extract_fee(1_000_000, 30, 1_000)?; // 0.3% + 1000 flat
 assert_eq!(net + fee, 1_000_000);
 ```
+
+`extract_fee` rejects `fee_bps > 10_000` (>100%) with `InvalidArgument` and
+returns `InsufficientFunds` if `bps_fee + flat_fee` would exceed `amount`.
+Misconfigured fees and undersized inputs surface as different errors.
 
 ---
 
