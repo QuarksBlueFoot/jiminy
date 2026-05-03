@@ -6,7 +6,7 @@ Token/mint readers, Token-2022 screening, CPI guards, Ed25519, Merkle proofs, Py
 
 ```toml
 [dependencies]
-jiminy-solana = "0.16"
+jiminy-solana = "0.17"
 ```
 
 Builds on `jiminy-core` and Hopper Runtime's Solana-facing account surface.
@@ -64,7 +64,7 @@ if let Some(cfg) = read_transfer_fee_config(&data)? {
 
 `token_account_owner`, `token_account_mint`, `token_account_delegate`,
 `token_account_close_authority`, `mint_authority`, and `mint_freeze_authority`
-return `Address` (or `Option<Address>`) by value — not `&Address`. A 32-byte
+return `Address` (or `Option<Address>`) by value, not `&Address`. A 32-byte
 copy on BPF is a handful of loads, and the owned return removes the
 unsoundness window where a returned reference outlived the `try_borrow` guard
 and could alias a concurrent `&mut [u8]`.

@@ -59,10 +59,10 @@
 //! ## Design
 //!
 //! Interface types are intentionally restricted:
-//! - **No `load` (Tier 1)** — you don't own this account
-//! - **No `overlay_mut`** — foreign accounts are read-only
-//! - **No `split_fields_mut`** — same reason
-//! - **No `load_checked`** — discriminator/version are owner concerns
+//! - **No `load` (Tier 1)**: you don't own this account
+//! - **No `overlay_mut`**: foreign accounts are read-only
+//! - **No `split_fields_mut`**: same reason
+//! - **No `load_checked`**: discriminator/version are owner concerns
 
 /// Declare a read-only interface for a foreign program's account layout.
 ///
@@ -149,13 +149,13 @@ macro_rules! jiminy_interface {
         // Compile-time assertion: actual size must match declared sum.
         const _: () = assert!(
             core::mem::size_of::<$name>() == 0 $( + $fsize )+,
-            "size_of does not match declared LEN — check field sizes"
+            "size_of does not match declared LEN; check field sizes"
         );
 
         // Compile-time assertion: alignment must not exceed 8 bytes.
         const _: () = assert!(
             core::mem::align_of::<$name>() <= 8,
-            "layout alignment exceeds 8 bytes — use Le* wrappers for u128 fields"
+            "layout alignment exceeds 8 bytes; use Le* wrappers for u128 fields"
         );
 
         impl $name {
@@ -193,7 +193,7 @@ macro_rules! jiminy_interface {
                 $crate::account::pod_read::<Self>(data)
             }
 
-            /// **Tier 2 — Cross-program read.** Validate owner + layout_id
+            /// **Tier 2: Cross-program read.** Validate owner + layout_id
             /// + exact size, then borrow.
             ///
             /// The owner is checked against the program address passed to
@@ -235,7 +235,7 @@ macro_rules! jiminy_interface {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// segmented_interface! — read-only cross-program view for segmented accounts
+// segmented_interface!: read-only cross-program view for segmented accounts
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /// Declare a read-only interface for a foreign program's segmented account.
@@ -294,10 +294,10 @@ macro_rules! jiminy_interface {
 ///
 /// - `SEGMENTED_LAYOUT_ID` matching the foreign `segmented_layout!`
 /// - `SEGMENT_COUNT`, `TABLE_OFFSET`, `DATA_START_OFFSET`, `MIN_ACCOUNT_SIZE`
-/// - `segment_table(data)` — read-only segment table access
-/// - `segment::<T>(data, index)` — typed read-only segment slice
-/// - `validate_segments(data)` — full segment validation
-/// - `load_foreign_segmented(account)` — Tier 2 validation with min-size
+/// - `segment_table(data)`: read-only segment table access
+/// - `segment::<T>(data, index)`: typed read-only segment slice
+/// - `validate_segments(data)`: full segment validation
+/// - `load_foreign_segmented(account)`: Tier 2 validation with min-size
 ///
 /// No mutable access is generated (consistent with interface philosophy).
 #[macro_export]
@@ -399,7 +399,7 @@ macro_rules! segmented_interface {
                 &[ $( $seg_elem_size as u16, )+ ]
             }
 
-            /// **Tier 2 — Cross-program segmented read.**
+            /// **Tier 2: Cross-program segmented read.**
             ///
             /// Validates owner + `SEGMENTED_LAYOUT_ID` + minimum size,
             /// then borrows account data. Returns the raw data reference

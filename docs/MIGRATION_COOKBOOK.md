@@ -19,7 +19,7 @@ access and ad-hoc validation.
 ```toml
 [dependencies]
 # Replace the direct pinocchio dependency if you only need Jiminy's common surface.
-jiminy = "0.16"
+jiminy = "0.17"
 # pinocchio = "0.10"   ← remove
 ```
 
@@ -108,7 +108,7 @@ your-program/
 ```toml
 [dependencies]
 anchor-lang = "0.30"
-jiminy = "0.16"
+jiminy = "0.17"
 ```
 
 ### Step 2: Move hot instructions to hopper-runtime/jiminy

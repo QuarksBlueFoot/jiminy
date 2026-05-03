@@ -1,6 +1,6 @@
 [package]
 name = "jiminy-finance"
-version = "0.16.0"
+version = "0.17.0"
 edition = "2021"
 license = "Apache-2.0"
 authors = ["MoonManQuark"]
@@ -17,7 +17,7 @@ name = "jiminy_finance"
 
 [dependencies]
 hopper-runtime = { workspace = true }
-jiminy-core = { path = "../jiminy-core", version = "0.16.0", default-features = false }
+jiminy-core = { path = "../jiminy-core", version = "0.17.0", default-features = false }
 
 [features]
 default = []

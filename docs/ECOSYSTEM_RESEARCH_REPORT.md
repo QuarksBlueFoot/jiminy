@@ -17,13 +17,13 @@ Jiminy is already the most comprehensive zero-copy ABI standard for Solana. No c
 
 ---
 
-## 1. Pinocchio v0.11 — Jiminy's Runtime Layer
+## 1. Pinocchio v0.11 -- Jiminy's Runtime Layer
 
 ### Sources Investigated
-- `sdk/src/lib.rs` — crate-level docs, feature flags, re-exports
-- `sdk/src/entrypoint/lazy.rs` — `InstructionContext`, `MaybeAccount`, lazy parsing
-- `sdk/src/entrypoint/mod.rs` — `process_entrypoint`, input buffer format
-- `solana-sdk/account-view/src/lib.rs` — `AccountView`, `RuntimeAccount`, borrow tracking
+- `sdk/src/lib.rs` -- crate-level docs, feature flags, re-exports
+- `sdk/src/entrypoint/lazy.rs` -- `InstructionContext`, `MaybeAccount`, lazy parsing
+- `sdk/src/entrypoint/mod.rs` -- `process_entrypoint`, input buffer format
+- `solana-sdk/account-view/src/lib.rs` -- `AccountView`, `RuntimeAccount`, borrow tracking
 
 ### Key Findings
 
@@ -35,7 +35,7 @@ Pinocchio v0.11 promotes `InstructionContext` as a first-class lazy entrypoint. 
 pub fn process_instruction(mut context: InstructionContext) -> ProgramResult {
     let authority = context.next_account()?.assume_account();
     let vault = context.next_account()?.assume_account();
-    // remaining accounts never parsed — saves CU
+    // remaining accounts never parsed -- saves CU
 }
 ```
 
@@ -57,9 +57,9 @@ let config: VerifiedAccount<Config> = ctx.next_verified(program_id)?;
 
 Pinocchio's `AccountView` uses a `borrow_state` byte (the reused duplicate marker) for RefCell-like borrow tracking. Key observations:
 
-- `borrow_state = 255 (NOT_BORROWED)` — no borrows
-- `borrow_state = 0` — mutably borrowed
-- `borrow_state ∈ [2, 254]` — immutable borrow count (decrements)
+- `borrow_state = 255 (NOT_BORROWED)` -- no borrows
+- `borrow_state = 0` -- mutably borrowed
+- `borrow_state ∈ [2, 254]` -- immutable borrow count (decrements)
 - `borrow_unchecked()` bypasses tracking entirely
 
 **What Jiminy does:** `load()` calls `try_borrow()` (safe, tracked). `load_unchecked()` uses `borrow_unchecked()` (unsafe, untracked). Good layering.
@@ -74,20 +74,20 @@ Pinocchio v0.11 has `account-resize` and `unsafe-account-resize` features. The `
 
 ---
 
-## 2. solana-zero-copy v1.0 — Unaligned Primitives
+## 2. solana-zero-copy v1.0 -- Unaligned Primitives
 
 ### Sources Investigated
-- `zero-copy/src/lib.rs` — crate structure
-- `zero-copy/src/unaligned.rs` — `Bool`, `U16`, `U32`, `U64`, `I16`, `I64`, `U128`
+- `zero-copy/src/lib.rs` -- crate structure
+- `zero-copy/src/unaligned.rs` -- `Bool`, `U16`, `U32`, `U64`, `I16`, `I64`, `U128`
 
 ### Key Findings
 
 `solana-zero-copy` is **minimal by design**: only unaligned primitive wrappers. No dynamic arrays, no segments, no collections, no account patterns. Its value prop is "official Anza-blessed primitive types" with `bytemuck`, `borsh`, `serde`, and `wincode` feature gates.
 
 **What they do well:**
-- Ecosystem standardization — used by `spl-list-view`, `spl-type-length-value`
+- Ecosystem standardization -- used by `spl-list-view`, `spl-type-length-value`
 - Feature coverage: bytemuck, borsh, serde, wincode derive support
-- `impl_usize_conversion` — clean `TryFrom<usize>` for all types (used by spl-list-view's `PodLength`)
+- `impl_usize_conversion` -- clean `TryFrom<usize>` for all types (used by spl-list-view's `PodLength`)
 
 **What Jiminy does better:**
 - Jiminy's `Le*` types have arithmetic operators (`get()`, `set()`, `checked_add()` etc.)
@@ -101,21 +101,21 @@ Pinocchio v0.11 has `account-resize` and `unsafe-account-resize` features. The `
 
 **Innovation opportunity:** None directly from solana-zero-copy itself. The crate is a strict subset of what Jiminy already provides.
 
-**However:** The `PodLength` trait pattern from `spl-list-view` (which uses solana-zero-copy types) is relevant — see Section 4 below.
+**However:** The `PodLength` trait pattern from `spl-list-view` (which uses solana-zero-copy types) is relevant -- see Section 4 below.
 
 ---
 
-## 3. Quasar — Dynamic Account Framework
+## 3. Quasar -- Dynamic Account Framework
 
 ### Sources Investigated
-- `lang/src/dynamic.rs` — `String<P,N>`, `Vec<T,P,N>`, `RawEncoded`, `MAX_DYNAMIC_TAIL`
-- `lang/src/traits.rs` — `Owner`, `Discriminator`, `Space`, `AccountCheck`, `ZeroCopyDeref`
-- `lang/src/context.rs` — `Context`, `Ctx`, `CtxWithRemaining`
-- `lang/src/accounts/interface.rs` — `Interface<T>`, `ProgramInterface` trait
-- `derive/src/account/mod.rs` — field classification, `DynKind`, validation order
-- `derive/src/account/dynamic.rs` — codegen: ZC companion, offset caching, set_inner, realloc
-- `derive/src/account/accessors.rs` — O(1) field access via cached offsets, `_raw()` methods
-- `pod/src/lib.rs` — `PodU64`, `PodU32` etc. with wrapping arithmetic
+- `lang/src/dynamic.rs` -- `String<P,N>`, `Vec<T,P,N>`, `RawEncoded`, `MAX_DYNAMIC_TAIL`
+- `lang/src/traits.rs` -- `Owner`, `Discriminator`, `Space`, `AccountCheck`, `ZeroCopyDeref`
+- `lang/src/context.rs` -- `Context`, `Ctx`, `CtxWithRemaining`
+- `lang/src/accounts/interface.rs` -- `Interface<T>`, `ProgramInterface` trait
+- `derive/src/account/mod.rs` -- field classification, `DynKind`, validation order
+- `derive/src/account/dynamic.rs` -- codegen: ZC companion, offset caching, set_inner, realloc
+- `derive/src/account/accessors.rs` -- O(1) field access via cached offsets, `_raw()` methods
+- `pod/src/lib.rs` -- `PodU64`, `PodU32` etc. with wrapping arithmetic
 
 ### Key Findings
 
@@ -124,7 +124,7 @@ Pinocchio v0.11 has `account-resize` and `unsafe-account-resize` features. The `
 Quasar's most innovative pattern. Dynamic accounts have:
 - Fixed fields first → compiled into a `FooZc` companion struct (pointer-cast access)
 - Dynamic fields after → `String<P,N>` / `Vec<T,P,N>` with inline length prefixes
-- At parse time, a **single prefix-walk** produces `__off: [u32; N-1]` — cached byte offsets
+- At parse time, a **single prefix-walk** produces `__off: [u32; N-1]` -- cached byte offsets
 - All subsequent field access is O(1) via the cached offsets
 
 ```
@@ -134,14 +134,14 @@ Wire layout:
                                     __off[0]               __off[1]  (cached)
 ```
 
-**Why this matters:** Jiminy's `segmented_layout!` uses a segment table (12 bytes × N descriptors) between the fixed prefix and data. Quasar's approach is **more space-efficient** for 1–3 dynamic fields because there's no segment table overhead — the length prefix IS the metadata.
+**Why this matters:** Jiminy's `segmented_layout!` uses a segment table (12 bytes × N descriptors) between the fixed prefix and data. Quasar's approach is **more space-efficient** for 1–3 dynamic fields because there's no segment table overhead -- the length prefix IS the metadata.
 
 Trade-offs:
 | | Jiminy Segments | Quasar Inline |
 |---|---|---|
 | **Space per dynamic field** | 12 bytes descriptor | 1–4 bytes prefix |
 | **Cross-program readable** | Yes (segment table is self-describing) | No (offsets require walking) |
-| **Capacity tracking** | Explicit capacity field | No capacity — realloc on write |
+| **Capacity tracking** | Explicit capacity field | No capacity -- realloc on write |
 | **Multiple segments** | Up to 8 | Unlimited (walk cost grows) |
 | **Tooling decodability** | Segment table is parseable | Requires codec knowledge |
 
@@ -165,22 +165,22 @@ inline_dynamic_layout! {
 ```
 
 This generates:
-- `ProfileFixed` — `#[repr(C)]` overlay for the fixed portion
-- `Profile<'a>` — parsed view with cached offsets (like Quasar)
-- `LAYOUT_ID` — deterministic hash including dynamic field metadata
-- `load()` — validates header + walks prefixes once
-- `name()`, `tags()` — O(1) accessors via cached offsets
+- `ProfileFixed` -- `#[repr(C)]` overlay for the fixed portion
+- `Profile<'a>` -- parsed view with cached offsets (like Quasar)
+- `LAYOUT_ID` -- deterministic hash including dynamic field metadata
+- `load()` -- validates header + walks prefixes once
+- `name()`, `tags()` -- O(1) accessors via cached offsets
 
-**Key differentiator from Quasar:** Include the dynamic field metadata (prefix sizes, max lengths, element types) in the `LAYOUT_ID` hash. This makes inline dynamic layouts **cross-program verifiable** — something Quasar can't do.
+**Key differentiator from Quasar:** Include the dynamic field metadata (prefix sizes, max lengths, element types) in the `LAYOUT_ID` hash. This makes inline dynamic layouts **cross-program verifiable** -- something Quasar can't do.
 
 #### 3b. RawEncoded CPI Pass-Through ★★
 
-Quasar generates `_raw()` accessor methods that return `RawEncoded<'a, PREFIX_BYTES>` — a zero-copy view of prefix + data bytes for CPI:
+Quasar generates `_raw()` accessor methods that return `RawEncoded<'a, PREFIX_BYTES>` -- a zero-copy view of prefix + data bytes for CPI:
 
 ```rust
 // Quasar pattern:
 let raw_name = profile.name_raw();  // RawEncoded<'_, 2>
-// Pass raw_name.bytes directly to CPI data — no decode/re-encode
+// Pass raw_name.bytes directly to CPI data -- no decode/re-encode
 ```
 
 **Innovation for Jiminy:** For segmented accounts doing CPI, provide a raw segment view:
@@ -242,35 +242,35 @@ impl Profile {
 
 ---
 
-## 4. spl-list-view — Standard Collection Pattern
+## 4. spl-list-view -- Standard Collection Pattern
 
 ### Sources Investigated
-- `list-view/src/lib.rs` — crate structure
-- `list-view/src/list_view.rs` — `ListView<T, L>`, layout calculation, alignment padding
-- `list-view/src/list_view_mut.rs` — `ListViewMut`, push, remove
+- `list-view/src/lib.rs` -- crate structure
+- `list-view/src/list_view.rs` -- `ListView<T, L>`, layout calculation, alignment padding
+- `list-view/src/list_view_mut.rs` -- `ListViewMut`, push, remove
 
 ### Key Findings
 
 `spl-list-view` is a zero-copy `Vec` over `&[u8]` with these design choices:
 - Generic length prefix via `PodLength` trait (`U16`, `U32`, `U64`)
 - Alignment padding between prefix and data (for native-aligned `Pod` types)
-- **No capacity field** — capacity derived from buffer size
+- **No capacity field** -- capacity derived from buffer size
 - Shift-left `remove()` (not swap-remove)
 - Uses `bytemuck` for type safety
 
 **What they do well:**
 - Clean `size_of(num_items)` calculation including padding
-- `PodLength` trait is generic — supports u16/u32/u64 prefixes
+- `PodLength` trait is generic -- supports u16/u32/u64 prefixes
 - Standard `push/remove` semantics
 
 **What Jiminy does better:**
-- Jiminy's `SegmentDescriptor` has explicit capacity tracking — critical for deterministic rent calculation
+- Jiminy's `SegmentDescriptor` has explicit capacity tracking -- critical for deterministic rent calculation
 - Jiminy's `ZeroCopySlice` is simpler (no alignment padding needed because all Jiminy types are align-1)
 - Jiminy's segments support multiple arrays per account
 
 **Gap in spl-list-view:**
-- No capacity awareness — buffer must be pre-sized perfectly
-- No multi-array support — single list per buffer
+- No capacity awareness -- buffer must be pre-sized perfectly
+- No multi-array support -- single list per buffer
 - Depends on `bytemuck` (not pinocchio-native)
 
 **Innovation opportunity (LOW):** Jiminy's collection story is already stronger. Minor win: adopt the `PodLength` trait pattern for `ZeroCopySlice` to support u8/u16/u32 prefixes:
@@ -308,7 +308,7 @@ pub struct AccountIntrospection<'a> {
 
 impl AccountIntrospection<'_> {
     /// Best-effort inspection of raw account bytes.
-    /// Does NOT validate — for tooling/explorers only.
+    /// Does NOT validate -- for tooling/explorers only.
     pub fn inspect(data: &[u8]) -> Self { /* ... */ }
 }
 ```
@@ -339,7 +339,7 @@ segmented_interface! {
 
 // Usage:
 let ob = OrderBook::load_foreign(account)?;
-let bids = ob.bids()?;  // SegmentSlice<Order> — zero-copy view
+let bids = ob.bids()?;  // SegmentSlice<Order> -- zero-copy view
 for bid in bids.iter() { /* ... */ }
 ```
 
@@ -378,27 +378,27 @@ This is more efficient for cross-program reads where you only need one or two fi
 
 | # | Innovation | Source Inspiration | Effort | Impact |
 |---|---|---|---|---|
-| 1 | **`inline_dynamic_layout!`** — inline dynamic fields with offset caching and layout_id verification | Quasar's dynamic codegen | Large | ★★★★★ |
-| 2 | **`segmented_interface!`** — cross-program views for segmented accounts | Novel (gap in ecosystem) | Medium | ★★★★★ |
-| 3 | **Account Introspection** — `AccountIntrospection::inspect()` for tooling | Novel (gap in ecosystem) | Small | ★★★★ |
-| 4 | **Multi-program interfaces** — `jiminy_interface!` with program sets | Quasar's `ProgramInterface` | Small | ★★★★ |
+| 1 | **`inline_dynamic_layout!`** -- inline dynamic fields with offset caching and layout_id verification | Quasar's dynamic codegen | Large | ★★★★★ |
+| 2 | **`segmented_interface!`** -- cross-program views for segmented accounts | Novel (gap in ecosystem) | Medium | ★★★★★ |
+| 3 | **Account Introspection** -- `AccountIntrospection::inspect()` for tooling | Novel (gap in ecosystem) | Small | ★★★★ |
+| 4 | **Multi-program interfaces** -- `jiminy_interface!` with program sets | Quasar's `ProgramInterface` | Small | ★★★★ |
 
 ### Tier 2: Strong Opportunities (Medium Impact)
 
 | # | Innovation | Source Inspiration | Effort | Impact |
 |---|---|---|---|---|
-| 5 | **Raw segment pass-through** — `SegmentRaw` for zero-copy CPI forwarding | Quasar's `RawEncoded` | Small | ★★★ |
-| 6 | **Generic ZeroCopySlice prefix** — `ZeroCopySlice<T, L>` with u8/u16/u32 prefix | spl-list-view's `PodLength` | Small | ★★★ |
-| 7 | **Lazy account loader** — `LazyAccounts` wrapping pinocchio's `InstructionContext` | Pinocchio v0.11 lazy entrypoint | Medium | ★★★ |
+| 5 | **Raw segment pass-through** -- `SegmentRaw` for zero-copy CPI forwarding | Quasar's `RawEncoded` | Small | ★★★ |
+| 6 | **Generic ZeroCopySlice prefix** -- `ZeroCopySlice<T, L>` with u8/u16/u32 prefix | spl-list-view's `PodLength` | Small | ★★★ |
+| 7 | **Lazy account loader** -- `LazyAccounts` wrapping pinocchio's `InstructionContext` | Pinocchio v0.11 lazy entrypoint | Medium | ★★★ |
 | 8 | **MIN_LEN / MAX_LEN** for dynamic layouts | Quasar's `MIN_SPACE`/`MAX_SPACE` | Small | ★★ |
 
 ### Tier 3: Nice-to-Have (Low Impact or Low Urgency)
 
 | # | Innovation | Source Inspiration | Effort | Impact |
 |---|---|---|---|---|
-| 9 | **Field projection interfaces** — partial struct overlays | Novel | Medium | ★★ |
+| 9 | **Field projection interfaces** -- partial struct overlays | Novel | Medium | ★★ |
 | 10 | **wincode feature gate** for Le* types | solana-zero-copy's wincode support | Small | ★ |
-| 11 | **Realloc-safe segment growth** — detect pinocchio resize feature | Pinocchio account-resize | Small | ★ |
+| 11 | **Realloc-safe segment growth** -- detect pinocchio resize feature | Pinocchio account-resize | Small | ★ |
 
 ---
 
@@ -406,7 +406,7 @@ This is more efficient for cross-program reads where you only need one or two fi
 
 ### Innovation 1: `inline_dynamic_layout!`
 
-**Problem:** `segmented_layout!` has 12 bytes overhead per segment. For 1–2 dynamic fields (the common case — e.g., a name string + a tags array), the segment table is heavy.
+**Problem:** `segmented_layout!` has 12 bytes overhead per segment. For 1–2 dynamic fields (the common case -- e.g., a name string + a tags array), the segment table is heavy.
 
 **Design:**
 
@@ -426,10 +426,10 @@ inline_dynamic_layout! {
 ```
 
 **Generated types:**
-- `ProfileFixed` — `#[repr(C)]` overlay for bytes 0..56
-- `Profile<'a>` — parsed view borrowing `&'a [u8]` with `__off: [u32; 2]`
-- `ProfileMut<'a>` — mutable variant with write accessors
-- `Profile::LAYOUT_ID` — hash includes `"DynString:LeU16:64"` etc.
+- `ProfileFixed` -- `#[repr(C)]` overlay for bytes 0..56
+- `Profile<'a>` -- parsed view borrowing `&'a [u8]` with `__off: [u32; 2]`
+- `ProfileMut<'a>` -- mutable variant with write accessors
+- `Profile::LAYOUT_ID` -- hash includes `"DynString:LeU16:64"` etc.
 - `Profile::MIN_LEN = 56 + 2 + 2 + 1` (fixed + prefixes)
 - `Profile::MAX_LEN = MIN_LEN + 64 + 256 + 16 * size_of::<Tag>()`
 
@@ -505,7 +505,7 @@ for bid in bids.iter() {
 
 ```rust
 /// Best-effort account structure inspection.
-/// For tooling only — NOT a trust boundary.
+/// For tooling only -- NOT a trust boundary.
 pub struct AccountShape {
     /// True if bytes 0..16 look like a valid Jiminy header.
     pub has_jiminy_header: bool,
@@ -559,11 +559,11 @@ For context, here's what the research confirms Jiminy leads on:
 | Raw CPI pass-through | ❌ | ❌ | ❌ | ✅ | ❌ |
 
 **Critical advantages to maintain:**
-1. `layout_id` — deterministic, schema-change-detecting ABI fingerprint. Nobody else has this.
-2. `jiminy_interface!` — the ONLY cross-program type-safe read system in the ecosystem.
-3. Declarative-only macros — auditable, no hidden codegen.
-4. Tiered trust — explicit security posture selection.
-5. Segment capacity tracking — deterministic rent, no surprise reallocs.
+1. `layout_id` -- deterministic, schema-change-detecting ABI fingerprint. Nobody else has this.
+2. `jiminy_interface!` -- the ONLY cross-program type-safe read system in the ecosystem.
+3. Declarative-only macros -- auditable, no hidden codegen.
+4. Tiered trust -- explicit security posture selection.
+5. Segment capacity tracking -- deterministic rent, no surprise reallocs.
 
 ---
 
@@ -571,7 +571,7 @@ For context, here's what the research confirms Jiminy leads on:
 
 | Innovation | Risk | Mitigation |
 |---|---|---|
-| `inline_dynamic_layout!` | Complexity — two dynamic patterns (segmented + inline) | Clear docs: "use inline for 1-2 fields, segmented for 3+" |
+| `inline_dynamic_layout!` | Complexity -- two dynamic patterns (segmented + inline) | Clear docs: "use inline for 1-2 fields, segmented for 3+" |
 | `inline_dynamic_layout!` | layout_id hash format change | New hash prefix `jiminy:v1:dyn:` to distinguish |
 | `segmented_interface!` | Foreign segment table could be malformed | Strict bounds checking, element_size validation |
 | Multi-program interface | Widens attack surface (more programs pass owner check) | Explicit program set, document trust implications |
@@ -581,8 +581,8 @@ For context, here's what the research confirms Jiminy leads on:
 
 ## Next Steps
 
-1. **Prototype `inline_dynamic_layout!`** — start with fixed-then-dynamic field ordering, u8/u16/u32 prefixes, offset caching. Verify layout_id determinism.
-2. **Add `AccountShape::inspect()`** — small, immediately useful for jiminy-schema and @jiminy/ts.
-3. **Extend `jiminy_interface!`** with program set support — backward-compatible addition.
-4. **Design `segmented_interface!`** — requires careful cross-program segment table validation spec.
-5. **Generic `ZeroCopySlice<T, L>`** — quick win, backward-compatible.
+1. **Prototype `inline_dynamic_layout!`** -- start with fixed-then-dynamic field ordering, u8/u16/u32 prefixes, offset caching. Verify layout_id determinism.
+2. **Add `AccountShape::inspect()`** -- small, immediately useful for jiminy-schema and @jiminy/ts.
+3. **Extend `jiminy_interface!`** with program set support -- backward-compatible addition.
+4. **Design `segmented_interface!`** -- requires careful cross-program segment table validation spec.
+5. **Generic `ZeroCopySlice<T, L>`** -- quick win, backward-compatible.

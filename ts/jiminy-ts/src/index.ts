@@ -1,5 +1,5 @@
 /**
- * @jiminy/ts — TypeScript runtime for Jiminy zero-copy Solana accounts.
+ * @jiminy/ts: TypeScript runtime for Jiminy zero-copy Solana accounts.
  *
  * Provides:
  * - Jiminy header decoding and validation

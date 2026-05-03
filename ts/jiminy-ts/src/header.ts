@@ -1,5 +1,5 @@
 /**
- * Jiminy account header — 16 bytes at the start of every Jiminy-managed account.
+ * Jiminy account header: 16 bytes at the start of every Jiminy-managed account.
  *
  * Layout:
  * ```

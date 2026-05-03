@@ -62,7 +62,7 @@ fn stamp_header(buf: &mut [u8], disc: u8, version: u8, layout_id: &[u8; 8]) {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// 1. Header v2 — 16-byte structure
+// 1. Header v2: 16-byte structure
 // ══════════════════════════════════════════════════════════════════════════════
 
 #[test]
@@ -119,7 +119,7 @@ fn check_header_accepts_newer_version() {
     let mut buf = AlignedBuf::<64>::new();
     let id = [1, 2, 3, 4, 5, 6, 7, 8];
     stamp_header(buf.as_mut_slice(), 5, 3, &id);
-    // Expecting version >= 2, got 3 — should pass.
+    // Expecting version >= 2, got 3; should pass.
     assert!(check_header(buf.as_slice(), 5, 2, &id).is_ok());
 }
 
@@ -343,7 +343,7 @@ fn load_unverified_overlay_valid_header() {
 #[test]
 fn load_unverified_overlay_invalid_header_still_overlays() {
     let mut buf = AlignedBuf::<56>::new();
-    // Write wrong disc — header check fails, but overlay still works.
+    // Write wrong disc; header check fails, but overlay still works.
     stamp_header(buf.as_mut_slice(), 99, 1, &[0; 8]);
     let (_, validated) = TestVault::load_unverified_overlay(buf.as_slice()).unwrap();
     assert!(!validated);
@@ -356,7 +356,7 @@ fn load_unverified_overlay_too_small_fails() {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// 8. extends — compile-time V2 ⊃ V1 assertions
+// 8. extends: compile-time V2 ⊃ V1 assertions
 // ══════════════════════════════════════════════════════════════════════════════
 
 #[test]
@@ -378,7 +378,7 @@ fn extends_higher_version() {
 
 #[test]
 fn v2_can_read_v1_prefix() {
-    // V2 has the same prefix as V1 — first 56 bytes are compatible.
+    // V2 has the same prefix as V1; first 56 bytes are compatible.
     let mut buf = AlignedBuf::<64>::new();
     stamp_header(buf.as_mut_slice(), TestVault::DISC, TestVault::VERSION, &TestVault::LAYOUT_ID);
     buf.0[16..24].copy_from_slice(&999u64.to_le_bytes());
@@ -463,12 +463,12 @@ fn compatible_check_logic_rejects_lower_version() {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// 13. Foreign loading semantics — layout_id only
+// 13. Foreign loading semantics: layout_id only
 // ══════════════════════════════════════════════════════════════════════════════
 
 #[test]
 fn load_checked_rejects_valid_header_wrong_v2_layout_id() {
-    // Valid V1 header but asked to check as V2 layout — layout_id mismatch.
+    // Valid V1 header but asked to check as V2 layout; layout_id mismatch.
     let mut buf = AlignedBuf::<64>::new();
     stamp_header(
         buf.as_mut_slice(),
@@ -597,7 +597,7 @@ fn unverified_overlay_partially_overwritten_header() {
 
 #[test]
 fn unverified_overlay_v2_header_on_v1_struct() {
-    // A V2 header on a V1-sized buffer — overlay should work but not validate.
+    // A V2 header on a V1-sized buffer; overlay should work but not validate.
     let mut buf = AlignedBuf::<56>::new();
     stamp_header(
         buf.as_mut_slice(),
@@ -616,7 +616,7 @@ fn unverified_overlay_v2_header_on_v1_struct() {
 
 #[test]
 fn compatible_accepts_with_any_layout_id() {
-    // validate_version_compatible ignores layout_id — verify this by using a gibberish ID.
+    // validate_version_compatible ignores layout_id; verify this by using a gibberish ID.
     let mut buf = AlignedBuf::<64>::new();
     stamp_header(buf.as_mut_slice(), 1, 2, &[0xFF; 8]);
     // Manual compatibility check: disc == 1 ✓, version >= 1 ✓.

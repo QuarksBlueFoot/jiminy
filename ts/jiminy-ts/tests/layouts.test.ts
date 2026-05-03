@@ -29,15 +29,15 @@ describe('layouts', () => {
   describe('SplTokenAccount', () => {
     it('decodes an initialized token account', () => {
       const data = new Uint8Array(SPL_TOKEN_SIZE);
-      // mint at 0..32 — all 1s
+      // mint at 0..32: all 1s
       data.fill(1, 0, 32);
-      // owner at 32..64 — all 2s
+      // owner at 32..64: all 2s
       data.fill(2, 32, 64);
       // amount at 64..72
       writeU64(data, 64, 1000n);
       // delegate_tag at 72 = 1 (Some)
       writeU32(data, 72, 1);
-      // delegate at 76..108 — all 3s
+      // delegate at 76..108: all 3s
       data.fill(3, 76, 108);
       // state at 108 = 1 (Initialized)
       data[108] = 1;

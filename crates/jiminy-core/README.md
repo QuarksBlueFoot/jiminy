@@ -6,7 +6,7 @@ Account layout, zero-copy IO, validation, PDA, sysvar access, lifecycle, math, t
 
 ```toml
 [dependencies]
-jiminy-core = "0.16"
+jiminy-core = "0.17"
 ```
 
 ## What's in here
@@ -24,6 +24,14 @@ jiminy-core = "0.16"
 | `interface` | Cross-program ABI interfaces (`jiminy_interface!`) |
 | `event` | Zero-alloc event emission via `sol_log_data` |
 | `programs` | Well-known program IDs *(feature-gated)* |
+
+## New in 0.17
+
+- `SegmentDescriptor` is now the capacity-aware 12-byte descriptor used by
+	segmented accounts.
+- `segmented_interface!` provides read-only foreign views for segmented
+	accounts with `load_foreign_segmented()`.
+- Segment validation checks reserved capacity regions and descriptor flags.
 
 ## New in 0.16
 

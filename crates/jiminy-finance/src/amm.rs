@@ -53,7 +53,7 @@ pub fn constant_product_out(
     }
     // `fee_bps` is u16 (max 65_535) so values above 10_000 are representable
     // and would underflow the fee-factor subtraction (panic in debug, wrap in
-    // release). Reject explicitly — a >=100% fee is never a valid swap config.
+    // release). Reject explicitly; a >=100% fee is never a valid swap config.
     if fee_bps as u32 >= 10_000 {
         return Err(ProgramError::InvalidArgument);
     }

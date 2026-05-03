@@ -14,7 +14,7 @@ fuzz_target!(|data: &[u8]| {
     // Try parsing as a slice of AccountHeader (16-byte elements).
     if let Ok(slice) = ZeroCopySlice::<AccountHeader>::from_bytes(data) {
         let len = slice.len();
-        // Read every element — must not panic.
+        // Read every element -- must not panic.
         for i in 0..len {
             let _ = slice.get(i);
             let _ = slice.read(i);

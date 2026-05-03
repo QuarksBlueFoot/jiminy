@@ -6,7 +6,7 @@ Adapter for reading Anchor-framework accounts from Jiminy programs (and vice ver
 
 ```toml
 [dependencies]
-jiminy-anchor = "0.16"
+jiminy-anchor = "0.17"
 ```
 
 ## What's in here

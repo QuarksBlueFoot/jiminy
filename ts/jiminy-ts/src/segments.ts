@@ -6,11 +6,11 @@
  *
  * ```
  * Byte   Field         Type
- * 0-3    offset        u32 (LE) — byte offset from account start
- * 4-5    count         u16 (LE) — number of live elements
- * 6-7    capacity      u16 (LE) — maximum element capacity
- * 8-9    element_size  u16 (LE) — size of each element in bytes
- * 10-11  flags         u16 (LE) — reserved for future use (zero)
+ * 0-3    offset        u32 (LE): byte offset from account start
+ * 4-5    count         u16 (LE): number of live elements
+ * 6-7    capacity      u16 (LE): maximum element capacity
+ * 8-9    element_size  u16 (LE): size of each element in bytes
+ * 10-11  flags         u16 (LE): reserved for future use (zero)
  * ```
  */
 

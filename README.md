@@ -58,7 +58,7 @@ dependency while you migrate.
 
 `no_std`. `no_alloc`. Declarative macros only. Hot-path helpers are
 `#[inline(always)]`; larger walkers use plain `#[inline]`. Built on Hopper
-Runtime, Pinocchio backend wired in today — drop the umbrella crate to fall
+Runtime, Pinocchio backend wired in today. Drop the umbrella crate to fall
 back to direct Pinocchio at any time.
 
 ---
@@ -222,26 +222,27 @@ and there's nothing to forget.
 
 ---
 
-## New in 0.16
+## New in 0.17
 
-### Verified account wrappers
+### Capacity-aware segmented ABI
 
-- **`VerifiedAccount<T>` / `VerifiedAccountMut<T>`**: type-safe wrappers returned by `load()` / `load_mut()` / `load_foreign()`. Infallible `get()` / `get_mut()` access after construction. No raw bytes exposed.
-- **`strict` feature**: production hardening mode. When enabled, `validate_version_compatible()` is compile-time disabled, forcing all loads through layout_id-verified tiers.
+- **12-byte `SegmentDescriptor` (breaking)**: descriptors now encode `offset`,
+  `count`, `capacity`, `element_size`, and `flags`. Validation checks reserved
+  regions, not just live elements.
+- **Explicit capacity APIs**: `SegmentDescriptor::new()` takes `(offset,
+  count, capacity, element_size)`, and `SegmentTableMut::init()` takes
+  `(element_size, count, capacity)` tuples.
+- **`segmented_interface!`**: declare read-only cross-program views for
+  segmented accounts. The macro generates segment table accessors, typed
+  segment reads, and `load_foreign_segmented()`.
+- **Schema min-size support**: `LayoutManifest::min_size()` reports the fixed
+  prefix plus segment table size, and schema verification rejects invalid
+  segment descriptors.
 
-### Safety hardening
+### Security hardening
 
-- **Compile-time alignment assertion** in `jiminy_interface!`: prevents over-aligned types (raw `u128`, etc.) from slipping through interface definitions.
-- **`jiminy_interface!` version parameter**: interfaces can now specify `version = N` to match foreign layouts at any version. Default remains `version = 1` for backward compatibility.
-- **Push overlap protection**: `segment_push` now checks the next segment's offset to prevent writes from overflowing into adjacent segments.
-- **`init_segments_with_capacity()`**: new initializer for segmented layouts that spaces segment offsets by max capacity with counts starting at zero. Enables safe push/remove workflows.
-- **Exact size enforcement**: Tiers 1 and 2 now require `data.len() == expected_size` (was `<`). Prevents hidden trailing data attacks.
-- **`load_mut()` backed by `RefMut`**: eliminates UB from mutable aliasing.
-
-### Security hardening (audit pass)
-
-A focused audit pass tightened a handful of safety-critical surfaces. None of
-these change public function signatures.
+A focused audit pass tightened safety-critical surfaces and fixed UB-prone
+interfaces.
 
 - **Token-2022 TLV offset corrected**: the extension walker was reading TLV at
   byte 356 instead of 166, so `check_no_transfer_fee` /
@@ -262,24 +263,39 @@ these change public function signatures.
   `mint_freeze_authority`: the previous `&Address` return smuggled a pointer
   out of a dropped `try_borrow` guard, opening a UB window where a concurrent
   `try_borrow_mut` could create an aliasing `&mut [u8]`. Now returns the
-  32-byte address by value (a handful of BPF loads).
+  32-byte address by value.
 - **AMM fee underflow guard**: `constant_product_out` /
-  `constant_product_in` reject `fee_bps >= 10_000` up-front (>=100% would
-  underflow the `10_000 - fee_bps` subtraction).
-- **Vesting bypass on pathological schedules**: `vested_amount` now validates
-  `start <= cliff <= end` and `now >= start` before casting `(now - start)`
-  to `u128`; previously a config with `start > cliff` could wrap and release
-  `total` at the cliff instead of `0`.
-- **`liquidation_seize_amount` u64 wrap**: `10_000 + bonus_bps` is now
-  `u128 checked_add`, so a `u64::MAX`-adjacent bonus rejects cleanly.
+  `constant_product_in` reject `fee_bps >= 10_000` before subtracting from
+  `10_000`.
+- **Vesting schedule validation**: `vested_amount` validates
+  `start <= cliff <= end` and `now >= start` before computing elapsed time.
+- **`liquidation_seize_amount` u64 wrap fixed**: `10_000 + bonus_bps` is now
+  a checked `u128` addition.
 - **`extract_fee` config validation**: `fee_bps > 10_000` is now an
-  `InvalidArgument`, distinguishing a misconfigured fee from a true
-  `InsufficientFunds`.
-- **`rent_exempt_min` overflow**: swapped `saturating_mul(6960)` for
-  `checked_*`, so nonsensical sizes fall to `u64::MAX` deliberately rather
-  than silently capping.
-- **Needless `unsafe` removed** from `check_program_allowed` — replaced with
-  the safe Hopper-native `account.owned_by(&Address)` API.
+  `InvalidArgument`, distinct from a true `InsufficientFunds` error.
+- **`rent_exempt_min` overflow handling**: swapped `saturating_mul(6960)` for
+  checked arithmetic, so nonsensical sizes return `u64::MAX` deliberately.
+- **Needless `unsafe` removed** from `check_program_allowed`; it now uses the
+  safe Hopper-native `account.owned_by(&Address)` API.
+
+<details>
+<summary>New in 0.16</summary>
+
+### Verified account wrappers
+
+- **`VerifiedAccount<T>` / `VerifiedAccountMut<T>`**: type-safe wrappers returned by `load()` / `load_mut()` / `load_foreign()`. Infallible `get()` / `get_mut()` access after construction. No raw bytes exposed.
+- **`strict` feature**: production hardening mode. When enabled, `validate_version_compatible()` is compile-time disabled, forcing all loads through layout_id-verified tiers.
+
+### Safety hardening
+
+- **Compile-time alignment assertion** in `jiminy_interface!`: prevents over-aligned types (raw `u128`, etc.) from slipping through interface definitions.
+- **`jiminy_interface!` version parameter**: interfaces can now specify `version = N` to match foreign layouts at any version. Default remains `version = 1` for backward compatibility.
+- **Push overlap protection**: `segment_push` now checks the next segment's offset to prevent writes from overflowing into adjacent segments.
+- **`init_segments_with_capacity()`**: new initializer for segmented layouts that spaces segment offsets by max capacity with counts starting at zero. Enables safe push/remove workflows.
+- **Exact size enforcement**: Tiers 1 and 2 now require `data.len() == expected_size` (was `<`). Prevents hidden trailing data attacks.
+- **`load_mut()` backed by `RefMut`**: eliminates UB from mutable aliasing.
+
+</details>
 
 <details>
 <summary>New in 0.15</summary>
@@ -319,7 +335,8 @@ these change public function signatures.
 
 - **`SEGMENTED_ABI.md`**: Design for variable-length accounts with capacity-aware segment descriptors.
 - **`UNSAFE_INVENTORY.md`**: every `unsafe` site catalogued with file, purpose, and soundness justification.
-- **289+ Rust tests** across the workspace: 122 unit + 13 proptest + 59 segment (jiminy-core), 41 unit + 4 integration (jiminy-schema), 18 (jiminy-layouts), 25 (jiminy-anchor), plus doc tests.
+- Workspace tests cover core ABI loaders, segmented layouts, schema export,
+  standard layouts, Anchor interop, macro ergonomics, and Solana helpers.
 
 <details>
 <summary>New in 0.14</summary>
@@ -395,7 +412,7 @@ layer you need.
 │  └────────────────────────────────────────────────────────────┘  │
 └──────────────────────────────────────────────────────────────────┘
 
-  Domain extensions (not core, jiminy does not depend on these):
+  Domain extensions (not part of jiminy-core; re-exported by the umbrella crate):
   jiminy-finance · jiminy-lending · jiminy-staking
   jiminy-vesting · jiminy-multisig · jiminy-distribute
 ```
@@ -449,8 +466,8 @@ layer you need.
 
 ### Community / Domain Extensions (Not Core)
 
-These crates demonstrate patterns built using Jiminy.
-They are not part of the core, and Jiminy does not depend on them.
+These crates demonstrate patterns built using Jiminy. They are not part of
+`jiminy-core`; the umbrella `jiminy` crate re-exports them for convenience.
 
 | Crate | |
 |---|---|
@@ -468,17 +485,17 @@ They are not part of the core, and Jiminy does not depend on them.
 ```toml
 # Full toolkit (recommended)
 [dependencies]
-jiminy = "0.16"
+jiminy = "0.17"
 
 # Or pick individual crates for minimal deps
-jiminy-core = "0.16"      # Account layout, checks, math, PDA
-jiminy-solana = "0.16"    # Token, CPI, crypto, oracle
-jiminy-finance = "0.16"   # AMM math, slippage
+jiminy-core = "0.17"      # Account layout, checks, math, PDA
+jiminy-solana = "0.17"    # Token, CPI, crypto, oracle
+jiminy-finance = "0.17"   # AMM math, slippage
 
 # Tooling & ecosystem
-jiminy-schema = "0.16"    # Layout manifests, TS codegen, indexer kit
-jiminy-layouts = "0.16"   # SPL Token/Mint/Multisig/Nonce/Stake overlays
-jiminy-anchor = "0.16"    # Anchor disc + zero-copy overlay interop
+jiminy-schema = "0.17"    # Layout manifests, TS codegen, indexer kit
+jiminy-layouts = "0.17"   # SPL Token/Mint/Multisig/Nonce/Stake overlays
+jiminy-anchor = "0.17"    # Anchor disc + zero-copy overlay interop
 ```
 
 ## Adding Jiminy to an existing Pinocchio project
@@ -490,7 +507,7 @@ Already using pinocchio directly? You have two options:
 ```toml
 [dependencies]
 pinocchio = "0.10"
-jiminy = "0.16"
+jiminy = "0.17"
 ```
 
 This works fine. Cargo deduplicates the pinocchio crate as long as versions are
@@ -501,7 +518,7 @@ imports alongside them.
 
 ```toml
 [dependencies]
-jiminy = "0.16"
+jiminy = "0.17"
 ```
 
 Jiminy re-exports the Hopper Runtime surface you author against. Replace your
@@ -1003,7 +1020,7 @@ Zero-alloc diagnostic logging behind the `log` feature flag. Uses the raw
 `sol_log` syscall, no extra deps.
 
 ```toml
-jiminy = { version = "0.16", features = ["log"] }
+jiminy = { version = "0.17", features = ["log"] }
 ```
 
 | Function | What it logs |
@@ -1047,7 +1064,7 @@ Anchor deserializes token accounts but doesn't screen extensions. A mint with a
 permanent delegate can drain your vault. A transfer hook can make your CPI fail.
 Jiminy's `check_safe_token_2022_mint` rejects all commonly dangerous extensions
 in a single call, or you can check them individually. The screening helpers are
-kind-aware — they verify the account-type byte at offset 165 against the kind
+kind-aware. They verify the account-type byte at offset 165 against the kind
 they're checking (mint `0x01` vs account `0x02`), so a wrong-kind buffer fails
 closed instead of silently passing.
 
@@ -1164,7 +1181,7 @@ for post-swap safety. Price impact estimation.
 
 ```rust
 // Signature is (reserve_in, reserve_out, amount_in, fee_bps).
-// fee_bps must be < 10_000 (>=100% would underflow the fee factor) — the
+// fee_bps must be < 10_000. A 100% fee would underflow the fee factor, so the
 // function rejects it with InvalidArgument rather than wrapping silently.
 let out = constant_product_out(reserve_in, reserve_out, amount_in, 30)?; // 30 bps fee
 check_k_invariant(ra_before, rb_before, ra_after, rb_after)?;
@@ -1359,30 +1376,32 @@ Misconfigured fees and undersized inputs surface as different errors.
 
 ---
 
-## Modular crates (v0.16+)
+## Modular crates (v0.17+)
 
 Starting with v0.11, Jiminy is split into focused crates. v0.13 added
 declarative macros for error codes, instruction dispatch, and account
 uniqueness checks. v0.15 adds the Account ABI system, schema tooling,
 SPL layout overlays, and Anchor interop. v0.16 adds verified account
-wrappers, push overlap protection, and production hardening.
+wrappers, push overlap protection, and production hardening. v0.17 adds
+capacity-aware segmented ABI, segmented foreign interfaces, typed
+Token-2022 walkers, and audit-driven safety fixes.
 
 ```toml
 # Full toolkit - zero local code, re-exports everything
-jiminy = "0.16"
+jiminy = "0.17"
 
 # Or pick what you need
-jiminy-core = "0.16"        # Account layout, checks, math, PDA, sysvar
-jiminy-solana = "0.16"      # Token, CPI, crypto, oracle, introspection
-jiminy-finance = "0.16"     # AMM math, slippage
-jiminy-lending = "0.16"     # Lending/liquidation primitives
-jiminy-staking = "0.16"     # Reward accumulators
-jiminy-vesting = "0.16"     # Vesting schedules
-jiminy-multisig = "0.16"    # M-of-N threshold
-jiminy-distribute = "0.16"  # Dust-safe splits
-jiminy-schema = "0.16"      # Layout manifests, TS codegen, indexer kit
-jiminy-layouts = "0.16"     # SPL Token/Mint/Multisig/Nonce/Stake overlays
-jiminy-anchor = "0.16"      # Anchor disc + zero-copy overlay interop
+jiminy-core = "0.17"        # Account layout, checks, math, PDA, sysvar
+jiminy-solana = "0.17"      # Token, CPI, crypto, oracle, introspection
+jiminy-finance = "0.17"     # AMM math, slippage
+jiminy-lending = "0.17"     # Lending/liquidation primitives
+jiminy-staking = "0.17"     # Reward accumulators
+jiminy-vesting = "0.17"     # Vesting schedules
+jiminy-multisig = "0.17"    # M-of-N threshold
+jiminy-distribute = "0.17"  # Dust-safe splits
+jiminy-schema = "0.17"      # Layout manifests, TS codegen, indexer kit
+jiminy-layouts = "0.17"     # SPL Token/Mint/Multisig/Nonce/Stake overlays
+jiminy-anchor = "0.17"      # Anchor disc + zero-copy overlay interop
 ```
 
 The root `jiminy` crate re-exports everything. Module paths are unchanged:
@@ -1399,12 +1418,13 @@ use jiminy_core::check::check_signer;
 use jiminy_solana::crypto::verify_merkle_proof;
 ```
 
-### Migration from 0.15
+### Migration from 0.16
 
-The API is the same. If you depend on `jiminy = "0.15"`, upgrade
-to `"0.16"` and everything compiles. 0.16 adds verified account wrappers,
-push overlap protection, and production hardening but nothing was removed
-or renamed.
+If you depend on `jiminy = "0.16"`, upgrade to `"0.17"` and review segmented
+account code. `SegmentDescriptor` is now 12 bytes, `SegmentDescriptor::new()`
+takes `capacity` and `element_size`, and `SegmentTableMut::init()` takes
+3-tuples. Token and mint address readers now return owned `Address` values
+instead of references.
 
 ---
 

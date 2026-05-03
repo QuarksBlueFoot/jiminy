@@ -28,7 +28,7 @@ Get-ChildItem $templatesRoot -Directory | ForEach-Object {
     } | ForEach-Object {
         $text = Get-Content -Raw -Path $_.FullName
         $text = $text -replace '\{\{project-name\}\}', $packageName
-        $text = $text -replace 'jiminy = "0\.16"', "jiminy = { path = `"$jiminyPath`" }"
+        $text = $text -replace 'jiminy = "0\.17"', "jiminy = { path = `"$jiminyPath`" }"
         Set-Content -NoNewline -Path $_.FullName -Value $text
     }
 

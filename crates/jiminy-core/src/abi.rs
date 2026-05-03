@@ -1,4 +1,4 @@
-//! Jiminy ABI field primitives — alignment-1 wire types.
+//! Jiminy ABI field primitives: alignment-1 wire types.
 //!
 //! These are the canonical field types for `zero_copy_layout!` structs.
 //! Each type is `#[repr(transparent)]` over a byte array, guaranteeing
@@ -8,7 +8,7 @@
 //!
 //! SBF has 1-byte alignment for everything, so raw `u64` overlays work
 //! on-chain. But native tests, Miri, and future VMs may enforce real
-//! alignment — and taking `&u64` to an unaligned pointer is instant UB.
+//! alignment, and taking `&u64` to an unaligned pointer is instant UB.
 //!
 //! These wrappers store fields as `[u8; N]` (LE) and access via
 //! `from_le_bytes` / `to_le_bytes`. Zero overhead on SBF. Safe everywhere.

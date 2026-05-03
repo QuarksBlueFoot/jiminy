@@ -9,7 +9,7 @@ publish = false
 crate-type = ["cdylib", "lib"]
 
 [dependencies]
-jiminy = "0.16"
+jiminy = "0.17"
 
 [features]
 default = ["bpf-entrypoint"]

@@ -1,7 +1,7 @@
 {
   "name": "@jiminy/ts",
-  "version": "0.15.0",
-  "description": "TypeScript runtime for Jiminy zero-copy Solana accounts — header decoding, layout_id verification, segment tables, and standard layout readers.",
+  "version": "0.17.0",
+  "description": "TypeScript runtime for Jiminy zero-copy Solana accounts: header decoding, layout_id verification, segment tables, and standard layout readers.",
   "license": "Apache-2.0",
   "author": "MoonManQuark",
   "repository": {

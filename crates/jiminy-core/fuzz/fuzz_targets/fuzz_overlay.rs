@@ -1,7 +1,7 @@
 //! Fuzz target: zero-copy overlay.
 //!
 //! Exercises `pod_from_bytes` and `pod_from_bytes_mut` with arbitrary
-//! byte slices. Must never panic or produce UB — only return `Err`.
+//! byte slices. Must never panic or produce UB -- only return `Err`.
 
 #![no_main]
 

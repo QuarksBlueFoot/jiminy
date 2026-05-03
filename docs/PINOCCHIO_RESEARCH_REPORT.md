@@ -1,7 +1,7 @@
 # Pinocchio Framework: Comprehensive Research Report
 
 **Source**: `anza-xyz/pinocchio` (GitHub), crates.io v0.10.2  
-**Researched**: 2026-03-27 — direct source code analysis  
+**Researched**: 2026-03-27 -- direct source code analysis
 **Repo structure**: Monorepo with `sdk/` (core crate) + `programs/` (system, token, token-2022, ATA, memo)
 
 ---
@@ -36,7 +36,7 @@ pub use {solana_instruction_view as instruction, solana_instruction_view::cpi};
 
 Pinocchio offers **three entrypoint strategies**, each a declarative macro:
 
-**1. `entrypoint!` — All-in-one (most common)**
+**1. `entrypoint!` -- All-in-one (most common)**
 ```rust
 entrypoint!(process_instruction);
 // Expands to:
@@ -54,10 +54,10 @@ fn process_instruction(
 ) -> ProgramResult;
 ```
 
-**2. `program_entrypoint!` — Entrypoint without allocator/panic**
+**2. `program_entrypoint!` -- Entrypoint without allocator/panic**
 Same signature as above, but the developer must independently declare an allocator and panic handler. Suitable for `no_std` programs.
 
-**3. `lazy_program_entrypoint!` — On-demand parsing**
+**3. `lazy_program_entrypoint!` -- On-demand parsing**
 ```rust
 fn process_instruction(mut context: InstructionContext) -> ProgramResult;
 ```
@@ -70,7 +70,7 @@ fn process_instruction(mut context: InstructionContext) -> ProgramResult;
 
 The lazy entrypoint only reads accounts when called, saving CUs for programs that don't need all accounts. Trade-off: the program must handle duplicate account mapping manually.
 
-**4. `process_entrypoint()` — Public function for custom entrypoints**
+**4. `process_entrypoint()` -- Public function for custom entrypoints**
 Exposed as `pinocchio::entrypoint::process_entrypoint::<MAX_ACCOUNTS>(input, handler)`. Programs can write a raw `#[no_mangle] pub unsafe extern "C" fn entrypoint(input: *mut u8) -> u64` and call this for standard parsing after any fast-path logic.
 
 ### Instruction Dispatch
@@ -104,7 +104,7 @@ let system = &accounts[2];
 
 ### Core Principle: Pointer Overlay on Runtime Buffer
 
-The runtime serializes accounts into a contiguous byte buffer. Pinocchio's entrypoint does **not** copy or deserialize this data — it interprets the buffer in-place via pointer casts.
+The runtime serializes accounts into a contiguous byte buffer. Pinocchio's entrypoint does **not** copy or deserialize this data -- it interprets the buffer in-place via pointer casts.
 
 **`RuntimeAccount` (the raw account header):**
 ```rust
@@ -123,7 +123,7 @@ pub struct RuntimeAccount {
 }
 ```
 
-**`AccountView` — The zero-copy wrapper:**
+**`AccountView` -- The zero-copy wrapper:**
 ```rust
 #[repr(C)]
 pub struct AccountView {
@@ -169,7 +169,7 @@ Key pattern: multi-byte integers are stored as `[u8; N]` arrays and read via `u6
 
 The `borrow_state` field in `RuntimeAccount` repurposes the duplicate-marker byte (which is `0xFF` for non-duplicate accounts) as a reference counter:
 
-- `0xFF` (255) = NOT_BORROWED — available for mutable borrow
+- `0xFF` (255) = NOT_BORROWED -- available for mutable borrow
 - `0` = mutably borrowed
 - `2..254` = immutably borrowed (count of remaining immutable borrows)
 
@@ -265,7 +265,7 @@ This combines size + owner + borrow check in one call.
 | `Ref<'a, T>` | `solana-account-view` | Immutable borrow guard for account data. Tracks borrow via `borrow_state`. |
 | `RefMut<'a, T>` | `solana-account-view` | Mutable borrow guard for account data. |
 | `InstructionContext` | `pinocchio::entrypoint::lazy` | Lazy-parsed instruction wrapper for on-demand account access. |
-| `MaybeAccount` | `pinocchio::entrypoint::lazy` | `enum { Account(AccountView), Duplicated(u8) }` — result of lazy account parse. |
+| `MaybeAccount` | `pinocchio::entrypoint::lazy` | `enum { Account(AccountView), Duplicated(u8) }` -- result of lazy account parse. |
 | `ProgramError` | `solana-program-error` | Enum with 26 builtin error variants + `Custom(u32)`. |
 | `ProgramResult` | `solana-program-error` | `Result<(), ProgramError>` alias. |
 | `InstructionView<'a,'b,'c,'d>` | `solana-instruction-view` | Holds `program_id`, `data`, `accounts` for CPI. |
@@ -287,11 +287,11 @@ This combines size + owner + borrow check in one call.
 
 | Trait | Description |
 |---|---|
-| `Sysvar` | `fn get() -> Result<Self, ProgramError>` — loads sysvar via syscall, no account needed. |
+| `Sysvar` | `fn get() -> Result<Self, ProgramError>` -- loads sysvar via syscall, no account needed. |
 | `Resize` | Feature-gated. `fn resize(&mut self, new_len: usize) -> Result<(), ProgramError>` for account data grow/shrink. |
 | `UnsafeResize` | Feature-gated alternative without bounds checking. |
 
-### Key Macros (ALL declarative — no proc macros)
+### Key Macros (ALL declarative -- no proc macros)
 
 | Macro | Kind | Description |
 |---|---|---|
@@ -317,7 +317,7 @@ This combines size + owner + borrow check in one call.
 The entire SDK has only 4 direct dependencies, all Anza-maintained with minimal transitive deps. No `solana-program` (~200 dependency tree) needed.
 
 ### 5.2 Extreme CU Efficiency
-- Entrypoint deserialization uses zero copies — pointer overlay on runtime buffer
+- Entrypoint deserialization uses zero copies -- pointer overlay on runtime buffer
 - Account parsing is unrolled via `process_n_accounts!` macro (5 accounts at a time inlined)
 - `#[inline(always)]` everywhere for hot paths
 - `Address` equality uses `u64`-chunked comparison (`read_unaligned` × 4) for better CU performance
@@ -336,7 +336,7 @@ Three entrypoint strategies serve different optimization needs. Custom entrypoin
 With `no_allocator!` + `nostd_panic_handler!` + `lazy_program_entrypoint!`, a program can be fully `no_std` and `no_alloc`, using only the 32KB heap manually via `allocate_unchecked`.
 
 ### 5.7 Proper Borrow Tracking
-Runtime-compatible `Ref`/`RefMut` guards that track borrows via the account's duplicate marker byte — same mechanism the runtime uses, so CPI borrow checks work correctly.
+Runtime-compatible `Ref`/`RefMut` guards that track borrows via the account's duplicate marker byte -- same mechanism the runtime uses, so CPI borrow checks work correctly.
 
 ### 5.8 Const PDA Derivation
 `Address::derive_address_const()` enables compile-time PDA computation for known seeds.
@@ -356,10 +356,10 @@ No generated TypeScript client, no JSON IDL, no instruction builders. Client-sid
 
 ### 6.4 Extremely Unsafe
 The codebase is heavily `unsafe`. Key examples:
-- `AccountView::new_unchecked` — raw pointer, no validation
-- `borrow_unchecked` / `borrow_unchecked_mut` — bypass borrow tracking
-- `close_unchecked` — zeroes 48 bytes at a fixed offset, UB if account not runtime-created
-- `from_bytes_unchecked` — pointer cast with no alignment/size validation
+- `AccountView::new_unchecked` -- raw pointer, no validation
+- `borrow_unchecked` / `borrow_unchecked_mut` -- bypass borrow tracking
+- `close_unchecked` -- zeroes 48 bytes at a fixed offset, UB if account not runtime-created
+- `from_bytes_unchecked` -- pointer cast with no alignment/size validation
 - `owner()` returns a reference that can be invalidated by `assign()`/`close()`
 
 Programs *must* understand the safety contracts. Misuse leads to UB, not a helpful error.
@@ -375,7 +375,7 @@ This is error-prone and tedious for complex state.
 `ProgramError::Custom(u32)` is the only way to define program-specific errors. No built-in macro to derive meaningful error types (though `ToStr` trait exists for display).
 
 ### 6.7 Duplicate Account Handling
-The standard `entrypoint!` handles duplicates transparently, but `lazy_program_entrypoint!` returns `MaybeAccount::Duplicated(index)` which the program must handle manually — easy to get wrong.
+The standard `entrypoint!` handles duplicates transparently, but `lazy_program_entrypoint!` returns `MaybeAccount::Duplicated(index)` which the program must handle manually -- easy to get wrong.
 
 ### 6.8 `AccountView` Doesn't Track Data Length Changes Well
 The `resize_delta` (v1) / `padding` (v2) reuse is confusing. The account-resize feature stores original data length in what was the padding field. The `close_unchecked()` doesn't update `resize_delta`, so subsequent `resize()` may be incorrect.
@@ -424,7 +424,7 @@ let instruction = InstructionView {
 | `invoke_unchecked()` | N/A | N/A | **No** |
 | `invoke_signed_unchecked()` | N/A | N/A | **No** |
 
-The `_unchecked` variants skip address matching and borrow validation — significant CU savings but UB if accounts are incorrectly borrowed.
+The `_unchecked` variants skip address matching and borrow validation -- significant CU savings but UB if accounts are incorrectly borrowed.
 
 ### Borrow Validation During CPI
 
@@ -558,8 +558,8 @@ pub struct Mint {
 ```
 
 **Critical patterns:**
-- Multi-byte integers as `[u8; N]` arrays, read via `from_le_bytes()` — avoids alignment traps
-- `COption<T>` modeled as `flag: [u8; 4]` + `value: T` — the value is always allocated, flag indicates presence
+- Multi-byte integers as `[u8; N]` arrays, read via `from_le_bytes()` -- avoids alignment traps
+- `COption<T>` modeled as `flag: [u8; 4]` + `value: T` -- the value is always allocated, flag indicates presence
 - All structs are `repr(C)` to match the on-chain layout exactly
 - `Address` inside structs works because it's `repr(transparent)` over `[u8; 32]`
 
@@ -573,8 +573,8 @@ pub struct Mint {
 ### Account Data Access
 
 Two paths:
-1. **Safe**: `try_borrow() -> Ref<[u8]>` / `try_borrow_mut() -> RefMut<[u8]>` — tracks borrows
-2. **Unsafe**: `borrow_unchecked() -> &[u8]` / `borrow_unchecked_mut() -> &mut [u8]` — no tracking
+1. **Safe**: `try_borrow() -> Ref<[u8]>` / `try_borrow_mut() -> RefMut<[u8]>` -- tracks borrows
+2. **Unsafe**: `borrow_unchecked() -> &[u8]` / `borrow_unchecked_mut() -> &mut [u8]` -- no tracking
 
 Both return raw byte slices. Programs cast to typed overlays:
 ```rust
@@ -601,7 +601,7 @@ The safe `close()` additionally checks borrow state and updates `resize_delta`.
 
 Pinocchio has **zero proc macros**. This is a deliberate design choice:
 - Eliminates build-time proc macro compilation overhead
-- No hidden code generation — everything is auditable
+- No hidden code generation -- everything is auditable
 - No dependency on `syn`, `quote`, `proc-macro2`
 
 ### Entrypoint Macros
@@ -652,10 +652,10 @@ seeds!(b"vault", authority.as_ref(), &[bump])  // [Seed; N] array
 ### Internal Optimization Macros
 
 The entrypoint uses several internal macros for CU-optimized parsing:
-- `align_pointer!` — aligns pointer to 8-byte BPF boundary
-- `advance_input_with_account!` — advances buffer past account data + padding
-- `process_n_accounts!` — unrolls account parsing N times inline
-- `process_accounts!` — maps small counts (1–5) to the appropriate unrolled pattern
+- `align_pointer!` -- aligns pointer to 8-byte BPF boundary
+- `advance_input_with_account!` -- advances buffer past account data + padding
+- `process_n_accounts!` -- unrolls account parsing N times inline
+- `process_accounts!` -- maps small counts (1–5) to the appropriate unrolled pattern
 
 ### What's Not Provided (that libraries like jiminy fill)
 
@@ -670,7 +670,7 @@ The entrypoint uses several internal macros for CU-optimized parsing:
 
 ## Summary
 
-Pinocchio is a **minimal, zero-copy, zero-dependency foundation** for Solana programs. It excels at raw performance — CU optimization, binary size, and compile times — by eliminating abstractions. The cost is extreme verbosity and manual safety management.
+Pinocchio is a **minimal, zero-copy, zero-dependency foundation** for Solana programs. It excels at raw performance -- CU optimization, binary size, and compile times -- by eliminating abstractions. The cost is extreme verbosity and manual safety management.
 
 **Best for:**
 - Performance-critical programs where every CU counts
@@ -685,4 +685,4 @@ Pinocchio is a **minimal, zero-copy, zero-dependency foundation** for Solana pro
 - Serialization (manual or custom solution)
 - Error code definitions (custom macros)
 
-The ecosystem position is "the low-level layer" — analogous to raw `libc` vs `std`. Libraries like jiminy build the safety and convenience layer on top while preserving pinocchio's zero-copy performance characteristics.
+The ecosystem position is "the low-level layer" -- analogous to raw `libc` vs `std`. Libraries like jiminy build the safety and convenience layer on top while preserving pinocchio's zero-copy performance characteristics.

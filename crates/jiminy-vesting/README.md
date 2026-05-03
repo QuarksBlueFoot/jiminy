@@ -3,7 +3,7 @@
 Linear + cliff vesting, stepped schedules, periodic unlock, claimable amount calculation.
 
 ```toml
-jiminy-vesting = "0.16"
+jiminy-vesting = "0.17"
 ```
 
 ```rust,ignore

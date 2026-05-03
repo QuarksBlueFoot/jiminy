@@ -117,7 +117,7 @@ jobs:
       - name: cargo miri test (jiminy-core)
         run: cargo miri test -p jiminy-core
 
-  # BPF/SBF build job — validates on-chain program compilation.
+  # BPF/SBF build job -- validates on-chain program compilation.
   build-sbf:
     name: Build SBF Programs
     runs-on: ubuntu-latest

@@ -27,7 +27,7 @@ fuzz_target!(|data: &[u8]| {
         // This should succeed (data contains its own header).
         let _ = load_unverified_overlay::<AccountHeader>(data, disc, version, &layout_id);
 
-        // Deliberately wrong disc/version — should still not panic.
+        // Deliberately wrong disc/version -- should still not panic.
         let _ = load_unverified_overlay::<AccountHeader>(data, disc.wrapping_add(1), version, &layout_id);
     }
 });

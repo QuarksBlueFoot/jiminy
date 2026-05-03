@@ -8,7 +8,7 @@
  * - Nonce Account (80 bytes)
  * - Stake State (200 bytes)
  *
- * These are **external** account layouts — they do NOT have the Jiminy
+ * These are **external** account layouts. They do NOT have the Jiminy
  * 16-byte header. They are for reading accounts owned by SPL Token,
  * System, or Stake programs.
  */

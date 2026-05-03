@@ -11,7 +11,7 @@
 //! | 1 | **Verified** | `load()` / `load_mut()` | owner + disc + version + layout_id + exact size | Loading your own program's accounts |
 //! | 2 | **Foreign Verified** | `load_foreign()` | owner + layout_id + exact size | Reading another program's accounts (cross-program) |
 //! | 3 | **Compatibility** | `validate_version_compatible()` | owner + disc + version + min size (no layout_id) | Version migration, explicitly weaker |
-//! | 4 | **Unsafe** | `load_unchecked()` | none (`unsafe`) | Hot path — caller assumes all risk |
+//! | 4 | **Unsafe** | `load_unchecked()` | none (`unsafe`) | Hot path; caller assumes all risk |
 //! | 5 | **Unverified Overlay** | `load_unverified_overlay()` | header + layout_id if present, fallback to overlay | Indexers, explorers, diagnostic tooling |
 //!
 //! Tiers 1–2 are the standard paths. Tier 3 is a migration helper that
@@ -92,7 +92,7 @@ pub fn validate_foreign<'a>(
     Ok(data)
 }
 
-/// **Tier 2 — Cross-program read for segmented accounts.**
+/// **Tier 2: Cross-program read for segmented accounts.**
 ///
 /// Same as [`validate_foreign`] but uses minimum-size checking
 /// instead of exact-size. Segmented accounts have variable length

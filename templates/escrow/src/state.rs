@@ -6,7 +6,7 @@ zero_copy_layout! {
     /// On-chain escrow account.
     ///
     /// Flags (byte 2-3):
-    ///   bit 0 — accepted (set when recipient claims)
+    ///   bit 0: accepted (set when recipient claims)
     pub struct Escrow, discriminator = 2, version = 1 {
         header:    AccountHeader = 16,
         amount:    u64           = 8,

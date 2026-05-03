@@ -10,7 +10,7 @@ use libfuzzer_sys::fuzz_target;
 use jiminy_core::account::header;
 
 fuzz_target!(|data: &[u8]| {
-    // Try reading individual header fields — none should panic.
+    // Try reading individual header fields -- none should panic.
     let _ = header::read_version(data);
     let _ = header::read_layout_id(data);
     let _ = header::read_header_flags(data);

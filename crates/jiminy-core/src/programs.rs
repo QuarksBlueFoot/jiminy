@@ -1,6 +1,6 @@
 use hopper_runtime::Address;
 
-/// The system program — where lamports come from and where rent goes.
+/// The system program. Lamports come from here, and rent goes here.
 ///
 /// `11111111111111111111111111111111`
 pub const SYSTEM: Address = Address::new_from_array([0u8; 32]);

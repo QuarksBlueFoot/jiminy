@@ -205,11 +205,11 @@ pub fn find_extension(data: &[u8], ext_type: ExtensionType) -> Option<&[u8]> {
 ///
 /// Handling of the classic (non-extended) shape:
 ///
-/// * A buffer of exactly `BASE_MINT_LEN` (82) bytes is a classic SPL Mint —
+/// * A buffer of exactly `BASE_MINT_LEN` (82) bytes is a classic SPL Mint;
 ///   no TLV is possible, returns `Ok(None)` when `expected_kind` is Mint, and
 ///   `Err` otherwise.
 /// * A buffer of exactly `BASE_ACCOUNT_LEN` (165) bytes is a classic SPL
-///   Token Account — no TLV is possible, returns `Ok(None)` when
+///   Token Account; no TLV is possible, returns `Ok(None)` when
 ///   `expected_kind` is Account, and `Err` otherwise.
 /// * Any buffer of length `>= TLV_START` (166) must carry the correct
 ///   account-type byte or is rejected.
@@ -279,7 +279,7 @@ pub fn find_extension_account(
 /// Check if a specific extension exists in the account data.
 ///
 /// Returns `true` if the extension type is found in the TLV entries.
-/// **Does not validate the account-type byte** — prefer
+/// **Does not validate the account-type byte**. Prefer
 /// [`has_extension_mint`]/[`has_extension_account`] when you know which kind
 /// you are looking at.
 ///
@@ -367,7 +367,7 @@ pub fn check_no_extension_account(data: &[u8], ext_type: ExtensionType) -> Progr
 // Each helper routes through the *typed* walker for its kind, so passing the
 // wrong kind of buffer (mint data where an account was expected, or vice
 // versa) is rejected as `InvalidAccountData` rather than silently returning
-// `Ok(())` — the exact failure mode that made the previous offset bug
+// `Ok(())`, the exact failure mode that made the previous offset bug
 // dangerous.
 
 /// Generate `check_no_$name` helpers that reject a mint-level extension.

@@ -113,7 +113,7 @@ impl_le_szc_bridge!(LeU32, U32);
 impl_le_szc_bridge!(LeU64, U64);
 impl_le_szc_bridge!(LeI16, I16);
 
-// I64 has a private inner field — convert via bytes.
+// I64 has a private inner field; convert via bytes.
 impl From<crate::abi::LeI64> for I64 {
     #[inline(always)]
     fn from(v: crate::abi::LeI64) -> Self {

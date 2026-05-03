@@ -156,7 +156,7 @@ proptest! {
         let mut buf = Aligned56::zeroed();
         let copy_len = data.len().min(56);
         buf.0[..copy_len].copy_from_slice(&data[..copy_len]);
-        // Should never panic — either returns Ok with validated true/false.
+        // Should never panic; either returns Ok with validated true/false.
         let _ = PropVault::load_unverified_overlay(&buf.0);
     }
 

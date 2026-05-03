@@ -67,8 +67,8 @@
 //!
 //! ## Community / Domain Extensions (Not Core)
 //!
-//! These crates demonstrate patterns built using Jiminy.
-//! They are not part of the core, and Jiminy does not depend on them.
+//! These crates demonstrate patterns built using Jiminy. They are not part of
+//! `jiminy_core`; the umbrella crate re-exports them for convenience.
 //!
 //! | Crate | |
 //! |---|---|
@@ -640,7 +640,7 @@ macro_rules! __check_account_inner {
     }};
 }
 
-/// Strict account validation macro — `owner`, `disc`, and `layout_id` are
+/// Strict account validation macro. `owner`, `disc`, and `layout_id` are
 /// mandatory positional arguments. Forgetting any of them is a compile error.
 ///
 /// Additional optional constraints (`writable`, `signer`, `version >=`,

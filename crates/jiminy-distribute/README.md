@@ -5,7 +5,7 @@ distributes the integer-division dust so `sum(amounts) == total` exactly. Also
 does basis-point + flat-fee extraction with `net + fee == amount` guaranteed.
 
 ```toml
-jiminy-distribute = "0.16"
+jiminy-distribute = "0.17"
 ```
 
 Two functions:

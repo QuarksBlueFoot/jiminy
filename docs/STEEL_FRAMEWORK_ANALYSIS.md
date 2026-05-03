@@ -1,4 +1,4 @@
-# Steel Framework — Deep Source Code Analysis
+# Steel Framework -- Deep Source Code Analysis
 
 **Version analyzed**: 4.0.4 (`regolith-labs/steel` @ `c6d1a79`, master)  
 **Solana SDK**: `^2.1` (solana-program)  
@@ -11,7 +11,7 @@
 
 ### Core Abstraction Model
 
-Steel is a **thin, opinionated library** — not a code generator. It sits directly on top of `solana_program` and provides:
+Steel is a **thin, opinionated library** -- not a code generator. It sits directly on top of `solana_program` and provides:
 
 1. **Declarative macros** (`account!`, `instruction!`, `error!`, `event!`) that wire up discriminators and serialization
 2. **Extension traits** on `AccountInfo` for chainable validation and deserialization
@@ -43,7 +43,7 @@ workspace/
 │       └── add.rs
 ```
 
-This is **recommended, not enforced** — Steel is a library, not a framework that generates code.
+This is **recommended, not enforced** -- Steel is a library, not a framework that generates code.
 
 ### Program Entrypoint
 
@@ -63,7 +63,7 @@ pub fn process_instruction(
 entrypoint!(process_instruction);
 ```
 
-`entrypoint!` is just `solana_program::entrypoint` — re-exported verbatim. No wrapping.
+`entrypoint!` is just `solana_program::entrypoint` -- re-exported verbatim. No wrapping.
 
 ---
 
@@ -129,7 +129,7 @@ impl AsAccount for AccountInfo<'_> {
 }
 ```
 
-**Critical unsafe usage**: `as_account` borrows data via `try_borrow_data()`, then creates a raw pointer slice via `std::slice::from_raw_parts` that escapes the `Ref` borrow guard. This effectively "leaks" the borrow — the returned `&T` / `&mut T` outlives the `Ref`/`RefMut` guard. This is **technically unsound** (the `Ref` is dropped while the reference is still live), but works in practice within the SVM execution model because:
+**Critical unsafe usage**: `as_account` borrows data via `try_borrow_data()`, then creates a raw pointer slice via `std::slice::from_raw_parts` that escapes the `Ref` borrow guard. This effectively "leaks" the borrow -- the returned `&T` / `&mut T` outlives the `Ref`/`RefMut` guard. This is **technically unsound** (the `Ref` is dropped while the reference is still live), but works in practice within the SVM execution model because:
 - Account data memory is stable for the duration of instruction processing
 - The runtime doesn't move account data buffers
 
@@ -146,7 +146,7 @@ pub trait AccountHeaderDeserialize {
 }
 ```
 
-Returns `(header_ref, remaining_bytes)` — lets you parse a fixed header then interpret the tail based on header fields.
+Returns `(header_ref, remaining_bytes)` -- lets you parse a fixed header then interpret the tail based on header fields.
 
 ---
 
@@ -192,9 +192,9 @@ counter_info
 ```
 
 6 variants:
-- `assert(closure)` / `assert_mut(closure)` — default error
-- `assert_err(closure, err)` / `assert_mut_err(closure, err)` — custom ProgramError
-- `assert_msg(closure, msg)` / `assert_mut_msg(closure, msg)` — custom message string
+- `assert(closure)` / `assert_mut(closure)` -- default error
+- `assert_err(closure, err)` / `assert_mut_err(closure, err)` -- custom ProgramError
+- `assert_msg(closure, msg)` / `assert_mut_msg(closure, msg)` -- custom message string
 
 All return `Result<&Self, ProgramError>` or `Result<&mut Self, ProgramError>`.
 
@@ -210,7 +210,7 @@ fn has_seeds(&self, seeds: &[&[u8]], program_id: &Pubkey) -> Result<&Self, Progr
 }
 ```
 
-**Note**: This calls `find_program_address` every time — it does NOT accept a bump. This means every PDA check pays the full `find_program_address` compute cost (~1500 CU). There is no `has_seeds_with_bump` optimization.
+**Note**: This calls `find_program_address` every time -- it does NOT accept a bump. This means every PDA check pays the full `find_program_address` compute cost (~1500 CU). There is no `has_seeds_with_bump` optimization.
 
 ---
 
@@ -220,23 +220,23 @@ fn has_seeds(&self, seeds: &[&[u8]], program_id: &Pubkey) -> Result<&Self, Progr
 
 | Trait | Module | Description |
 |-------|--------|-------------|
-| `Discriminator` | `account::deserialize` | `fn discriminator() -> u8` — returns single-byte discriminator |
-| `AccountDeserialize` | `account::deserialize` | `try_from_bytes` / `try_from_bytes_mut` — bytemuck deserialize with discriminator check |
+| `Discriminator` | `account::deserialize` | `fn discriminator() -> u8` -- returns single-byte discriminator |
+| `AccountDeserialize` | `account::deserialize` | `try_from_bytes` / `try_from_bytes_mut` -- bytemuck deserialize with discriminator check |
 | `AccountHeaderDeserialize` | `account::deserialize` | Header + remainder pattern for variable-length accounts |
 | `AccountInfoValidation` | `account::validation` | Chainable checks on `AccountInfo` (signer, writable, owner, seeds, etc.) |
-| `AsAccount` | `account::validation` | `as_account::<T>` / `as_account_mut::<T>` — owner + discriminator + bytemuck |
+| `AsAccount` | `account::validation` | `as_account::<T>` / `as_account_mut::<T>` -- owner + discriminator + bytemuck |
 | `AccountValidation` | `account::validation` | `assert()` / `assert_mut()` closures on deserialized data |
-| `CloseAccount` | `account::close` | `close(to)` — drain lamports, assign system program, realloc to 0 |
-| `LamportTransfer` | `account::lamports` | `send(lamports, to)` / `collect(lamports, from)` — direct and CPI transfers |
-| `Loggable` | `log` | `log()` / `log_return()` — sol_log_data and set_return_data |
+| `CloseAccount` | `account::close` | `close(to)` -- drain lamports, assign system program, realloc to 0 |
+| `LamportTransfer` | `account::lamports` | `send(lamports, to)` / `collect(lamports, from)` -- direct and CPI transfers |
+| `Loggable` | `log` | `log()` / `log_return()` -- sol_log_data and set_return_data |
 | `AsSpl` | `spl::validation` | `as_mint()` / `as_token_account()` / `as_associated_token_account()` on `AccountInfo` |
 
 ### Key Types
 
 | Type | Description |
 |------|-------------|
-| `Mint` | `enum { V0(spl_token::Mint), V1(spl_token_2022::Mint) }` — unified SPL/Token-2022 |
-| `TokenAccount` | `enum { V0(spl_token::Account), V1(spl_token_2022::Account) }` — unified |
+| `Mint` | `enum { V0(spl_token::Mint), V1(spl_token_2022::Mint) }` -- unified SPL/Token-2022 |
+| `TokenAccount` | `enum { V0(spl_token::Account), V1(spl_token_2022::Account) }` -- unified |
 | `Numeric` | `#[repr(C)] Pod` wrapper around I80F48 fixed-point (16 bytes) |
 
 ### Macros
@@ -267,7 +267,7 @@ fn has_seeds(&self, seeds: &[&[u8]], program_id: &Pubkey) -> Result<&Self, Progr
    counter_info.is_writable()?.has_seeds(&[COUNTER], &api::ID)?;
    ```
 
-4. **bytemuck zero-copy**: Account data is cast in-place via bytemuck — no deserialization allocations. Competitive with raw pinocchio for read/write performance.
+4. **bytemuck zero-copy**: Account data is cast in-place via bytemuck -- no deserialization allocations. Competitive with raw pinocchio for read/write performance.
 
 5. **Unified SPL Token / Token-2022 handling**: The `Mint` and `TokenAccount` enums automatically handle both token programs, which is a real pain point in other frameworks.
 
@@ -305,7 +305,7 @@ fn has_seeds(&self, seeds: &[&[u8]], program_id: &Pubkey) -> Result<&Self, Progr
 
 8. **Instruction data as `[u8; N]` for multi-byte values**: Because bytemuck requires `Pod`, you can't use `u64` directly in instruction data on some architectures. Steel's template uses `pub amount: [u8; 8]` with manual `u64::from_le_bytes()` conversion. This is error-prone.
 
-9. **No account serialization on write**: bytemuck casts are in-place, so writes go through directly. But there's no "flush" or "commit" concept — mutations are immediately visible in the account data buffer. This is actually a feature for performance but can surprise developers used to Anchor's `exit()` serialization model.
+9. **No account serialization on write**: bytemuck casts are in-place, so writes go through directly. But there's no "flush" or "commit" concept -- mutations are immediately visible in the account data buffer. This is actually a feature for performance but can surprise developers used to Anchor's `exit()` serialization model.
 
 10. **`Mint::assert_mut` panics**: The `AccountValidation` impl for `Mint` has `assert_mut` methods that `panic!("not implemented")`. This is a runtime bomb if anyone tries to use mutable assertions on mints.
 
@@ -391,7 +391,7 @@ impl From<MyError> for ProgramError {
 
 ### Error Propagation
 
-- All validation methods return `Result<&Self, ProgramError>` — standard `?` propagation
+- All validation methods return `Result<&Self, ProgramError>` -- standard `?` propagation
 - The `trace()` helper logs `"{msg}: {file}:{line}"` via `sol_log` and returns the error
 - `#[track_caller]` on every validation method means the log shows the **caller's** location, not Steel's internal code
 
@@ -425,15 +425,15 @@ Total account size: `8 + std::mem::size_of::<T>()`
 
 ### Why 8-Byte Header?
 
-Likely for alignment purposes — keeping the struct body 8-byte aligned regardless of what the discriminator byte does. This matches Anchor's 8-byte discriminator size, though Anchor actually uses all 8 bytes for a SHA-256 hash prefix.
+Likely for alignment purposes -- keeping the struct body 8-byte aligned regardless of what the discriminator byte does. This matches Anchor's 8-byte discriminator size, though Anchor actually uses all 8 bytes for a SHA-256 hash prefix.
 
 ### Struct Requirements
 
 All account structs must be:
-- `#[repr(C)]` — C-compatible layout, no field reordering
-- `Pod` — no padding bytes, all fields must be Pod
-- `Zeroable` — safe to represent as all zeros
-- `Copy + Clone` — required by Pod
+- `#[repr(C)]` -- C-compatible layout, no field reordering
+- `Pod` -- no padding bytes, all fields must be Pod
+- `Zeroable` -- safe to represent as all zeros
+- `Copy + Clone` -- required by Pod
 
 ### Instruction Data Layout
 
@@ -441,7 +441,7 @@ All account structs must be:
 [ disc: u8 | struct_data: bytemuck::bytes_of(self) ]
 ```
 
-Instructions use a **1-byte** discriminator (no padding) — the struct data immediately follows byte 0. Contrast with accounts which have 8-byte headers.
+Instructions use a **1-byte** discriminator (no padding) -- the struct data immediately follows byte 0. Contrast with accounts which have 8-byte headers.
 
 The `instruction!` macro's `to_bytes()`:
 
@@ -460,29 +460,29 @@ This allocates (client-side only, not on-chain).
 
 ## 10. Macro System
 
-### All Declarative — Zero Proc Macros
+### All Declarative -- Zero Proc Macros
 
 Steel uses **only `macro_rules!`** macros. This is a deliberate design choice:
 - No proc macro compile time overhead
 - No syn/quote dependency for macro expansion
-- Simpler to audit — you can read the macro and see exactly what it expands to
+- Simpler to audit -- you can read the macro and see exactly what it expands to
 - No custom derive complexity
 
 ### `account!(EnumName, StructName)`
 
 Expands to:
-1. `impl Discriminator for StructName` — returns `EnumName::StructName.into()` (u8)
-2. `impl AccountValidation for StructName` — all 6 assert/assert_mut/assert_err/assert_msg variants
+1. `impl Discriminator for StructName` -- returns `EnumName::StructName.into()` (u8)
+2. `impl AccountValidation for StructName` -- all 6 assert/assert_mut/assert_err/assert_msg variants
 3. `to_bytes() -> &[u8]` method via `bytemuck::bytes_of`
 
-The `AccountDeserialize` impl is **not** generated by the macro — it comes from the blanket impl on all `T: Discriminator + Pod`.
+The `AccountDeserialize` impl is **not** generated by the macro -- it comes from the blanket impl on all `T: Discriminator + Pod`.
 
 ### `instruction!(EnumName, StructName)`
 
 Expands to:
-1. `impl Discriminator for StructName` — returns `EnumName::StructName as u8`
-2. `try_from_bytes(&[u8]) -> Result<&Self, ProgramError>` — bytemuck conversion  
-3. `to_bytes() -> Vec<u8>` — discriminator byte + struct bytes (allocates, for client use)
+1. `impl Discriminator for StructName` -- returns `EnumName::StructName as u8`
+2. `try_from_bytes(&[u8]) -> Result<&Self, ProgramError>` -- bytemuck conversion
+3. `to_bytes() -> Vec<u8>` -- discriminator byte + struct bytes (allocates, for client use)
 
 ### `error!(EnumName)`
 
@@ -491,14 +491,14 @@ Expands to: `impl From<EnumName> for ProgramError` (Custom variant)
 ### `event!(StructName)`
 
 Expands to:
-1. `impl Loggable` — `log()` calls `sol_log_data`, `log_return()` calls `set_return_data`
+1. `impl Loggable` -- `log()` calls `sol_log_data`, `log_return()` calls `set_return_data`
 2. `to_bytes()` / `from_bytes()` methods
 
 ---
 
 ## 11. Instruction Dispatch
 
-### `parse_instruction` — The Dispatch Function
+### `parse_instruction` -- The Dispatch Function
 
 ```rust
 pub fn parse_instruction<'a, T: TryFrom<u8>>(
@@ -577,7 +577,7 @@ let counter = counter_info
     .as_account_mut::<Counter>(&api::ID)?
     .assert_mut(|c| c.value < 100)?;
 counter.value += amount;
-// No flush needed — writes go directly to account data buffer via bytemuck
+// No flush needed -- writes go directly to account data buffer via bytemuck
 ```
 
 ### Closing

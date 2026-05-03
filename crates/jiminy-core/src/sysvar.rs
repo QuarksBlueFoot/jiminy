@@ -2,11 +2,11 @@
 //!
 //! Two access paths:
 //!
-//! 1. **Syscall** (`clock_timestamp()`, `clock_slot()`, etc.) — reads via
+//! 1. **Syscall** (`clock_timestamp()`, `clock_slot()`, etc.): reads via
 //!    `sol_get_clock_sysvar` / `sol_get_rent_sysvar`. No account needed,
 //!    saves one account slot in your instruction. Available on-chain only.
 //!
-//! 2. **Account-based** (`read_clock()`, `read_clock_slot()`, etc.) — reads
+//! 2. **Account-based** (`read_clock()`, `read_clock_slot()`, etc.): reads
 //!    from a passed-in Clock or Rent sysvar account. Works in tests and
 //!    anywhere you already have the account.
 //!
