@@ -39,7 +39,8 @@
 //! | Macro | |
 //! |---|---|
 //! | [`require!`] | `if !cond { return Err(e) }` -- the universal guard |
-//! | [`require_keys_eq!`] | Two addresses must match |
+//! | [`require_keys_eq!`] | Two owned or borrowed `Address` operands must match |
+//! | [`require_keys_neq!`] | Two owned or borrowed `Address` operands must differ |
 //! | [`check_accounts_unique!`] | Pairwise uniqueness for any N accounts |
 //! | [`error_codes!`] | Define numbered error codes without a proc macro |
 //! | [`instruction_dispatch!`] | Byte-tag instruction routing |

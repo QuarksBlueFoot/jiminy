@@ -104,8 +104,8 @@
 //! | Macro | |
 //! |---|---|
 //! | [`require!`] | `if !cond { return Err(e) }` -- the universal guard |
-//! | [`require_keys_eq!`] | Two addresses must match |
-//! | [`require_keys_neq!`] | Two addresses must differ |
+//! | [`require_keys_eq!`] | Two owned or borrowed `Address` operands must match |
+//! | [`require_keys_neq!`] | Two owned or borrowed `Address` operands must differ |
 //! | [`require_gte!`] | `a >= b` |
 //! | [`require_gt!`] | `a > b` |
 //! | [`require_lt!`] | `a < b` |
