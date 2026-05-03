@@ -458,6 +458,60 @@ macro_rules! zero_copy_layout {
     };
 }
 
+/// Assert that an existing non-Jiminy account layout is safe to overlay.
+///
+/// Use this for live programs that already have account bytes in production and
+/// cannot adopt Jiminy's 16-byte header or `layout_id` convention yet. The
+/// macro does **not** generate a struct, header, discriminator, or ABI hash. It
+/// only proves that the type has opted into Jiminy's `Pod + FixedLayout`
+/// contract and that the Rust layout still matches the declared legacy size.
+///
+/// ```rust,ignore
+/// #[repr(C)]
+/// #[derive(Clone, Copy)]
+/// pub struct ArgusVaultV1 {
+///     pub authority: Address,
+///     pub balance: LeU64,
+/// }
+///
+/// unsafe impl jiminy_core::account::Pod for ArgusVaultV1 {}
+/// impl jiminy_core::account::FixedLayout for ArgusVaultV1 {
+///     const SIZE: usize = 40;
+/// }
+///
+/// jiminy_core::assert_legacy_layout!(ArgusVaultV1, 40);
+/// ```
+#[macro_export]
+macro_rules! assert_legacy_layout {
+    ($ty:ty, $size:expr $(,)?) => {
+        $crate::assert_legacy_layout!(@inner $ty, $size, 8usize);
+    };
+    ($ty:ty, size = $size:expr $(,)?) => {
+        $crate::assert_legacy_layout!(@inner $ty, $size, 8usize);
+    };
+    ($ty:ty, size = $size:expr, max_align = $max_align:expr $(,)?) => {
+        $crate::assert_legacy_layout!(@inner $ty, $size, $max_align);
+    };
+    (@inner $ty:ty, $size:expr, $max_align:expr) => {
+        const _: fn() = {
+            fn __jiminy_assert_legacy_layout<T: $crate::account::Pod + $crate::account::FixedLayout>() {}
+            __jiminy_assert_legacy_layout::<$ty>
+        };
+        const _: () = assert!(
+            core::mem::size_of::<$ty>() == $size,
+            "legacy layout size_of does not match declared size"
+        );
+        const _: () = assert!(
+            <$ty as $crate::account::FixedLayout>::SIZE == $size,
+            "legacy layout FixedLayout::SIZE does not match declared size"
+        );
+        const _: () = assert!(
+            core::mem::align_of::<$ty>() <= $max_align,
+            "legacy layout alignment exceeds configured maximum"
+        );
+    };
+}
+
 /// Count the number of token-tree repetitions (segments).
 #[doc(hidden)]
 #[macro_export]

@@ -32,7 +32,7 @@ unexpected_cfgs = { level = "allow", check-cfg = ['cfg(target_os, values("solana
 pinocchio = { version = "0.10", features = ["cpi", "copy"] }
 pinocchio-system = "0.5"
 pinocchio-token = "0.5"
-hopper-runtime = { path = "../Hopper-Solana-Zero-copy-State-Framework/crates/hopper-runtime", default-features = false, features = ["pinocchio-backend"] }
+hopper-runtime = { path = "../Hopper-Solana-Zero-copy-State-Framework/crates/hopper-runtime", default-features = false, features = ["legacy-pinocchio-compat"] }
 sha2-const-stable = "0.1"
 jiminy = { path = ".", version = "0.16.0" }
 jiminy-core = { path = "crates/jiminy-core", version = "0.16.0" }

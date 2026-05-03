@@ -285,7 +285,7 @@ pub fn check_token_account_frozen(account: &AccountView) -> ProgramResult {
 /// ```rust,ignore
 /// check_not_frozen(source_token)?;
 /// check_not_frozen(dest_token)?;
-/// safe_transfer_tokens(source_token, dest_token, authority, amount)?;
+/// safe_transfer_tokens(source_token, dest_token, mint, authority, amount)?;
 /// ```
 #[inline(always)]
 pub fn check_not_frozen(account: &AccountView) -> ProgramResult {

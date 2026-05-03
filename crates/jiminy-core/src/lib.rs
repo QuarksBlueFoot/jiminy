@@ -45,6 +45,7 @@
 //! | [`instruction_dispatch!`] | Byte-tag instruction routing |
 //! | [`jiminy_interface!`](crate::jiminy_interface) | Read-only interface for foreign program accounts |
 //! | [`impl_pod!`] | Batch `unsafe impl Pod` |
+//! | [`assert_legacy_layout!`] | Validate existing non-Jiminy account ABIs without adding a header |
 //! | [`segmented_layout!`] | Fixed prefix + dynamic segments for variable-length accounts |
 //!
 //! # What does NOT belong here
@@ -102,7 +103,7 @@ pub const fn __sha256_const(data: &[u8]) -> [u8; 32] {
 /// Require a boolean condition: return `$err` (converted via `Into`) if false.
 #[macro_export]
 macro_rules! require {
-    ($cond:expr, $err:expr) => {
+    ($cond:expr, $err:expr $(,)?) => {
         if !($cond) {
             return Err($err.into());
         }
@@ -110,20 +111,28 @@ macro_rules! require {
 }
 
 /// Require two [`Address`] values to be equal.
+///
+/// Accepts owned `Address` values, `&Address` references, or a mix of both.
 #[macro_export]
 macro_rules! require_keys_eq {
-    ($a:expr, $b:expr, $err:expr) => {
-        if *$a != *$b {
+    ($a:expr, $b:expr, $err:expr $(,)?) => {
+        let __jiminy_a: &$crate::Address = &$a;
+        let __jiminy_b: &$crate::Address = &$b;
+        if __jiminy_a != __jiminy_b {
             return Err($err.into());
         }
     };
 }
 
 /// Require two [`Address`] values to be **different**.
+///
+/// Accepts owned `Address` values, `&Address` references, or a mix of both.
 #[macro_export]
 macro_rules! require_keys_neq {
-    ($a:expr, $b:expr, $err:expr) => {
-        if *$a == *$b {
+    ($a:expr, $b:expr, $err:expr $(,)?) => {
+        let __jiminy_a: &$crate::Address = &$a;
+        let __jiminy_b: &$crate::Address = &$b;
+        if __jiminy_a == __jiminy_b {
             return Err($err.into());
         }
     };
@@ -132,7 +141,7 @@ macro_rules! require_keys_neq {
 /// Require two accounts to have **different** addresses.
 #[macro_export]
 macro_rules! require_accounts_ne {
-    ($a:expr, $b:expr, $err:expr) => {
+    ($a:expr, $b:expr, $err:expr $(,)?) => {
         if $a.address() == $b.address() {
             return Err($err.into());
         }
@@ -142,7 +151,7 @@ macro_rules! require_accounts_ne {
 /// Require `a >= b`.
 #[macro_export]
 macro_rules! require_gte {
-    ($a:expr, $b:expr, $err:expr) => {
+    ($a:expr, $b:expr, $err:expr $(,)?) => {
         if $a < $b {
             return Err($err.into());
         }
@@ -152,7 +161,7 @@ macro_rules! require_gte {
 /// Require `a > b`.
 #[macro_export]
 macro_rules! require_gt {
-    ($a:expr, $b:expr, $err:expr) => {
+    ($a:expr, $b:expr, $err:expr $(,)?) => {
         if $a <= $b {
             return Err($err.into());
         }
@@ -162,7 +171,7 @@ macro_rules! require_gt {
 /// Require `a < b`.
 #[macro_export]
 macro_rules! require_lt {
-    ($a:expr, $b:expr, $err:expr) => {
+    ($a:expr, $b:expr, $err:expr $(,)?) => {
         if $a >= $b {
             return Err($err.into());
         }
@@ -172,7 +181,7 @@ macro_rules! require_lt {
 /// Require `a <= b`.
 #[macro_export]
 macro_rules! require_lte {
-    ($a:expr, $b:expr, $err:expr) => {
+    ($a:expr, $b:expr, $err:expr $(,)?) => {
         if $a > $b {
             return Err($err.into());
         }
@@ -182,7 +191,7 @@ macro_rules! require_lte {
 /// Require `a == b` for scalar types.
 #[macro_export]
 macro_rules! require_eq {
-    ($a:expr, $b:expr, $err:expr) => {
+    ($a:expr, $b:expr, $err:expr $(,)?) => {
         if $a != $b {
             return Err($err.into());
         }
@@ -192,7 +201,7 @@ macro_rules! require_eq {
 /// Require `a != b` for scalar types.
 #[macro_export]
 macro_rules! require_neq {
-    ($a:expr, $b:expr, $err:expr) => {
+    ($a:expr, $b:expr, $err:expr $(,)?) => {
         if $a == $b {
             return Err($err.into());
         }
@@ -202,7 +211,7 @@ macro_rules! require_neq {
 /// Require bit `n` to be set in `$byte`, else return `$err`.
 #[macro_export]
 macro_rules! require_flag {
-    ($byte:expr, $n:expr, $err:expr) => {
+    ($byte:expr, $n:expr, $err:expr $(,)?) => {
         if ($byte >> $n) & 1 == 0 {
             return Err($err.into());
         }

@@ -34,6 +34,8 @@
 | C4 | Docs build gate | **Done** | `cargo doc --workspace --no-deps -D warnings` as CI step |
 | C5 | Publish reference templates | **Done** | Three templates in `templates/`: vault (fixed layout), escrow (flags + time), staking (segmented layout) |
 | C6 | Migration cookbook | **Done** | `docs/MIGRATION_COOKBOOK.md`: pinocchio → Jiminy, Anchor hot-path, version migration, borsh → zero-copy |
+| C7 | Phase 3 adoption hardening | **Done** | `require*!` macros accept trailing commas; key guards accept owned/borrowed `Address`; `assert_legacy_layout!` bridges live non-Jiminy ABIs |
+| C8 | Template compile smoke gate | **Done** | `scripts/check-templates.ps1` expands placeholders into `target/template-check/*` and `cargo check`s vault, escrow, and staking templates |
 
 ## Phase D: Standard status
 

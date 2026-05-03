@@ -9,10 +9,11 @@
 use hopper_runtime::{ProgramError, AccountView, Address, ProgramResult};
 use hopper_runtime::system::instructions::{CreateAccount, Transfer as SysTransfer};
 use hopper_runtime::token::instructions::{
-    Burn, CloseAccount, MintTo, Transfer as TkTransfer,
+    BurnChecked, CloseAccount, MintToChecked, TransferChecked,
 };
 
 use jiminy_core::check::{check_signer, check_writable, rent_exempt_min};
+use crate::token::mint_decimals;
 use crate::token::{check_token_account_mint, check_token_account_owner};
 
 /// Create an account via system program CPI with validation.
@@ -115,15 +116,17 @@ pub fn safe_transfer_sol(
 /// - `authority` is a signer
 /// - `from` is writable
 /// - `to` is writable
+/// - `from` and `to` belong to `mint`
 /// - `amount` > 0
 ///
 /// ```rust,ignore
-/// safe_transfer_tokens(source_ata, dest_ata, owner, 1_000_000)?;
+/// safe_transfer_tokens(source_ata, dest_ata, mint, owner, 1_000_000)?;
 /// ```
 #[inline(always)]
 pub fn safe_transfer_tokens(
     from: &AccountView,
     to: &AccountView,
+    mint: &AccountView,
     authority: &AccountView,
     amount: u64,
 ) -> ProgramResult {
@@ -133,12 +136,17 @@ pub fn safe_transfer_tokens(
     check_signer(authority)?;
     check_writable(from)?;
     check_writable(to)?;
+    check_token_account_mint(from, mint.address())?;
+    check_token_account_mint(to, mint.address())?;
+    let decimals = mint_decimals(mint)?;
 
-    TkTransfer {
+    TransferChecked {
         from,
+        mint,
         to,
         authority,
         amount,
+        decimals,
     }
     .invoke()
 }
@@ -148,12 +156,13 @@ pub fn safe_transfer_tokens(
 /// Same as [`safe_transfer_tokens`] but the authority is a PDA.
 ///
 /// ```rust,ignore
-/// safe_transfer_tokens_signed(pool_ata, user_ata, pool_authority, amount, &[&[b"pool", &[bump]]])?;
+/// safe_transfer_tokens_signed(pool_ata, user_ata, mint, pool_authority, amount, &[&[b"pool", &[bump]]])?;
 /// ```
 #[inline(always)]
 pub fn safe_transfer_tokens_signed(
     from: &AccountView,
     to: &AccountView,
+    mint: &AccountView,
     authority: &AccountView,
     amount: u64,
     signers: &[hopper_runtime::cpi::Signer],
@@ -163,12 +172,17 @@ pub fn safe_transfer_tokens_signed(
     }
     check_writable(from)?;
     check_writable(to)?;
+    check_token_account_mint(from, mint.address())?;
+    check_token_account_mint(to, mint.address())?;
+    let decimals = mint_decimals(mint)?;
 
-    TkTransfer {
+    TransferChecked {
         from,
+        mint,
         to,
         authority,
         amount,
+        decimals,
     }
     .invoke_signed(signers)
 }
@@ -178,6 +192,8 @@ pub fn safe_transfer_tokens_signed(
 /// Checks:
 /// - `authority` is a signer
 /// - `account` is writable
+/// - `account` belongs to `mint`
+/// - `mint.decimals` is carried into `BurnChecked`
 /// - `amount` > 0
 ///
 /// ```rust,ignore
@@ -196,12 +212,15 @@ pub fn safe_burn(
     check_signer(authority)?;
     check_writable(account)?;
     check_writable(mint)?;
+    check_token_account_mint(account, mint.address())?;
+    let decimals = mint_decimals(mint)?;
 
-    Burn {
+    BurnChecked {
         account,
         mint,
         authority,
         amount,
+        decimals,
     }
     .invoke()
 }
@@ -212,6 +231,8 @@ pub fn safe_burn(
 /// - `authority` is a signer (mint authority)
 /// - `account` (destination) is writable
 /// - `mint` is writable
+/// - `account` belongs to `mint`
+/// - `mint.decimals` is carried into `MintToChecked`
 /// - `amount` > 0
 ///
 /// ```rust,ignore
@@ -230,12 +251,15 @@ pub fn safe_mint_to(
     check_signer(authority)?;
     check_writable(mint)?;
     check_writable(account)?;
+    check_token_account_mint(account, mint.address())?;
+    let decimals = mint_decimals(mint)?;
 
-    MintTo {
+    MintToChecked {
         mint,
         account,
         mint_authority: authority,
         amount,
+        decimals,
     }
     .invoke()
 }
@@ -254,12 +278,15 @@ pub fn safe_mint_to_signed(
     }
     check_writable(mint)?;
     check_writable(account)?;
+    check_token_account_mint(account, mint.address())?;
+    let decimals = mint_decimals(mint)?;
 
-    MintTo {
+    MintToChecked {
         mint,
         account,
         mint_authority: authority,
         amount,
+        decimals,
     }
     .invoke_signed(signers)
 }
@@ -301,7 +328,7 @@ pub fn safe_close_token_account(
 /// ```rust,ignore
 /// safe_checked_transfer(
 ///     source_ata, dest_ata, owner,
-///     &usdc_mint, source_wallet.address(), dest_wallet.address(),
+///     usdc_mint, source_wallet.address(), dest_wallet.address(),
 ///     amount,
 /// )?;
 /// ```
@@ -310,7 +337,7 @@ pub fn safe_checked_transfer(
     from: &AccountView,
     to: &AccountView,
     authority: &AccountView,
-    expected_mint: &Address,
+    mint: &AccountView,
     expected_from_owner: &Address,
     expected_to_owner: &Address,
     amount: u64,
@@ -318,19 +345,22 @@ pub fn safe_checked_transfer(
     if amount == 0 {
         return Err(ProgramError::InvalidArgument);
     }
-    check_token_account_mint(from, expected_mint)?;
-    check_token_account_mint(to, expected_mint)?;
+    check_token_account_mint(from, mint.address())?;
+    check_token_account_mint(to, mint.address())?;
     check_token_account_owner(from, expected_from_owner)?;
     check_token_account_owner(to, expected_to_owner)?;
     check_signer(authority)?;
     check_writable(from)?;
     check_writable(to)?;
+    let decimals = mint_decimals(mint)?;
 
-    TkTransfer {
+    TransferChecked {
         from,
+        mint,
         to,
         authority,
         amount,
+        decimals,
     }
     .invoke()
 }

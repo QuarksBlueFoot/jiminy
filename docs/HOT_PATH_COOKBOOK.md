@@ -152,11 +152,11 @@ use jiminy_solana::cpi::*;
 // Reentrancy guard: prevent CPI attacks
 check_no_cpi_caller(sysvar_instructions)?;
 
-// Safe token transfer (checks program ID)
+// Safe token transfer (uses TransferChecked; checks mint + decimals)
 safe_transfer_tokens(
-    token_program,
     source,
     destination,
+    mint,
     authority,
     amount,
 )?;

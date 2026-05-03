@@ -90,6 +90,33 @@ const _: usize = Vault::LEN;            // 56
 const _: [u8; 8] = Vault::LAYOUT_ID;    // SHA-256 fingerprint
 ```
 
+### Existing live layouts
+
+If a program already has live accounts and cannot add Jiminy's 16-byte header,
+do not use `zero_copy_layout!` for that account version. Keep the existing
+`#[repr(C)]` ABI, implement `Pod + FixedLayout`, and pin the contract with
+`assert_legacy_layout!`:
+
+```rust
+use jiminy::prelude::*;
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct LegacyVaultV1 {
+    pub authority: Address,
+    pub balance: LeU64,
+}
+
+unsafe impl Pod for LegacyVaultV1 {}
+impl FixedLayout for LegacyVaultV1 { const SIZE: usize = 40; }
+
+assert_legacy_layout!(LegacyVaultV1, size = 40, max_align = 8);
+```
+
+This preserves the existing header/discriminator convention while giving
+auditors the same compile-time size, alignment, and trait-bound proof used by
+Jiminy's standard overlays.
+
 ## Using the Header in Code
 
 ### Writing (init) - recommended

@@ -91,6 +91,7 @@
 //! |---|---|
 //! | `zero_copy_layout!` | Define `#[repr(C)]` account struct with `Pod`, overlay, tiered loaders, `LAYOUT_ID` |
 //! | `segmented_layout!` | Extend `zero_copy_layout!` with dynamic variable-length segments |
+//! | `assert_legacy_layout!` | Validate existing non-Jiminy account ABIs without adding a header |
 //! | `jiminy_interface!` | Declare read-only view of a foreign program's account (cross-program ABI) |
 //! | [`init_account!`] | CPI create + zero-init + header write in one call |
 //! | [`close_account!`] | Safe close with lamport drain and sentinel byte |
@@ -224,7 +225,7 @@ pub mod prelude;
 /// Require a boolean condition: return `$err` (converted via `Into`) if false.
 #[macro_export]
 macro_rules! require {
-    ($cond:expr, $err:expr) => {
+    ($cond:expr, $err:expr $(,)?) => {
         if !($cond) {
             return Err($err.into());
         }
@@ -232,20 +233,28 @@ macro_rules! require {
 }
 
 /// Require two [`Address`] values to be equal.
+///
+/// Accepts owned `Address` values, `&Address` references, or a mix of both.
 #[macro_export]
 macro_rules! require_keys_eq {
-    ($a:expr, $b:expr, $err:expr) => {
-        if *$a != *$b {
+    ($a:expr, $b:expr, $err:expr $(,)?) => {
+        let __jiminy_a: &$crate::Address = &$a;
+        let __jiminy_b: &$crate::Address = &$b;
+        if __jiminy_a != __jiminy_b {
             return Err($err.into());
         }
     };
 }
 
 /// Require two [`Address`] values to be **different**.
+///
+/// Accepts owned `Address` values, `&Address` references, or a mix of both.
 #[macro_export]
 macro_rules! require_keys_neq {
-    ($a:expr, $b:expr, $err:expr) => {
-        if *$a == *$b {
+    ($a:expr, $b:expr, $err:expr $(,)?) => {
+        let __jiminy_a: &$crate::Address = &$a;
+        let __jiminy_b: &$crate::Address = &$b;
+        if __jiminy_a == __jiminy_b {
             return Err($err.into());
         }
     };
@@ -254,7 +263,7 @@ macro_rules! require_keys_neq {
 /// Require two accounts to have **different** addresses.
 #[macro_export]
 macro_rules! require_accounts_ne {
-    ($a:expr, $b:expr, $err:expr) => {
+    ($a:expr, $b:expr, $err:expr $(,)?) => {
         if $a.address() == $b.address() {
             return Err($err.into());
         }
@@ -264,7 +273,7 @@ macro_rules! require_accounts_ne {
 /// Require `a >= b`.
 #[macro_export]
 macro_rules! require_gte {
-    ($a:expr, $b:expr, $err:expr) => {
+    ($a:expr, $b:expr, $err:expr $(,)?) => {
         if $a < $b {
             return Err($err.into());
         }
@@ -274,7 +283,7 @@ macro_rules! require_gte {
 /// Require `a > b`.
 #[macro_export]
 macro_rules! require_gt {
-    ($a:expr, $b:expr, $err:expr) => {
+    ($a:expr, $b:expr, $err:expr $(,)?) => {
         if $a <= $b {
             return Err($err.into());
         }
@@ -284,7 +293,7 @@ macro_rules! require_gt {
 /// Require `a < b`.
 #[macro_export]
 macro_rules! require_lt {
-    ($a:expr, $b:expr, $err:expr) => {
+    ($a:expr, $b:expr, $err:expr $(,)?) => {
         if $a >= $b {
             return Err($err.into());
         }
@@ -294,7 +303,7 @@ macro_rules! require_lt {
 /// Require `a <= b`.
 #[macro_export]
 macro_rules! require_lte {
-    ($a:expr, $b:expr, $err:expr) => {
+    ($a:expr, $b:expr, $err:expr $(,)?) => {
         if $a > $b {
             return Err($err.into());
         }
@@ -304,7 +313,7 @@ macro_rules! require_lte {
 /// Require `a == b` for scalar types.
 #[macro_export]
 macro_rules! require_eq {
-    ($a:expr, $b:expr, $err:expr) => {
+    ($a:expr, $b:expr, $err:expr $(,)?) => {
         if $a != $b {
             return Err($err.into());
         }
@@ -314,7 +323,7 @@ macro_rules! require_eq {
 /// Require `a != b` for scalar types.
 #[macro_export]
 macro_rules! require_neq {
-    ($a:expr, $b:expr, $err:expr) => {
+    ($a:expr, $b:expr, $err:expr $(,)?) => {
         if $a == $b {
             return Err($err.into());
         }
@@ -324,7 +333,7 @@ macro_rules! require_neq {
 /// Require bit `n` to be set in `$byte`, else return `$err`.
 #[macro_export]
 macro_rules! require_flag {
-    ($byte:expr, $n:expr, $err:expr) => {
+    ($byte:expr, $n:expr, $err:expr $(,)?) => {
         if ($byte >> $n) & 1 == 0 {
             return Err($err.into());
         }
@@ -447,6 +456,43 @@ macro_rules! instruction_dispatch {
 macro_rules! impl_pod {
     ($($t:ty),+ $(,)?) => {
         $( unsafe impl $crate::account::Pod for $t {} )+
+    };
+}
+
+/// Assert that an existing non-Jiminy account layout is safe to overlay.
+///
+/// This is the migration bridge for live programs that cannot adopt Jiminy's
+/// 16-byte header or `layout_id` convention yet. It validates `Pod +
+/// FixedLayout`, the Rust struct size, the `FixedLayout::SIZE` constant, and a
+/// Solana-safe maximum alignment without changing account bytes.
+#[macro_export]
+macro_rules! assert_legacy_layout {
+    ($ty:ty, $size:expr $(,)?) => {
+        $crate::assert_legacy_layout!(@inner $ty, $size, 8usize);
+    };
+    ($ty:ty, size = $size:expr $(,)?) => {
+        $crate::assert_legacy_layout!(@inner $ty, $size, 8usize);
+    };
+    ($ty:ty, size = $size:expr, max_align = $max_align:expr $(,)?) => {
+        $crate::assert_legacy_layout!(@inner $ty, $size, $max_align);
+    };
+    (@inner $ty:ty, $size:expr, $max_align:expr) => {
+        const _: fn() = {
+            fn __jiminy_assert_legacy_layout<T: $crate::account::Pod + $crate::account::FixedLayout>() {}
+            __jiminy_assert_legacy_layout::<$ty>
+        };
+        const _: () = assert!(
+            core::mem::size_of::<$ty>() == $size,
+            "legacy layout size_of does not match declared size"
+        );
+        const _: () = assert!(
+            <$ty as $crate::account::FixedLayout>::SIZE == $size,
+            "legacy layout FixedLayout::SIZE does not match declared size"
+        );
+        const _: () = assert!(
+            core::mem::align_of::<$ty>() <= $max_align,
+            "legacy layout alignment exceeds configured maximum"
+        );
     };
 }
 

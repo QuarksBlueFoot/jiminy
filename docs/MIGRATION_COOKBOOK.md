@@ -269,6 +269,40 @@ let vault = Vault::overlay(&data)?; // zero-copy, no allocation
 
 ---
 
+## 4.5. Live Legacy ABI → Jiminy Safety Without Header Migration
+
+Existing programs sometimes cannot change account bytes because accounts are
+already live on mainnet. In that case, do not force the Jiminy 16-byte header
+into the ABI. Keep the legacy struct, implement `Pod + FixedLayout`, and lock
+the contract with `assert_legacy_layout!`.
+
+```rust
+use jiminy::prelude::*;
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct LegacyVaultV1 {
+    pub authority: Address,
+    pub balance: LeU64,
+}
+
+unsafe impl Pod for LegacyVaultV1 {}
+impl FixedLayout for LegacyVaultV1 {
+    const SIZE: usize = 40;
+}
+
+assert_legacy_layout!(LegacyVaultV1, size = 40, max_align = 8);
+
+let vault = pod_from_bytes::<LegacyVaultV1>(legacy_account_data)?;
+```
+
+This gives auditors a single grep target for legacy overlays while preserving
+the existing discriminator/header convention. New accounts should still prefer
+`zero_copy_layout!`; `assert_legacy_layout!` is the bridge for programs like
+Argus that need Jiminy layout safety before an ABI migration is possible.
+
+---
+
 ## 5. Fixed Layout → Segmented Layout
 
 When a fixed-size account needs variable-length data (e.g., adding a

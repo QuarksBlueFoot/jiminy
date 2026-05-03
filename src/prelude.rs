@@ -71,7 +71,7 @@ pub use jiminy_distribute::{proportional_split, extract_fee};
 // ── Root macros (override core's identical #[macro_export] copies) ────────────
 
 pub use crate::{
-    close_account, init_account, require, require_accounts_ne, require_eq, require_flag,
-    require_gt, require_gte, require_keys_eq, require_keys_neq, require_lt, require_lte,
-    require_neq,
+    assert_legacy_layout, close_account, init_account, require, require_accounts_ne, require_eq,
+    require_flag, require_gt, require_gte, require_keys_eq, require_keys_neq, require_lt,
+    require_lte, require_neq,
 };

@@ -540,12 +540,14 @@ CreateAccount {
 }
 .invoke()?;
 
-// Token program CPI
-TokenTransfer {
+// Token program CPI (checked mint + decimals path)
+TokenTransferChecked {
     from: source_token,
+  mint,
     to: dest_token,
     authority: owner,
     amount: 1_000_000,
+  decimals,
 }
 .invoke()?;
 ```
@@ -889,6 +891,7 @@ abstraction layers. All macros are declarative (`macro_rules!`). No proc macros.
 | `close_account!` | Safe close with lamport drain and sentinel byte |
 | `check_account!` | Disc + version + layout_id validation |
 | `impl_pod!(T1, T2, ...)` | Batch `unsafe impl Pod` for `#[repr(C)]` types |
+| `assert_legacy_layout!(T, size = N)` | Validate `Pod + FixedLayout` for an existing non-Jiminy account ABI without adding a header |
 
 #### Safety guards
 
@@ -901,11 +904,14 @@ abstraction layers. All macros are declarative (`macro_rules!`). No proc macros.
 | `require_gte!(a, b, err)` | `a >= b` |
 | `require_lt!(a, b, err)` | `a < b` |
 | `require_lte!(a, b, err)` | `a <= b` |
-| `require_keys_eq!(a, b, err)` | Two `Address` values must be equal |
-| `require_keys_neq!(a, b, err)` | Two `Address` values must differ |
+| `require_keys_eq!(a, b, err)` | Two owned or borrowed `Address` operands must be equal |
+| `require_keys_neq!(a, b, err)` | Two owned or borrowed `Address` operands must differ |
 | `require_accounts_ne!(a, b, err)` | Two accounts must have different addresses |
 | `require_flag!(byte, n, err)` | Bit `n` must be set in `byte` |
 | `check_accounts_unique!(a, b, c)` | Variadic uniqueness (any N accounts) |
+
+All `require*!` guard macros accept an optional trailing comma, so multi-line
+checks can use the same formatting style as function calls.
 
 #### Program structure
 
@@ -961,22 +967,22 @@ before issuing a CPI. All zero-copy, all `#[inline(always)]`.
 | `safe_create_account(payer, account, space, owner)` | System CPI: create account with rent-exempt balance |
 | `safe_create_account_signed(payer, account, space, owner, signers)` | Same, with PDA signer seeds |
 | `safe_transfer_sol(from, to, amount)` | System CPI: transfer SOL with nonzero check |
-| `safe_transfer_tokens(from, to, authority, amount)` | Token CPI: SPL transfer with validation |
-| `safe_transfer_tokens_signed(from, to, authority, amount, signers)` | Same, with PDA signer seeds |
-| `safe_checked_transfer(from, to, auth, mint, from_owner, to_owner, amount)` | Paranoid transfer: mint + owner checks first |
-| `safe_burn(account, mint, authority, amount)` | Token CPI: burn with validation |
-| `safe_mint_to(mint, account, authority, amount)` | Token CPI: mint tokens with validation |
+| `safe_transfer_tokens(from, to, mint, authority, amount)` | Token CPI: checked SPL transfer with mint + decimals validation |
+| `safe_transfer_tokens_signed(from, to, mint, authority, amount, signers)` | Same, with PDA signer seeds |
+| `safe_checked_transfer(from, to, auth, mint, from_owner, to_owner, amount)` | Paranoid transfer: mint + owner checks first, then `TransferChecked` |
+| `safe_burn(account, mint, authority, amount)` | Token CPI: checked burn with mint decimals validation |
+| `safe_mint_to(mint, account, authority, amount)` | Token CPI: checked mint with mint decimals validation |
 | `safe_mint_to_signed(mint, account, authority, amount, signers)` | Same, with PDA signer seeds |
 | `safe_close_token_account(account, destination, authority)` | Token CPI: close account |
 
 ```rust
-// One-liner CPI - checks signer, writable, nonzero for you
-safe_transfer_tokens(source_ata, dest_ata, owner, amount)?;
+// One-liner CPI - checks signer, writable, nonzero, mint, and decimals for you
+safe_transfer_tokens(source_ata, dest_ata, mint, owner, amount)?;
 
 // Paranoid transfer - also validates mint + owners match before CPI
 safe_checked_transfer(
     source_ata, dest_ata, owner,
-    &usdc_mint, source_wallet.address(), dest_wallet.address(),
+  usdc_mint, source_wallet.address(), dest_wallet.address(),
     amount,
 )?;
 
@@ -1411,7 +1417,7 @@ or renamed.
 | Proc macros | No | Yes | **No** (declarative macros give you the same benefits) |
 | Account validation | Manual | `#[account(...)]` | Functions + macros (`error_codes!`, `instruction_dispatch!`) |
 | System CPI | Manual bytes | `system_program::create_account` | `CreateAccount { .. }.invoke()` |
-| Token CPI | Manual bytes | Anchor SPL | `TokenTransfer { .. }.invoke()` |
+| Token CPI | Manual bytes | Anchor SPL | `TokenTransferChecked { .. }.invoke()` |
 | Token account reads | Manual offsets | Borsh deser | Zero-copy readers + check functions |
 | Mint account reads | Manual offsets | Borsh deser | Zero-copy readers + check functions |
 | Token-2022 screening | Manual | Not built-in | `check_safe_token_2022_mint` |

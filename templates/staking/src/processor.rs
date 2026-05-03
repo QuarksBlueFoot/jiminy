@@ -111,7 +111,7 @@ fn stake(
 
     // Write the new stake entry at the end of the segment.
     let new_entry = StakeEntry {
-        staker: *staker.key(),
+        staker: *staker.address(),
         amount,
         start_epoch: timestamp as u64,
     };
@@ -181,7 +181,7 @@ fn unstake(
     let entry = unsafe {
         &*(raw[entry_offset..].as_ptr() as *const StakeEntry)
     };
-    require_keys_eq!(entry.staker, *staker.key(), ProgramError::IllegalOwner);
+    require_keys_eq!(entry.staker, *staker.address(), ProgramError::IllegalOwner);
 
     let amount = entry.amount;
 

@@ -63,7 +63,7 @@ fn create(
     let mut raw = escrow.try_borrow_mut()?;
     let e = Escrow::overlay_mut(&mut raw)?;
     e.amount = amount;
-    e.creator = *creator_acc.key();
+    e.creator = *creator_acc.address();
     e.recipient = recipient;
     e.deadline = deadline;
 

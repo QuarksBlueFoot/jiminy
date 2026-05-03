@@ -111,5 +111,5 @@ pub use hopper_runtime::system::instructions::{
 
 // ── Token program CPI ───────────────────────────────────────────────────────
 pub use hopper_runtime::token::instructions::{
-    Burn, CloseAccount, InitializeAccount, MintTo, Transfer as TokenTransfer,
+    BurnChecked, CloseAccount, InitializeAccount, MintToChecked, TransferChecked as TokenTransferChecked,
 };

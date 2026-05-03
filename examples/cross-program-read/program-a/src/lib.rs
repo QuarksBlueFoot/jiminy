@@ -14,6 +14,7 @@ mod entrypoint {
     no_allocator!();
     nostd_panic_handler!();
 
+    #[allow(dead_code)]
     pub fn process_instruction(
         program_id: &Address,
         accounts: &[AccountView],

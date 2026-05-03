@@ -132,10 +132,10 @@ pub use crate::state::{
 
 // ── Macros ───────────────────────────────────────────────────────────────────
 pub use crate::{
-    check_accounts_unique, close_account, error_codes, init_account, instruction_dispatch,
-    impl_pod, require, require_accounts_ne, require_eq, require_flag, require_gt, require_gte,
-    require_keys_eq, require_keys_neq, require_lt, require_lte, require_neq,
-    zero_copy_layout,
+    assert_legacy_layout, check_accounts_unique, close_account, error_codes, init_account,
+    instruction_dispatch, impl_pod, require, require_accounts_ne, require_eq, require_flag,
+    require_gt, require_gte, require_keys_eq, require_keys_neq, require_lt, require_lte,
+    require_neq, zero_copy_layout,
     segmented_layout,
     // check_account is both a macro (check_account!) and a function (check::check_account).
     // The function is exported above via check::*. The macro is #[macro_export] at crate root.

@@ -50,6 +50,9 @@
 //! These are **external** (non-Jiminy) account layouts - they do NOT have
 //! the Jiminy 16-byte header. They are meant for reading accounts owned
 //! by other programs (SPL Token, System, Stake, etc.).
+//! Each overlay is pinned with `jiminy_core::assert_legacy_layout!`, the same
+//! macro downstream live programs can use to adopt Jiminy `Pod + FixedLayout`
+//! safety without changing their existing account ABI.
 
 #![no_std]
 
@@ -386,21 +389,13 @@ impl StakeState {
     }
 }
 
-// ── Compile-time size assertions ─────────────────────────────────────────────
+// ── Compile-time legacy layout assertions ───────────────────────────────────
 
-const _: () = assert!(core::mem::size_of::<SplTokenAccount>() == 165);
-const _: () = assert!(core::mem::size_of::<SplMint>() == 82);
-const _: () = assert!(core::mem::size_of::<SplMultisig>() == 355);
-const _: () = assert!(core::mem::size_of::<NonceAccount>() == 80);
-const _: () = assert!(core::mem::size_of::<StakeState>() == 200);
-
-// ── Compile-time alignment assertions ────────────────────────────────────────
-
-const _: () = assert!(core::mem::align_of::<SplTokenAccount>() == 1);
-const _: () = assert!(core::mem::align_of::<SplMint>() == 1);
-const _: () = assert!(core::mem::align_of::<SplMultisig>() == 1);
-const _: () = assert!(core::mem::align_of::<NonceAccount>() == 1);
-const _: () = assert!(core::mem::align_of::<StakeState>() == 1);
+jiminy_core::assert_legacy_layout!(SplTokenAccount, size = 165, max_align = 1);
+jiminy_core::assert_legacy_layout!(SplMint, size = 82, max_align = 1);
+jiminy_core::assert_legacy_layout!(SplMultisig, size = 355, max_align = 1);
+jiminy_core::assert_legacy_layout!(NonceAccount, size = 80, max_align = 1);
+jiminy_core::assert_legacy_layout!(StakeState, size = 200, max_align = 1);
 
 #[cfg(test)]
 mod tests {

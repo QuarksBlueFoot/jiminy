@@ -5,6 +5,17 @@
 Jiminy is the most complete zero-copy ABI-oriented Solana library in its
 lane. It is not yet ready to declare itself the frozen universal standard.
 
+**Phase 3 status (2026-05-03):** adoption hardening is active. The core ABI is
+solid enough for serious downstream use, but the pre-1.0 gate now prioritizes
+small correctness and migration seams over new abstractions. This pass fixed
+guard-macro ergonomics (`require*!` trailing commas), corrected
+`require_keys_eq!` / `require_keys_neq!` to accept owned or borrowed `Address`
+operands, restored compatibility with Hopper's `legacy-pinocchio-compat`
+backend feature, and added `assert_legacy_layout!` for live programs that need
+Jiminy layout safety without changing account header conventions. It also added
+a template smoke gate that expands placeholder crates and checks vault, escrow,
+and staking templates before they ship.
+
 **What exists today (v0.15):**
 
 - Fixed 16-byte account header with deterministic `layout_id`
